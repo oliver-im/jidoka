@@ -1,0 +1,14 @@
+{
+  "task_summary": "Bad agent ID",
+  "execution_mode": "subagents",
+  "agents": [
+    {
+      "id": "has spaces",
+      "role": "Invalid ID agent",
+      "model": "sonnet",
+      "tools": [],
+      "blocked_by": [],
+      "background": false
+    }
+  ]
+}

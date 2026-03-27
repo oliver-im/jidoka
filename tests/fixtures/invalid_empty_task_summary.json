@@ -1,0 +1,12 @@
+{
+    "task_summary": "",
+    "execution_mode": "subagents",
+    "agents": [{
+        "id": "agent1",
+        "role": "Test agent",
+        "model": "sonnet",
+        "tools": [],
+        "blocked_by": [],
+        "background": false
+    }]
+}

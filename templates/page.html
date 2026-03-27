@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Topology: {{ task_summary }}</title>
+  <style>{{ css }}</style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js"></script>
+  {% if has_plan %}
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
+  {% endif %}
+</head>
+<body class="{% if has_plan %}has-plan{% else %}no-plan{% endif %}">
+
+  <header>
+    <h1>{{ task_summary }}</h1>
+    <div class="header-meta">
+      <span class="mode-badge">Mode: {{ mode_label }}</span>
+      <div class="header-actions">
+        <button id="theme-toggle" type="button" title="Toggle dark mode">
+          <span class="icon-light">&#9788;</span>
+          <span class="icon-dark">&#9790;</span>
+        </button>
+        <button id="download-png" type="button" title="Download as PNG">&#8681; PNG</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    {% if has_plan %}
+    <aside class="plan-panel">
+      <h2>Plan</h2>
+      <div id="plan-content"></div>
+    </aside>
+    {% endif %}
+
+    <section class="diagram-panel">
+      <div class="diagrams">
+        {% for graph in mermaid_graphs %}
+        <div class="diagram-block">
+          {% if !phase_labels.is_empty() %}
+          <h3 class="phase-label">{{ phase_labels[loop.index0] }}</h3>
+          {% endif %}
+          <pre class="mermaid">{{ graph }}</pre>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="legend">
+        <h3>Legend</h3>
+        <div class="legend-grid">
+          <div class="legend-section">
+            <h4>Model</h4>
+            <div class="legend-items">
+              <div class="legend-item">
+                <span class="swatch swatch-haiku"></span> haiku
+              </div>
+              <div class="legend-item">
+                <span class="swatch swatch-sonnet"></span> sonnet
+              </div>
+              <div class="legend-item">
+                <span class="swatch swatch-opus"></span> opus
+              </div>
+              <div class="legend-item">
+                <span class="swatch swatch-main"></span> main agent
+              </div>
+            </div>
+          </div>
+          <div class="legend-section">
+            <h4>Output</h4>
+            <div class="legend-items">
+              <div class="legend-item">
+                <span class="shape shape-rect"></span> inline
+              </div>
+              <div class="legend-item">
+                <span class="shape shape-pill"></span> file
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overview">
+        <h3>Topology Overview</h3>
+        <pre class="overview-text">{{ description }}</pre>
+      </div>
+    </section>
+  </main>
+
+  {% if has_plan %}
+  <script>window.__planMarkdown = {{ plan_markdown_json }};</script>
+  {% endif %}
+  <script>{{ js }}</script>
+</body>
+</html>

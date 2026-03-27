@@ -1,0 +1,5 @@
+{
+  "task_summary": "Do something",
+  "execution_mode": "subagents",
+  "agents": []
+}

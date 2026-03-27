@@ -1,0 +1,14 @@
+{
+  "task_summary": "Build a simple widget",
+  "execution_mode": "subagents",
+  "agents": [
+    {
+      "id": "builder",
+      "role": "Build the widget",
+      "model": "sonnet",
+      "tools": ["Read", "Write"],
+      "blocked_by": [],
+      "background": false
+    }
+  ]
+}

@@ -1,0 +1,345 @@
+/* planview styles — embedded via include_str!() */
+
+/* ── Reset & Base ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #ffffff;
+  --bg-secondary: #f9fafb;
+  --text: #111827;
+  --text-secondary: #6b7280;
+  --border: #e5e7eb;
+  --header-bg: #f3f4f6;
+  --code-bg: #f3f4f6;
+
+  --haiku-fill: #dbeafe;
+  --haiku-stroke: #3b82f6;
+  --sonnet-fill: #dcfce7;
+  --sonnet-stroke: #22c55e;
+  --opus-fill: #ede9fe;
+  --opus-stroke: #8b5cf6;
+  --main-fill: #fef3c7;
+  --main-stroke: #f59e0b;
+}
+
+[data-theme="dark"] {
+  --bg: #111827;
+  --bg-secondary: #1f2937;
+  --text: #f9fafb;
+  --text-secondary: #9ca3af;
+  --border: #374151;
+  --header-bg: #1f2937;
+  --code-bg: #1f2937;
+
+  --haiku-fill: #1e3a5f;
+  --haiku-stroke: #60a5fa;
+  --sonnet-fill: #14532d;
+  --sonnet-stroke: #4ade80;
+  --opus-fill: #3b0764;
+  --opus-stroke: #a78bfa;
+  --main-fill: #78350f;
+  --main-stroke: #fbbf24;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* ── Header ── */
+header {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 1.5rem;
+}
+
+header h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mode-badge {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.15rem 0.6rem;
+  border-radius: 9999px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.header-actions button {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.15s;
+}
+
+.header-actions button:hover {
+  background: var(--bg-secondary);
+}
+
+.icon-dark { display: none; }
+[data-theme="dark"] .icon-light { display: none; }
+[data-theme="dark"] .icon-dark { display: inline; }
+
+/* ── Main Layout ── */
+main {
+  display: flex;
+  min-height: calc(100vh - 5rem);
+}
+
+.no-plan main {
+  flex-direction: column;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.has-plan main {
+  flex-direction: row;
+}
+
+/* ── Plan Panel ── */
+.plan-panel {
+  width: 45%;
+  min-width: 320px;
+  max-width: 560px;
+  border-right: 1px solid var(--border);
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: calc(100vh - 5rem);
+  background: var(--bg);
+}
+
+.plan-panel h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+#plan-content h1,
+#plan-content h2,
+#plan-content h3 {
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+}
+
+#plan-content h1 { font-size: 1.3rem; }
+#plan-content h2 { font-size: 1.1rem; }
+#plan-content h3 { font-size: 1rem; }
+
+#plan-content p {
+  margin-bottom: 0.8em;
+}
+
+#plan-content ul,
+#plan-content ol {
+  margin-bottom: 0.8em;
+  padding-left: 1.5em;
+}
+
+#plan-content li {
+  margin-bottom: 0.3em;
+}
+
+#plan-content code {
+  background: var(--code-bg);
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+#plan-content pre {
+  background: var(--code-bg);
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+
+#plan-content pre code {
+  background: none;
+  padding: 0;
+}
+
+/* ── Diagram Panel ── */
+.diagram-panel {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: calc(100vh - 5rem);
+}
+
+.has-plan .diagram-panel {
+  min-width: 0;
+}
+
+.diagram-block {
+  margin-bottom: 2rem;
+}
+
+.phase-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+pre.mermaid {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  overflow-x: auto;
+}
+
+/* ── Legend ── */
+.legend {
+  margin-top: 2rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.legend h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.legend-grid {
+  display: flex;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.legend-section h4 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+}
+
+.legend-items {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 2px solid;
+}
+
+.swatch-haiku  { background: var(--haiku-fill);  border-color: var(--haiku-stroke); }
+.swatch-sonnet { background: var(--sonnet-fill); border-color: var(--sonnet-stroke); }
+.swatch-opus   { background: var(--opus-fill);   border-color: var(--opus-stroke); }
+.swatch-main   { background: var(--main-fill);   border-color: var(--main-stroke); }
+
+.shape {
+  display: inline-block;
+  width: 20px;
+  height: 14px;
+  border: 2px solid var(--text-secondary);
+  background: transparent;
+}
+
+.shape-rect {
+  border-radius: 2px;
+}
+
+.shape-pill {
+  border-radius: 7px;
+}
+
+/* ── Overview ── */
+.overview {
+  margin-top: 2rem;
+}
+
+.overview h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.overview-text {
+  font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .has-plan main {
+    flex-direction: column;
+  }
+
+  .plan-panel {
+    width: 100%;
+    max-width: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 50vh;
+  }
+
+  .diagram-panel {
+    max-height: none;
+  }
+
+  .legend-grid {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}

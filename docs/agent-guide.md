@@ -9,7 +9,7 @@ You produce topology JSON. The renderer handles everything else — validation, 
 ## Skill Configuration
 
 ```
-name: agent-topology
+name: planview
 context: fork
 agent: general-purpose
 allowed-tools: Read, Grep, Glob, Bash
@@ -23,7 +23,7 @@ Read the codebase using Read, Grep, Glob, then decompose the task into a topolog
 
 ### Step 2: Save and Render
 
-Save the topology JSON to `/tmp/agent-topology-${CLAUDE_SESSION_ID}.json`.
+Save the topology JSON to `/tmp/planview-${CLAUDE_SESSION_ID}.json`.
 
 - If `--open` is in the original arguments: pipe JSON to the renderer binary for immediate browser display
 - If `--open` is NOT present: save JSON only (the ExitPlanMode hook renders later)

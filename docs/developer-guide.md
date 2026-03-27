@@ -1,19 +1,19 @@
 # Developer Guide: Building the Renderer
 
-Self-contained reference for rebuilding agent-topology in any language. See [Data Model](data-model.md) for the JSON schema that serves as the contract between skill and renderer, and [Agent Guide](agent-guide.md) for the skill's behavior and heuristics.
+Self-contained reference for rebuilding planview in any language. See [Data Model](data-model.md) for the JSON schema that serves as the contract between skill and renderer, and [Agent Guide](agent-guide.md) for the skill's behavior and heuristics.
 
 ## System Architecture
 
 Two components with a strict boundary between them.
 
 ```
-User types /agent-topology <task>
+User types /planview <task>
       |
       v
 +- SKILL (forked subagent) ----------------------+
 |                                                 |
 |  LLM analyzes task -> produces topology JSON    |
-|  Saves JSON to /tmp/agent-topology-{id}.json    |
+|  Saves JSON to /tmp/planview-{id}.json    |
 |  Returns topology JSON (one-shot)               |
 +------------------+-----------------------------+
                    |
@@ -48,9 +48,9 @@ topology JSON -> validate -> graph -> mermaid  -+
 ### The Contract
 
 ```bash
-echo '<topology JSON>' | agent-topology
+echo '<topology JSON>' | planview
 # or
-agent-topology path/to/topology.json
+planview path/to/topology.json
 ```
 
 - **Input:** topology JSON on stdin or file path argument
@@ -248,7 +248,7 @@ Combines Mermaid graphs + description + optional plan into a self-contained HTML
 - **Title:** `Topology: {task_summary}`
 - **Mermaid CDN:** `mermaid@11.12.2`
 - **If plan panel present:** `marked@15.0.7` (markdown parsing) + `dompurify@3.2.4` (sanitization)
-- CSS and JS are embedded inline (compiled at build time from `style.css` and `script.js`)
+- CSS and JS are embedded inline (embedded at build time via `include_str!()` from `style.css` and `script.js`)
 - Plan content is injected as `window.__planMarkdown` for client-side rendering
 
 #### Layout Modes
@@ -268,38 +268,40 @@ Combines Mermaid graphs + description + optional plan into a self-contained HTML
 ## CLI Interface
 
 ```
-agent-topology v0.2.4
+planview v0.2.4
 
 Usage:
-  agent-topology <file>              Render a topology JSON file
-  echo '<json>' | agent-topology     Read from stdin
-  agent-topology --example           Render the built-in showcase
-  agent-topology --example --json    Dump the showcase JSON to stdout
-  agent-topology <file> --mermaid    Output raw Mermaid graph definitions
-  agent-topology <file> --plan <plan.md>  Render with plan panel
-  agent-topology hook                Process ExitPlanMode hook from stdin
-  agent-topology index <dir>         Generate index.html for a directory of JSON files
+  planview <file>              Render a topology JSON file
+  echo '<json>' | planview     Read from stdin
+  planview --example           Render the built-in showcase
+  planview --example --json    Dump the showcase JSON to stdout
+  planview <file> --mermaid    Output raw Mermaid graph definitions
+  planview <file> --plan <plan.md>  Render with plan panel
+  planview hook                Process ExitPlanMode hook from stdin
+  planview index <dir>         Generate index.html for a directory of JSON files
 
 Options:
   -h, --help       Show this help message
   -v, --version    Show version number
   --mermaid        Output Mermaid definitions to stdout instead of HTML
   --plan <file>    Show plan markdown alongside the topology diagram
+  --schema         Dump the topology JSON schema to stdout
+  --validate       Validate JSON without rendering (exit 0 = valid, exit 1 = invalid with errors on stderr)
 ```
 
 ### Mode Details
 
 - **Normal mode** (default): Read JSON from file/stdin, validate, render HTML, write to temp file, open browser. Stdout: HTML file path. Exit 0 on success, 1 on error.
-- **Hook mode** (`agent-topology hook`): Process ExitPlanMode PreToolUse hook input from stdin. See [Hook Integration](#hook-integration) for full details. Always exits 0 (never blocks ExitPlanMode).
-- **Index mode** (`agent-topology index <dir>`): Scan a directory for `*.json` files, generate an `index.html` gallery page with iframe previews of each topology.
+- **Hook mode** (`planview hook`): Process ExitPlanMode PreToolUse hook input from stdin. See [Hook Integration](#hook-integration) for full details. Always exits 0 (never blocks ExitPlanMode).
+- **Index mode** (`planview index <dir>`): Scan a directory for `*.json` files, generate an `index.html` gallery page with iframe previews of each topology.
 - **Mermaid mode** (`--mermaid`): Output raw Mermaid graph definitions to stdout instead of generating HTML. Useful for embedding in markdown.
 
 ### Environment Variables
 
 | Variable | Effect |
 |---|---|
-| `AGENT_TOPOLOGY_NO_OPEN` | If set, don't open the browser (just write HTML and print path) |
-| `AGENT_TOPOLOGY_NO_AUTO` | If set, don't auto-invoke (hook silently exits when no topology file exists) |
+| `PLANVIEW_NO_OPEN` | If set, don't open the browser (just write HTML and print path) |
+| `PLANVIEW_NO_AUTO` | If set, don't auto-invoke (hook silently exits when no topology file exists) |
 | `CLAUDE_PLANS_DIR` | Override default `~/.claude/plans` location |
 | `CLAUDE_SESSION_ID` | Used by the skill to namespace temp files |
 | `TMPDIR` | Override default `/tmp` for HTML output |
@@ -308,14 +310,14 @@ Options:
 
 ```json
 {
-  "name": "agent-topology",
+  "name": "planview",
   "skills": ["SKILL.md"],
   "hooks": {
     "PreToolUse": [
       {
         "matcher": "ExitPlanMode",
         "hooks": [
-          { "type": "command", "command": "agent-topology hook || true" }
+          { "type": "command", "command": "planview hook || true" }
         ]
       }
     ]
@@ -346,7 +348,7 @@ PreToolUse fires before the user sees the approval dialog:
 2. Agent calls ExitPlanMode
 3. **>> PreToolUse hook fires** (synchronous, blocks until complete)
 4. Hook reads plan file from disk
-5. Hook reads topology from `/tmp/agent-topology-{session_id}.json`
+5. Hook reads topology from `/tmp/planview-{session_id}.json`
 6. Hook renders combined HTML, opens browser
 7. User sees ExitPlanMode approval dialog in CLI
 8. User reviews combined plan+diagram in browser while deciding
@@ -364,7 +366,7 @@ This is reliable because PreToolUse hooks fire synchronously — the agent write
 Hook receives stdin JSON: { "session_id": "...", "tool_name": "ExitPlanMode", "tool_input": {} }
   |
   +-- Extract session_id
-  +-- Check /tmp/agent-topology-{session_id}.json exists
+  +-- Check /tmp/planview-{session_id}.json exists
   |
   +- [topology exists]
   |   +-- Read topology JSON -> validate -> generate mermaid + description
@@ -373,7 +375,7 @@ Hook receives stdin JSON: { "session_id": "...", "tool_name": "ExitPlanMode", "t
   |   +-- Exit 0
   |
   +- [topology missing]
-      +-- AGENT_TOPOLOGY_NO_AUTO set? -> exit 0 (opt-out)
+      +-- PLANVIEW_NO_AUTO set? -> exit 0 (opt-out)
       +-- Marker file exists with attempts >= 3? -> exit 0 (give up)
       +-- Write marker (increment attempt count) -> deny via hookSpecificOutput -> exit 0
 ```
@@ -387,16 +389,16 @@ Hooks are deterministic shell processes — they can gate (allow/deny) but can't
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "permissionDecision": "deny",
-    "permissionDecisionReason": "BLOCKED: You must run /agent-topology with a summary of your plan before exiting plan mode. After /agent-topology completes, you MUST call ExitPlanMode again to finish."
+    "permissionDecisionReason": "BLOCKED: You must run /planview with a summary of your plan before exiting plan mode. After /planview completes, you MUST call ExitPlanMode again to finish."
   }
 }
 ```
 
-The agent sees the deny, follows the instruction (runs `/agent-topology`), and retries ExitPlanMode.
+The agent sees the deny, follows the instruction (runs `/planview`), and retries ExitPlanMode.
 
 ### Infinite Loop Prevention
 
-A marker file (`/tmp/agent-topology-{session_id}.attempted`) tracks how many times the hook has denied. After 3 attempts, the hook silently falls through (exits 0 without denying). This prevents infinite denial loops if the skill fails repeatedly.
+A marker file (`/tmp/planview-{session_id}.attempted`) tracks how many times the hook has denied. After 3 attempts, the hook silently falls through (exits 0 without denying). This prevents infinite denial loops if the skill fails repeatedly.
 
 ### Critical: Always Exit 0
 
@@ -414,38 +416,45 @@ PreToolUse hooks block the tool if they return a non-zero exit code. The hook mu
 | Team = single graph | The team is one communication boundary. Phasing is shown through arrows, not separate graphs. Agents persist across phases. |
 | Topology overview derived, not authored | Computed from JSON via topological sort. Always consistent with the graph — can't drift. |
 | One-shot skill, caller-driven iteration | `AskUserQuestion` doesn't surface inside forks. Skill generates and returns; caller handles adjust loop. Each adjustment is a full regeneration — no state to preserve. |
-| Bun compile to single binary | No runtime dependencies for end users. |
+| Rust compile to single binary | No runtime dependencies for end users. |
 | Mermaid via CDN | Simplest browser visualization for V1. Renderer internals are replaceable without changing the skill. |
 | Arrows = dispatch, rectangle = communication | Arrows show data flow and execution order (same for both modes). Rectangles show communication boundaries. Separates execution order from communication scope. |
 | Nested agents are regular nodes | Same shape regardless of nesting. Nesting shown by arrows, not containers. Keeps visual language simple: node = agent, arrow = flow, rectangle = communication. |
 | Hook-driven enforcement via deny | Hooks can gate but can't invoke skills or call the LLM. The only way to trigger LLM work from a hook is to deny with an instruction. |
 | Regenerate on adjust, don't patch | Full rebuild from scratch is simpler and less error-prone than surgical edits. |
 
-## Rendering Backend Research
+### Post-v1: MCP Server
 
-Evaluated Mermaid, D2, Graphviz (WASM), ELK.js + raw SVG, Excalidraw, and Kroki.
+Deferred per [research/cli-vs-mcp.md](../research/cli-vs-mcp.md). The CLI binary (`echo JSON | planview`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
 
-**Verdict:** Mermaid was chosen for V1 as the simplest option with the lowest risk. The renderer architecture is designed to be swappable — `mermaid.ts` can be replaced with `d2.ts` without changing any other pipeline stage (validate, graph, describe, html shell).
+## Rendering Backend
 
-**D2** is the strongest candidate for a Mermaid alternative:
+Mermaid via CDN — the only evaluated option with native stadium/pill and double circle shapes matching planview's visual language. The renderer architecture is swappable — `mermaid.rs` can be replaced with `graphviz.rs` without changing any other pipeline stage (validate, graph, describe, html shell). Graphviz WASM (778 KB, gold-standard layout) is the strongest alternative if Mermaid limitations become blocking. See [research/diagram-rendering.md](../research/diagram-rendering.md) for the full evaluation.
 
-- Purpose-built for software architecture diagrams
-- Best visual quality among text-to-diagram tools
-- Native nested containers, icons, tooltips, per-element styling
-- `@terrastruct/d2` WASM package enables zero-install usage
+## Development Setup
 
-**D2 risks:** Pre-1.0 (v0.7.1), best layout engine (TALA) is paid, no GitHub Markdown rendering, WASM bundle size unknown.
+### Building
 
-### Decision Framework
+```bash
+cargo build --release
+```
 
-- Is Mermaid with improvements good enough? → Stay with Mermaid
-- Need icons/tooltips/richer styling? → Add D2 as alternative backend (`--renderer d2`)
-- Need full control? → Build custom renderer with ELK.js + SVG (highest effort)
+### Making the binary available
+
+Symlink the release binary into `~/.local/bin` so the `planview` command is available system-wide without reinstalling after each build:
+
+```bash
+ln -sf "$(pwd)/target/release/planview" ~/.local/bin/planview
+```
+
+This is a one-time setup. Subsequent `cargo build --release` runs overwrite the binary in place — the symlink picks up the new version automatically.
+
+> **Prerequisite:** `~/.local/bin` must be on your `$PATH`. Most shells include it by default. If not, add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile.
 
 ## Platform Constraints
 
 - **macOS only for V1:** uses `open` for browser launch (code has `win32: "start"` and fallback `xdg-open` but untested)
-- **Bun required:** runtime, build tool, test runner, binary compiler
+- **Rust required:** cargo for build/test/compile, single binary via `cargo build --release`
 - **No LLM calls in renderer:** the renderer is deterministic I/O only
-- **Session-scoped temp files:** `/tmp/agent-topology-{session_id}.json` prevents collisions between concurrent Claude Code sessions
+- **Session-scoped temp files:** `/tmp/planview-{session_id}.json` prevents collisions between concurrent Claude Code sessions
 - **Plans directory:** `~/.claude/plans/` is a Claude Code internal, may change (configurable via `CLAUDE_PLANS_DIR`)

@@ -1,0 +1,12 @@
+{
+    "task_summary": "Test empty role",
+    "execution_mode": "subagents",
+    "agents": [{
+        "id": "agent1",
+        "role": "",
+        "model": "sonnet",
+        "tools": [],
+        "blocked_by": [],
+        "background": false
+    }]
+}

@@ -1,0 +1,14 @@
+{
+    "task_summary": "Test empty nested agents",
+    "execution_mode": "subagents",
+    "agents": [{
+        "id": "parent",
+        "role": "Parent with empty nested agents",
+        "model": "sonnet",
+        "tools": [],
+        "blocked_by": [],
+        "background": false,
+        "execution_mode": "subagents",
+        "agents": []
+    }]
+}
