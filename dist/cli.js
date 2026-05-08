@@ -19077,6 +19077,8 @@ _None._
 
 `;
   out += "- When resuming, read this file first to find the cursor unit, then read the cursor unit's md. Skip `overview.md` unless this is the first session on the plan.\n";
+  out += "- Work one unit at a time. After finishing the cursor unit, run its review steps, then update this file: move the unit into Done with a one-liner and advance the cursor to the next unit id.\n";
+  out += "- Stop after each unit. Surface a brief summary to the user and wait for explicit go-ahead before starting the next unit. If the unit is blocked, record it under Blockers and stop without advancing the cursor.\n";
   return out;
 }
 function buildUnitMd(unit) {
