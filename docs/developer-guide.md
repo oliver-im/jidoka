@@ -1,6 +1,6 @@
 # Developer Guide: Building the Renderer
 
-Self-contained reference for rebuilding planview in any language. See [Data Model](data-model.md) for the JSON schema that serves as the contract between skill and renderer, and [Agent Guide](agent-guide.md) for the skill's behavior and heuristics.
+Self-contained reference for rebuilding planview in any language. See [Data Model](data-model.md) for the typed shapes (Plan + per-unit Topology) and the plan markdown surface, and [Agent Guide](agent-guide.md) for the skill's behavior and heuristics.
 
 ## System Architecture
 
@@ -10,68 +10,100 @@ Two components with a strict boundary between them.
 User types /planview <task>
       |
       v
-+- SKILL (forked subagent) ----------------------+
-|                                                 |
-|  LLM analyzes task -> produces topology JSON    |
-|  Saves JSON to /tmp/planview-{id}.json    |
-|  Returns topology JSON (one-shot)               |
-+------------------+-----------------------------+
++- SKILL (forked subagent) -------------------------+
+|                                                    |
+|  LLM analyzes task -> produces plan markdown       |
+|    (# Title H1 + ## Unit NN: headings + bodies +   |
+|    optional ```topology fences inside units)       |
+|  Returns markdown to caller (one-shot)             |
++------------------+--------------------------------+
                    |
-                   |  (if --open flag)
-+------------------v-----------------------------+
-|  RENDERER (compiled binary)                     |
-|                                                 |
-|  Validates JSON -> Mermaid graphs               |
-|  -> topology overview -> HTML -> browser        |
-+------------------------------------------------+
+                   v  (caller calls ExitPlanMode with markdown as `plan` arg)
++------------------v--------------------------------+
+|  RENDERER (bundled dist/cli.js, hook mode)         |
+|                                                    |
+|  Reads tool_input.plan from PreToolUse stdin       |
+|  parse_plan_markdown -> validate_plan ->           |
+|  materialize_at writes <plan_dir_root>/            |
+|     <YYMMDD-N-slug>/{overview,progress,0N-*.md};   |
+|  html + browser opt-in                             |
++----------------------------------------------------+
 
-ExitPlanMode -> PreToolUse hook -> RENDERER (with plan from disk)
+Direct topology rendering (legacy path, unchanged):
+  echo '<topology-json>' | planview  ->  /tmp/*.html
 ```
 
 ### Skill (SKILL.md)
 
-Runs in a forked subagent (`context: fork`). One-shot generator: analyzes the task, produces topology JSON, saves it to a session-namespaced temp file, returns. All planning context stays in the fork. Main agent only sees the returned JSON.
+Runs in a forked subagent (`context: fork`). One-shot generator: analyzes the task, produces **plan markdown**, returns it to the caller. All planning context stays in the fork. Main agent only sees the returned markdown and decides what to do with it.
 
-The skill handles everything requiring LLM judgment: task analysis, agent decomposition, execution mode selection. It never generates HTML.
+The skill handles everything requiring LLM judgment: task analysis, unit decomposition, optional per-unit topology, body prose. It never saves to disk, never generates HTML, never calls the renderer, never executes the plan.
 
-### Renderer (src/)
+### Renderer (ts/)
 
-Deterministic CLI. Handles everything mechanical: validation, diagram generation, HTML output, browser launch. Never calls the LLM.
+Deterministic CLI. Handles everything mechanical: parsing, validation, plan dir materialization, HTML output, browser launch. Never calls the LLM.
 
 ```
-topology JSON -> validate -> graph -> mermaid  -+
-                                   -> describe  -+-> html -> browser
+plan markdown (from PreToolUse stdin's tool_input.plan, or from a file/stdin)
+  -> parse_plan_markdown      (extracts title/units/summaries/bodies; lifts ```topology fences)
+  -> validate_plan            (re-validates each lifted topology with path prefixes)
+  -> materialize:
+       resolve_target_dir -> materialize_at
+         -> build_overview_md / build_progress_md / build_unit_md
+            -> atomic_write per file
+       write_plan_html         (when html_output=true; embeds overview.md)
+  -> open_browser              (when auto_open_browser=true and !PLANVIEW_NO_OPEN)
+
+Per-unit topology (when extracted from a fence):
+  validate_topology_into       (path-prefixed: units[N].topology.agents…)
+  -> mermaid::generate         (used by both unit md ```mermaid blocks and HTML pre.mermaid)
 ```
 
-`graph` does topological sort (shared by both `mermaid` and `describe`).
+`graph` does topological sort for the topology layer (shared by both `mermaid` and `describe`).
 
-### The Contract
+### The Contracts
+
+**Hook contract** (the primary path):
+
+```
+ExitPlanMode fires with markdown in tool_input.plan
+  -> hook reads stdin, extracts tool_input.plan
+  -> parse_plan_markdown + validate_plan
+  -> materializes <project>/<plan_dir_root>/<YYMMDD-N-slug>/
+  -> opens overview.html (when configured)
+  -> exits 0
+```
+
+**Direct CLI contracts** (kept for backwards compatibility and one-off use):
 
 ```bash
-echo '<topology JSON>' | planview
-# or
-planview path/to/topology.json
+# Plan path:
+planview materialize <plan.md>            # parses markdown, writes plan dir + overview.html
+planview materialize - < plan.md          # same, via stdin
+planview materialize <legacy-plan.json>   # legacy Plan JSON also accepted (auto-detected)
+
+# Topology path (legacy, standalone):
+echo '<topology-json>' | planview         # writes /tmp/*.html, opens browser
+planview <topology.json>                  # same
+planview --example                        # built-in showcase
 ```
 
-- **Input:** topology JSON on stdin or file path argument
-- **Stdout:** path to generated HTML file
-- **Stderr:** error messages only
-- **Exit code:** 0 success, non-zero failure
-
-This boundary makes the renderer replaceable. Swap in a different binary with the same contract, and the skill works unchanged.
+The skill never invokes the binary. Renderer-skill separation is preserved.
 
 ## Validation Rules
 
-The validator enforces these constraints on the topology JSON. Every rule must be reproduced in a rewrite.
+The validator enforces two layered rule sets — one for the top-level Plan, one for each (optional) embedded Topology. `validate_plan` runs both; `validate` runs only the topology layer for the standalone CLI path.
 
-### Structural Rules
+### Topology Rules (per topology, including embedded)
+
+#### Structural
 
 1. Input must be a non-null object
 2. `task_summary` must be a non-empty string
 3. `execution_mode` must be `"team"` or `"subagents"`
 4. `agents` must be a non-empty array
 
-### Per-Agent Rules
+#### Per-agent
 
 5. `id` must be a non-empty string matching `^[a-zA-Z0-9_-]+$`
 6. `id` must be globally unique across all agents (including nested)
@@ -85,17 +117,32 @@ The validator enforces these constraints on the topology JSON. Every rule must b
 14. `execution_mode` (if present) must be `"team"` or `"subagents"`
 15. `agents` (if present) must be a non-empty array (no empty arrays)
 
-### Dependency Rules (Scope-Aware)
+#### Dependency (scope-aware)
 
 These are checked per scope — each level of nesting is validated independently:
 
 16. Every `blocked_by` entry must reference an existing agent ID in the same scope (not a parent or child scope)
 17. No agent can block itself (self-dependency)
-18. The dependency graph must be acyclic — checked via DFS with a recursion stack
+18. The dependency graph must be acyclic — checked via DFS with a three-color recursion stack
+
+When a topology lives inside a Unit, all of the above run with paths prefixed by `units[N].topology.agents…` so the user can locate the offending agent across plan + topology.
+
+### Plan Rules (top-level)
+
+19. `task_summary` must be a non-empty string
+20. `slug` must match `^[a-z0-9-]+$`, length 1–60, no leading/trailing hyphen
+21. `units` must be a non-empty array
+22. Each unit's `id` must match `^[0-9]{2}-[a-z0-9-]+$`
+23. Unit `id` must be unique within the plan
+24. Each unit's `title` and `summary` must be non-empty
+25. `blocked_by` references must resolve to existing unit IDs in the same plan
+26. No unit can block itself
+27. The unit dependency graph must be acyclic
+28. If `topology` is present, run rules 1–18 against it (path-prefixed as above)
 
 ### Normalization
 
-After validation, the `output` field defaults to `"inline"` if not provided.
+After validation, the topology's `output` field defaults to `"inline"` if not provided.
 
 ## Core Algorithms
 
@@ -268,64 +315,103 @@ Combines Mermaid graphs + description + optional plan into a self-contained HTML
 ## CLI Interface
 
 ```
-planview v0.2.4
-
 Usage:
-  planview <file>              Render a topology JSON file
-  echo '<json>' | planview     Read from stdin
-  planview --example           Render the built-in showcase
-  planview --example --json    Dump the showcase JSON to stdout
-  planview <file> --mermaid    Output raw Mermaid graph definitions
-  planview <file> --plan <plan.md>  Render with plan panel
-  planview hook                Process ExitPlanMode hook from stdin
-  planview index <dir>         Generate index.html for a directory of JSON files
+  planview <file>                      Render a topology JSON file
+  echo '<json>' | planview             Read topology JSON from stdin
+  planview --example                   Render the built-in showcase
+  planview --example --json            Dump the showcase JSON to stdout
+  planview <file> --mermaid            Output raw Mermaid graph definitions
+  planview <file> --plan <plan.md>     Render topology with plan panel
+  planview materialize <plan.md>       Materialize a plan markdown into <plan_dir_root>/
+  planview materialize - < plan.md     Materialize plan markdown from stdin
+                                       (legacy Plan JSON is also accepted; format auto-detected)
+  planview hook                        Process ExitPlanMode hook from stdin
 
 Options:
-  -h, --help       Show this help message
-  -v, --version    Show version number
-  --mermaid        Output Mermaid definitions to stdout instead of HTML
-  --plan <file>    Show plan markdown alongside the topology diagram
-  --schema         Dump the topology JSON schema to stdout
-  --validate       Validate JSON without rendering (exit 0 = valid, exit 1 = invalid with errors on stderr)
+  -h, --help          Show this help message
+  -v, --version       Show version number
+  --mermaid           Output Mermaid definitions to stdout instead of HTML
+  --plan <file>       Show plan markdown alongside the topology diagram
+  --schema            Dump the topology JSON schema to stdout
+  --validate          Validate JSON without rendering (topology only)
+
+Materialize subcommand options:
+  --plans-root <dir>  Override <project>/<plan_dir_root>
+  --today <YYMMDD>    Override the date prefix (default: local `date +%y%m%d`)
 ```
 
 ### Mode Details
 
-- **Normal mode** (default): Read JSON from file/stdin, validate, render HTML, write to temp file, open browser. Stdout: HTML file path. Exit 0 on success, 1 on error.
+- **Normal mode** (default): Read topology JSON from file/stdin, validate, render HTML, write to temp file, open browser. Stdout: HTML file path. Exit 0 on success, 1 on error.
+- **Materialize mode** (`planview materialize`): Read a plan from file (or stdin when the file argument is `-`), auto-detect markdown vs legacy JSON by the first non-whitespace character (`{` → JSON, otherwise markdown), validate, write `<plan_dir_root>/<YYMMDD-N-slug>/{overview,progress,0N-*}.md`. `overview.html` is written only when `html_output=true`; the browser opens only when `auto_open_browser=true` (both default off — see [Configuration](#configuration)). Plans root resolves from `$CLAUDE_PROJECT_DIR/<plan_dir_root>` (PWD fallback with stderr warning). Exit 0 on success, 1 on error.
 - **Hook mode** (`planview hook`): Process ExitPlanMode PreToolUse hook input from stdin. See [Hook Integration](#hook-integration) for full details. Always exits 0 (never blocks ExitPlanMode).
-- **Index mode** (`planview index <dir>`): Scan a directory for `*.json` files, generate an `index.html` gallery page with iframe previews of each topology.
 - **Mermaid mode** (`--mermaid`): Output raw Mermaid graph definitions to stdout instead of generating HTML. Useful for embedding in markdown.
 
 ### Environment Variables
 
 | Variable | Effect |
 |---|---|
-| `PLANVIEW_NO_OPEN` | If set, don't open the browser (just write HTML and print path) |
-| `PLANVIEW_NO_AUTO` | If set, don't auto-invoke (hook silently exits when no topology file exists) |
-| `CLAUDE_PLANS_DIR` | Override default `~/.claude/plans` location |
-| `CLAUDE_SESSION_ID` | Used by the skill to namespace temp files |
-| `TMPDIR` | Override default `/tmp` for HTML output |
+| `PLANVIEW_NO_OPEN` | If set, don't open the browser (just write the HTML and print the path) |
+| `CLAUDE_PROJECT_DIR` | Project root used to resolve `<project>/<plan_dir_root>/`; PWD fallback with a stderr warning when unset (claude-code issue [#22343](https://github.com/anthropics/claude-code/issues/22343)) |
+| `TMPDIR` | Override default `/tmp` for the topology renderer's HTML output |
+
+## Configuration
+
+The renderer reads a layered config: built-in defaults < `~/.claude/plugins/planview/config.json` (global) < `<project>/.planview.json` (project). Defined in `ts/config.ts`; loaded via `loadConfig(projectDir)` and threaded into the hook + materialize CLI paths.
+
+| Key | Type | Default | Project override? | Notes |
+|---|---|---|---|---|
+| `plan_dir_root` | string | `plan` | yes (relative paths only, no `..`) | Where plan dirs land. Project paths are resolved against `$CLAUDE_PROJECT_DIR`. |
+| `auto_open_browser` | bool | `false` | yes | Open `overview.html` after materialize. `PLANVIEW_NO_OPEN=1` always wins. |
+| `html_output` | bool | `false` | yes | Write `overview.html` alongside the markdown. When false, only the `.md` files are produced. |
+| `plan_level_topology` | bool | `false` | no | Reserved for v2; currently always false. |
+
+### Loader behavior
+
+- Missing files are not errors: layer falls through silently.
+- Invalid JSON or shape mismatch on the global file: stderr warning, fall back to defaults.
+- Project file may only set the keys marked above. Other keys are warn-and-ignored. Non-boolean values for the boolean keys are warn-and-ignored. `plan_dir_root` strings are validated (`isAbsolute` and `..` segments rejected) before being applied.
+- `mergeForWrite(base, cfg)` round-trips the global file preserving any manually added keys — used by `planview:configure`.
+
+### Optional shared daily counter
+
+`materialize.ts` scans `<parent>/research`, `<parent>/backlog`, and `<parent>/done/plan` for entries matching `^<today>-(\d+)-` when picking the next `N`. This is opportunistic — it lets users who organize all their note types under the same parent share a chronological counter (so `260505-2-foo` is unambiguous across plan/research/backlog). When those siblings don't exist, the scan finds nothing and the counter just increments per day per plan dir. The convention is purely the user's choice; planview imposes nothing about the structure outside of `<plan_dir_root>` itself.
+
+### Skills
+
+Two skills front the config UX (run outside the planning fork so `AskUserQuestion` works):
+
+- `planview:setup` — first-run Q&A walkthrough that writes the global file from scratch. Triggered by phrases like "set up planview".
+- `planview:configure` — diff-style edits that preserve manually added keys. Triggered by "change planview settings".
 
 ## Plugin Manifest
+
+The plugin ships with `.claude-plugin/plugin.json` (metadata) and `.claude/settings.json` (the ExitPlanMode hook). The skill at `.claude/skills/planview/SKILL.md` is auto-loaded when the plugin is enabled, so installing the plugin IS the prompt-injection — no per-project AGENTS.md needed.
 
 ```json
 {
   "name": "planview",
-  "skills": ["SKILL.md"],
+  "version": "0.3.0",
+  "description": "Materialize multi-unit plans …"
+}
+```
+
+The hook in `.claude/settings.json`:
+
+```json
+{
   "hooks": {
     "PreToolUse": [
       {
         "matcher": "ExitPlanMode",
-        "hooks": [
-          { "type": "command", "command": "planview hook || true" }
-        ]
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PLUGIN_ROOT/dist/cli.js\" hook" }]
       }
     ]
   }
 }
 ```
 
-The `|| true` ensures the hook command always exits 0 at the shell level, even if the binary crashes. The binary itself also always exits 0 internally.
+`$CLAUDE_PLUGIN_ROOT` expands to the plugin install path, so no `planview` binary needs to be on `$PATH`. The bundle always exits 0 internally — there is no `|| true` shell guard, since a non-zero exit from `dist/cli.js` would indicate a bug we want to surface, not silently swallow. Hook errors land on stderr via the run() wrapper.
 
 ## Hook Integration
 
@@ -344,61 +430,55 @@ PostToolUse is structurally incompatible with "review before approval."
 
 PreToolUse fires before the user sees the approval dialog:
 
-1. Agent writes plan to `~/.claude/plans/<name>.md`
-2. Agent calls ExitPlanMode
-3. **>> PreToolUse hook fires** (synchronous, blocks until complete)
-4. Hook reads plan file from disk
-5. Hook reads topology from `/tmp/planview-{session_id}.json`
-6. Hook renders combined HTML, opens browser
-7. User sees ExitPlanMode approval dialog in CLI
-8. User reviews combined plan+diagram in browser while deciding
-9. User approves or rejects
-
-### Plan Resolution
-
-PreToolUse has no `tool_response` (the tool hasn't run yet). The hook scans `~/.claude/plans/` for the most recently modified `.md` file and reads it directly from disk.
-
-This is reliable because PreToolUse hooks fire synchronously — the agent writes the plan file and calls ExitPlanMode in the same response. No other processing happens between file write and hook read.
+1. Agent (in plan mode) crystallizes a plan, runs `/planview`
+2. Skill returns plan markdown to the main agent
+3. Main agent calls `ExitPlanMode` with the markdown as the `plan` argument
+4. **>> PreToolUse hook fires** (synchronous, blocks until complete)
+5. Hook reads stdin, pulls the markdown out of `tool_input.plan`, parses + validates it
+6. Hook materializes `<project>/<plan_dir_root>/<YYMMDD-N-slug>/`
+7. Hook renders `overview.html` and opens it in the browser (when configured)
+8. User sees ExitPlanMode approval dialog in CLI
+9. User reviews the materialized plan + units in browser while deciding
+10. User approves or rejects
 
 ### Hook Flow
 
 ```
-Hook receives stdin JSON: { "session_id": "...", "tool_name": "ExitPlanMode", "tool_input": {} }
+Hook receives stdin JSON: { "session_id": "...", "tool_name": "ExitPlanMode", "tool_input": { "plan": "..." } }
   |
-  +-- Extract session_id
-  +-- Check /tmp/planview-{session_id}.json exists
+  +-- Validate session_id (path-safe)
   |
-  +- [topology exists]
-  |   +-- Read topology JSON -> validate -> generate mermaid + description
-  |   +-- Scan ~/.claude/plans/ for most recently modified .md
-  |   +-- Generate combined plan+diagram HTML -> open browser
-  |   +-- Exit 0
+  +- [tool_input.plan is missing or whitespace-only]
+  |   +-- exit 0 silently (no deny, no plan dir)
   |
-  +- [topology missing]
-      +-- PLANVIEW_NO_AUTO set? -> exit 0 (opt-out)
-      +-- Marker file exists with attempts >= 3? -> exit 0 (give up)
-      +-- Write marker (increment attempt count) -> deny via hookSpecificOutput -> exit 0
+  +- [tool_input.plan is non-empty]
+      +-- parse_plan_markdown -> error? -> deny with parser reason -> exit 0
+      +-- validate_plan       -> errors? -> deny with reasons      -> exit 0
+      +-- resolve_target_dir
+      +-- target dir already exists? -> deny "Plan dir <path> already exists" -> exit 0
+      +-- stage in <plansRoot>/.planview-stage-<sessionId>/
+      +-- materialize_at + (optional) write_plan_html
+      +-- atomic rename staging -> target ; cleanup staging on any failure
+      +-- open browser (only if cfg.auto_open_browser && !PLANVIEW_NO_OPEN) -> exit 0
 ```
 
-### Auto-Invoke via Deny
+There is no marker file, deny-loop, or `hook_behavior` knob — `ExitPlanMode` + `PreToolUse` shipped in Claude Code v2.1.85 (2026-03-26), four days after this project started; the original `/tmp/planview-{session_id}.json` ferry was forced by that timing and is now obsolete. The hook either has the markdown or it doesn't; if it doesn't, it stays out of the way.
 
-Hooks are deterministic shell processes — they can gate (allow/deny) but can't invoke skills or call the LLM. The only way a hook can trigger LLM work is to deny the tool call with an instruction in the reason string:
+### Deny payloads
+
+When parsing or validation fails, the hook returns:
 
 ```json
 {
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "permissionDecision": "deny",
-    "permissionDecisionReason": "BLOCKED: You must run /planview with a summary of your plan before exiting plan mode. After /planview completes, you MUST call ExitPlanMode again to finish."
+    "permissionDecisionReason": "Plan validation failed: ..."
   }
 }
 ```
 
-The agent sees the deny, follows the instruction (runs `/planview`), and retries ExitPlanMode.
-
-### Infinite Loop Prevention
-
-A marker file (`/tmp/planview-{session_id}.attempted`) tracks how many times the hook has denied. After 3 attempts, the hook silently falls through (exits 0 without denying). This prevents infinite denial loops if the skill fails repeatedly.
+The agent sees the deny with the specific reason and can fix the plan + retry ExitPlanMode. Validation-error denies, parse-error denies, and "target dir exists" denies all use specific messages so the agent has actionable context.
 
 ### Critical: Always Exit 0
 
@@ -411,12 +491,12 @@ PreToolUse hooks block the tool if they return a non-zero exit code. The hook mu
 | Produce-only, no execution | The topology is a composable output. Users incorporate it into their existing workflows rather than being locked into a closed pipeline. |
 | `context: fork` for planning | Planning context stays in the forked subagent. Main agent only sees the returned JSON. No context window pollution. |
 | Skill + renderer split | LLM handles judgment (decomposition); renderer handles deterministic work (diagrams, HTML). Zero tokens spent on rendering. |
-| JSON as contract | Single boundary between skill and renderer. Both sides validate independently. Changes to one side don't break the other. |
+| Markdown as contract | Single boundary between skill and renderer. Skill emits `# Title` + `## Unit NN:` + bodies + optional ```` ```topology ```` fences; renderer parses, validates, materializes. Both sides validate independently. ExitPlanMode's `plan` arg + PreToolUse stdin carry the contract end-to-end with no temp file in between. |
 | Subagents = per-phase graphs | Each graph represents a real dispatch round. The diagram structure matches the actual execution model. |
 | Team = single graph | The team is one communication boundary. Phasing is shown through arrows, not separate graphs. Agents persist across phases. |
 | Topology overview derived, not authored | Computed from JSON via topological sort. Always consistent with the graph — can't drift. |
 | One-shot skill, caller-driven iteration | `AskUserQuestion` doesn't surface inside forks. Skill generates and returns; caller handles adjust loop. Each adjustment is a full regeneration — no state to preserve. |
-| Rust compile to single binary | No runtime dependencies for end users. |
+| Single bundled Node entrypoint | esbuild produces a self-contained `dist/cli.js`; runtime deps (`commander`, `zod`, `eta`) are inlined. End users only need Node ≥ 20. |
 | Mermaid via CDN | Simplest browser visualization for V1. Renderer internals are replaceable without changing the skill. |
 | Arrows = dispatch, rectangle = communication | Arrows show data flow and execution order (same for both modes). Rectangles show communication boundaries. Separates execution order from communication scope. |
 | Nested agents are regular nodes | Same shape regardless of nesting. Nesting shown by arrows, not containers. Keeps visual language simple: node = agent, arrow = flow, rectangle = communication. |
@@ -429,32 +509,39 @@ Deferred per [research/cli-vs-mcp.md](../research/cli-vs-mcp.md). The CLI binary
 
 ## Rendering Backend
 
-Mermaid via CDN — the only evaluated option with native stadium/pill and double circle shapes matching planview's visual language. The renderer architecture is swappable — `mermaid.rs` can be replaced with `graphviz.rs` without changing any other pipeline stage (validate, graph, describe, html shell). Graphviz WASM (778 KB, gold-standard layout) is the strongest alternative if Mermaid limitations become blocking. See [research/diagram-rendering.md](../research/diagram-rendering.md) for the full evaluation.
+Mermaid via CDN — the only evaluated option with native stadium/pill and double circle shapes matching planview's visual language. The renderer architecture is swappable — `ts/mermaid.ts` can be replaced with a `ts/graphviz.ts` without changing any other pipeline stage (validate, graph, describe, html shell). Graphviz WASM (778 KB, gold-standard layout) is the strongest alternative if Mermaid limitations become blocking. See [research/diagram-rendering.md](../research/diagram-rendering.md) for the full evaluation.
 
 ## Development Setup
 
 ### Building
 
 ```bash
-cargo build --release
+npm install
+npm run build      # generate assets + bundle ts/cli.ts -> dist/cli.js
+npm test           # vitest run
+npm run typecheck  # tsc --noEmit
 ```
 
-### Making the binary available
+The bundled `dist/cli.js` is committed; rebuild after editing anything in `ts/` or `static/`. Requires Node ≥ 20.
 
-Symlink the release binary into `~/.local/bin` so the `planview` command is available system-wide without reinstalling after each build:
+### Making the binary available (optional)
+
+For standalone CLI use outside the plugin, symlink the bundled entrypoint into `~/.local/bin`:
 
 ```bash
-ln -sf "$(pwd)/target/release/planview" ~/.local/bin/planview
+ln -sf "$(pwd)/dist/cli.js" ~/.local/bin/planview
 ```
 
-This is a one-time setup. Subsequent `cargo build --release` runs overwrite the binary in place — the symlink picks up the new version automatically.
+`dist/cli.js` carries a `#!/usr/bin/env node` shebang and is chmod 755, so the symlink is executable directly. Subsequent `npm run build` runs overwrite the file in place — the symlink picks up the new version automatically.
 
 > **Prerequisite:** `~/.local/bin` must be on your `$PATH`. Most shells include it by default. If not, add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile.
 
+When the plugin is enabled in Claude Code, the hook calls the bundle directly via `node "$CLAUDE_PLUGIN_ROOT/dist/cli.js" hook`, so no symlink is needed for the plugin path.
+
 ## Platform Constraints
 
-- **macOS only for V1:** uses `open` for browser launch (code has `win32: "start"` and fallback `xdg-open` but untested)
-- **Rust required:** cargo for build/test/compile, single binary via `cargo build --release`
-- **No LLM calls in renderer:** the renderer is deterministic I/O only
-- **Session-scoped temp files:** `/tmp/planview-{session_id}.json` prevents collisions between concurrent Claude Code sessions
-- **Plans directory:** `~/.claude/plans/` is a Claude Code internal, may change (configurable via `CLAUDE_PLANS_DIR`)
+- **macOS first:** uses `open` for browser launch (code has `win32: "start"` and fallback `xdg-open` but untested). `today_yymmdd_local()` shells out to `date(1)`, which is GNU/BSD-compatible but not on Windows.
+- **Node ≥ 20 required:** TypeScript source in `ts/`, bundled to `dist/cli.js` via esbuild (`commander`, `zod`, `eta` inlined). `npm run build` rebuilds the bundle, `npm test` runs vitest, `npm run typecheck` runs `tsc --noEmit`.
+- **No LLM calls in renderer:** the renderer is deterministic I/O only.
+- **Session-scoped staging dir:** the hook stages writes in `<plansRoot>/.planview-stage-<sessionId>/` and renames on success. Concurrent hook invocations from different sessions don't collide; identical session_ids would (extremely unlikely under Claude Code).
+- **Project-scoped plan dirs:** `<project>/<plan_dir_root>/` (default `plan/`). `$CLAUDE_PROJECT_DIR` is the source of truth (PWD fallback with stderr warning when unset).

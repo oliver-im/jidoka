@@ -1,0 +1,14 @@
+{
+  "task_summary": "Bump version and tidy README",
+  "slug": "tidy-readme",
+  "units": [
+    {
+      "id": "01-tidy",
+      "title": "Tidy",
+      "summary": "Bump cargo version and rewrite the README intro.",
+      "blocked_by": [],
+      "review_steps": ["/code-review:code-review"],
+      "body_markdown": "## Tasks\n\nBump Cargo.toml; rewrite README intro.\n\n## Acceptance\n\n- README intro is one paragraph.\n"
+    }
+  ]
+}

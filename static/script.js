@@ -107,6 +107,27 @@
     container.innerHTML = DOMPurify.sanitize(rawHtml);
   }
 
+  function renderMarkdownInto(el, source) {
+    if (!el || !source) return;
+    if (typeof marked === "undefined" || typeof DOMPurify === "undefined") {
+      el.textContent = source;
+      return;
+    }
+    el.innerHTML = DOMPurify.sanitize(marked.parse(source));
+  }
+
+  function initPlanViewRendering() {
+    if (typeof window.__overviewMarkdown !== "undefined") {
+      renderMarkdownInto(document.getElementById("overview-md"), window.__overviewMarkdown);
+    }
+    if (Array.isArray(window.__unitBodies)) {
+      window.__unitBodies.forEach(function (body, i) {
+        var el = document.querySelector('.unit-body[data-key="' + i + '"]');
+        renderMarkdownInto(el, body);
+      });
+    }
+  }
+
   function restoreTheme() {
     var saved = localStorage.getItem("planview-theme");
     if (saved) {
@@ -116,6 +137,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     restoreTheme();
+    initPlanViewRendering();
     preserveMermaidSource();
     initMermaid();
     initThemeToggle();

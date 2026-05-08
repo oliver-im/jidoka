@@ -1,0 +1,31 @@
+{
+  "task_summary": "Sequential refactor",
+  "slug": "sequential-refactor",
+  "units": [
+    {
+      "id": "01-types",
+      "title": "Add types",
+      "summary": "Introduce the new types.",
+      "blocked_by": [],
+      "review_steps": ["/code-review:code-review"],
+      "body_markdown": "Body."
+    },
+    {
+      "id": "02-validate",
+      "title": "Validate",
+      "summary": "Add validation.",
+      "blocked_by": ["01-types"],
+      "agents_involved": ["main"],
+      "review_steps": ["/code-review:code-review", "agent-cli"],
+      "body_markdown": "Body."
+    },
+    {
+      "id": "03-render",
+      "title": "Render",
+      "summary": "Render output.",
+      "blocked_by": ["02-validate"],
+      "review_steps": ["/code-review:code-review"],
+      "body_markdown": "Body."
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "task_summary": "Plan with a multi-agent unit",
+  "slug": "multi-agent-unit",
+  "units": [
+    {
+      "id": "01-prep",
+      "title": "Prep",
+      "summary": "Single-agent prep step.",
+      "blocked_by": [],
+      "review_steps": ["/code-review:code-review"],
+      "body_markdown": "Body."
+    },
+    {
+      "id": "02-team-build",
+      "title": "Team build",
+      "summary": "Dispatch a team to build the feature.",
+      "blocked_by": ["01-prep"],
+      "agents_involved": ["frontend", "backend", "integrator"],
+      "review_steps": ["/code-review:code-review", "agent-cli"],
+      "body_markdown": "## Tasks\n\nDispatch the team.\n",
+      "topology": {
+        "task_summary": "Coordinate a team refactor",
+        "execution_mode": "team",
+        "agents": [
+          {
+            "id": "frontend",
+            "role": "Update React components",
+            "model": "sonnet",
+            "tools": ["Read", "Write"],
+            "blocked_by": [],
+            "background": false,
+            "produces": "updated UI"
+          },
+          {
+            "id": "backend",
+            "role": "Update API endpoints",
+            "model": "sonnet",
+            "tools": ["Read", "Write"],
+            "blocked_by": [],
+            "background": false,
+            "produces": "updated API"
+          },
+          {
+            "id": "integrator",
+            "role": "Integration testing",
+            "model": "opus",
+            "tools": ["Read", "Bash"],
+            "blocked_by": ["frontend", "backend"],
+            "background": false
+          }
+        ]
+      }
+    }
+  ]
+}

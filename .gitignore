@@ -1,1 +1,2 @@
-/target
+/node_modules
+/ts/assets.generated.ts

@@ -1,41 +1,41 @@
 # planview
 
-A Claude Code plugin that enhances plan mode with multi-agent topology diagrams. When you're planning a complex task that needs multiple agents, this tool decomposes the task into agents with roles, models, tools, and dependencies, then renders a visual diagram in the browser for review before execution begins.
+A Claude Code plugin that materializes plan-mode output as a structured directory of markdown files (`plan/<YYMMDD-N-slug>/` with `overview.md`, `progress.md`, and per-unit `0N-*.md`). HTML rendering is opt-in via config. When a unit dispatches multiple agents, an optional per-unit topology is embedded as a Mermaid diagram.
 
 ### The Problem
 
-Multi-agent topology is invisible in Claude Code. The main agent decides how to decompose a task into subagents or teams — how many agents, what roles, what dependencies, what order — but you never see that structure before it starts running and consuming tokens. There's no pre-execution review for multi-agent flow.
-
-Plan mode gives you approval before execution, but the plan is written to a random file in `~/.claude/plans/` and viewed in the terminal, which isn't ideal for long-form text review.
+Plan mode gives you approval before execution, but the plan lands in a random file under `~/.claude/plans/` and is reviewed in the terminal — fine for small tasks, painful for multi-step work that benefits from a directory of reviewable units. Separately, multi-agent topology is invisible: the main agent decides how to decompose a task into subagents or teams, but you never see that structure before it starts consuming tokens.
 
 ### What planview Does
 
-1. Decomposes a task into a topology JSON (agents, roles, models, tools, dependencies)
-2. Renders the topology as a Mermaid diagram with a human-readable overview
-3. Hooks into ExitPlanMode to show a combined plan+diagram HTML page in the browser
-4. If no topology exists when ExitPlanMode fires, auto-invokes by denying the tool call and instructing the agent to run `/planview` first
+1. **Plan-mode dir materialization (primary):** the ExitPlanMode hook reads the plan markdown straight out of `tool_input.plan` (PreToolUse stdin), parses it, validates it, and writes `overview.md` + `progress.md` + `0N-<unit-slug>.md` files into `<plan_dir_root>/<YYMMDD-N-slug>/` (default `plan/`). `overview.html` and the browser pop are opt-in via config.
+2. **Per-unit topology (optional):** when a unit body contains a ` ```topology ` fenced JSON block, it's extracted, validated, and rendered as a Mermaid diagram inside the unit md (and HTML if enabled) — showing roles, models, tools, and dependencies.
+3. **Silent on empty/missing plan:** if `tool_input.plan` is empty, the hook exits 0 without doing anything. Parse or validation failure surfaces a deny payload with the reason so the agent can fix it and retry.
 
 ## Installation
 
 ### Build
 
 ```bash
-cargo build --release
+npm install
+npm run build
 ```
 
-The binary is at `target/release/planview`.
+The bundled CLI lands at `dist/cli.js` (committed). Requires Node ≥ 20.
 
-### Add to PATH
+### Use as a Claude Code plugin (recommended)
+
+Enabling the plugin auto-loads `.claude/skills/` and `.claude/settings.json`. The ExitPlanMode hook invokes the bundled CLI via `$CLAUDE_PLUGIN_ROOT/dist/cli.js` — no PATH setup needed.
+
+### Standalone CLI (optional)
+
+To run the topology renderer outside the plugin (e.g. `echo '<topology>' | planview` for one-off diagrams), symlink the bundled CLI:
 
 ```bash
-# Option A: symlink
-ln -sf "$(pwd)/target/release/planview" /usr/local/bin/planview
-
-# Option B: copy
-cp target/release/planview /usr/local/bin/planview
+ln -sf "$(pwd)/dist/cli.js" /usr/local/bin/planview
 ```
 
-### Verify
+Verify:
 
 ```bash
 planview --version
@@ -44,9 +44,7 @@ planview --example    # opens a showcase diagram in the browser
 
 ### Hook Setup
 
-The repository includes `.claude/settings.json` with the PreToolUse hook already configured. If you clone this repo, the hook works automatically.
-
-To add the hook to a different project, add this to that project's `.claude/settings.json`:
+The repository's `.claude/settings.json` already wires the PreToolUse hook. To add the hook to a project that doesn't use the plugin, add this to that project's `.claude/settings.json`:
 
 ```json
 {
@@ -55,7 +53,7 @@ To add the hook to a different project, add this to that project's `.claude/sett
       {
         "matcher": "ExitPlanMode",
         "hooks": [
-          { "type": "command", "command": "planview hook || true" }
+          { "type": "command", "command": "node \"$CLAUDE_PLUGIN_ROOT/dist/cli.js\" hook" }
         ]
       }
     ]
@@ -67,11 +65,35 @@ To add the hook to a different project, add this to that project's `.claude/sett
 
 | Variable | Effect |
 |---|---|
-| `PLANVIEW_NO_OPEN` | Don't open the browser (just write HTML and print path) |
-| `PLANVIEW_NO_AUTO` | Don't auto-invoke (hook silently exits when no topology file exists) |
-| `CLAUDE_PLANS_DIR` | Override default `~/.claude/plans` location |
-| `CLAUDE_SESSION_ID` | Used by the skill to namespace temp files |
-| `TMPDIR` | Override default `/tmp` for HTML output |
+| `PLANVIEW_NO_OPEN` | Don't open the browser (just write the HTML and print the path) |
+| `CLAUDE_PROJECT_DIR` | Project root used to resolve `<project>/<plan_dir_root>/`. PWD fallback with a stderr warning when unset. |
+| `TMPDIR` | Override default `/tmp` for the topology renderer's HTML output |
+
+## Configuration
+
+planview reads a layered config: built-in defaults < `~/.claude/plugins/planview/config.json` (global) < `<project>/.planview.json` (project).
+
+| Key | Default | Project-overridable? | What it does |
+|---|---|---|---|
+| `plan_dir_root` | `plan` | ✓ (relative paths only) | Where plan dirs land, resolved against the project root. |
+| `auto_open_browser` | `false` | ✓ | Open `overview.html` in the browser after materialize. |
+| `html_output` | `false` | ✓ | Render `overview.html` alongside the markdown files. |
+| `plan_level_topology` | `false` | — | Reserved for v2; currently always false. |
+
+Defaults assume "files-on-disk is the value, the browser is opt-in" — most users view plan dirs in their editor (Obsidian, VS Code, iA Writer). Flip `auto_open_browser=true` and/or `html_output=true` if you want the rendered HTML view too.
+
+### Optional: shared daily counter
+
+If `<plan_dir_root>` has siblings named `research/`, `backlog/`, or `done/plan/` at the same parent, planview shares the daily counter `N` across them so identifiers like `260505-2-foo` are unambiguous across note types. This is purely opportunistic — the scan runs unconditionally and is harmless when those siblings don't exist (the counter just resets per day per plan dir).
+
+### Setup wizard
+
+To set or change config interactively:
+
+- Tell Claude Code "**set up planview**" — invokes the `planview:setup` skill, walks all knobs with Q&A, and writes the global config file.
+- Tell Claude Code "**change planview settings**" — invokes the `planview:configure` skill, which diff-edits the existing config and preserves any manually added keys.
+
+Both skills run outside the planning fork (so `AskUserQuestion` works there).
 
 ## Documentation
 
@@ -86,21 +108,31 @@ To add the hook to a different project, add this to that project's `.claude/sett
 ### Full Plan Mode Flow
 
 1. User enters plan mode with a task
-2. Claude explores the codebase, asks clarifying questions, writes the plan
-3. Plan crystallizes — Claude sees it needs multiple agents
-4. Claude invokes `/planview` from within plan mode
-5. The forked subagent generates the topology, saves JSON, returns it
-6. User reviews the topology — if adjustments needed, tells the main agent
-7. Main agent re-invokes `/planview` with adjustments (repeat until satisfied)
-8. The topology is incorporated into the plan
-9. Claude calls ExitPlanMode → PreToolUse hook fires, renders combined plan+diagram
-10. User reviews the combined page alongside the approval dialog in the CLI
-11. User approves or rejects → execution begins with the full picture
+2. Claude explores the codebase, asks clarifying questions, drafts the plan
+3. Claude invokes `/planview` from within plan mode
+4. The forked subagent decomposes the work into units, optionally attaches a ` ```topology ` fenced block to any unit that dispatches multiple agents, returns the plan markdown to the caller
+5. User reviews the proposed plan — if adjustments needed, tells the main agent
+6. Main agent re-invokes `/planview` with adjustments (repeat until satisfied)
+7. Main agent calls `ExitPlanMode` with the markdown as the `plan` argument → PreToolUse hook reads `tool_input.plan`, materializes `<plan_dir_root>/<YYMMDD-N-slug>/` (and renders/opens `overview.html` if those config knobs are on)
+8. User reviews the rendered plan alongside the approval dialog in the CLI
+9. User approves or rejects → execution begins from the materialized unit files
 
-### Standalone Flow
+### Direct Topology Rendering (advanced)
+
+The `/planview` slash command emits a plan markdown, not a bare topology. If you have a topology JSON in hand and want to render it on its own (for testing, exploration, or one-off diagrams), the standalone CLI still accepts topology input:
 
 ```
-/planview --open <task description>
+echo '<topology-json>' | planview
+planview <topology.json>
+planview --example          # built-in showcase
 ```
 
-Generates topology and immediately opens the browser diagram.
+This path writes a single HTML to `$TMPDIR` and opens the browser. It does not materialize a plan dir and is unaffected by the hook.
+
+### Materialize a plan markdown without ExitPlanMode
+
+```
+planview materialize <plan.md>            # parses markdown, writes plan dir
+planview materialize - < plan.md          # same, via stdin
+planview materialize <legacy-plan.json>   # legacy Plan JSON still accepted (auto-detected)
+```

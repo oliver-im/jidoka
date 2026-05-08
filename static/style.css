@@ -343,3 +343,236 @@ pre.mermaid {
     gap: 1rem;
   }
 }
+
+/* ── Plan view ── */
+body.plan {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.plan-main {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 1.5rem;
+  padding: 1.5rem;
+  align-items: start;
+}
+
+.plan-toc {
+  position: sticky;
+  top: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  font-size: 0.875rem;
+}
+
+.plan-toc h2 {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.plan-toc ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.plan-toc a {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+}
+
+.plan-toc a:hover {
+  background: var(--header-bg);
+  color: var(--text);
+}
+
+.plan-toc .unit-prefix {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.plan-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.plan-overview-card,
+.unit-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+}
+
+.plan-overview-card h2,
+.unit-header h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.unit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.chip {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-secondary);
+}
+
+.chip-blocked-by {
+  font-variant-numeric: tabular-nums;
+}
+
+.chip-topology {
+  background: var(--haiku-fill);
+  border-color: var(--haiku-stroke);
+  color: var(--haiku-stroke);
+}
+
+.unit-summary {
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+}
+
+.markdown-body {
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+  margin-top: 0.9rem;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+}
+
+.markdown-body h1 { font-size: 1.05rem; }
+.markdown-body h2 { font-size: 0.98rem; }
+.markdown-body h3 { font-size: 0.92rem; }
+
+.markdown-body p {
+  margin-bottom: 0.5rem;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.4rem 0 0.6rem 1.25rem;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+
+.markdown-body code {
+  background: var(--code-bg);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+.markdown-body pre {
+  background: var(--code-bg);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.unit-card .diagram-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.unit-review {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border);
+}
+
+.unit-review h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+}
+
+.unit-review ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.unit-review li::before {
+  content: "▢ ";
+  color: var(--text-secondary);
+  margin-right: 0.25rem;
+}
+
+.unit-review code {
+  background: var(--code-bg);
+  padding: 0.05rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+.unit-footer {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.unit-footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.unit-footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  .plan-main {
+    grid-template-columns: 1fr;
+  }
+  .plan-toc {
+    position: static;
+  }
+}
+

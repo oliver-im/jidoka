@@ -1,0 +1,14 @@
+{
+  "task_summary": "Plan with a bad slug",
+  "slug": "Bad Slug",
+  "units": [
+    {
+      "id": "01-x",
+      "title": "X",
+      "summary": "Do x.",
+      "blocked_by": [],
+      "review_steps": [],
+      "body_markdown": ""
+    }
+  ]
+}

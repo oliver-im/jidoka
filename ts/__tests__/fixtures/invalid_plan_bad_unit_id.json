@@ -1,0 +1,14 @@
+{
+  "task_summary": "Plan with malformed unit id",
+  "slug": "bad-unit-id",
+  "units": [
+    {
+      "id": "1-foo",
+      "title": "Foo",
+      "summary": "Do foo.",
+      "blocked_by": [],
+      "review_steps": [],
+      "body_markdown": ""
+    }
+  ]
+}

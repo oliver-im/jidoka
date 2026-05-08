@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plan: {{ title }}</title>
+  <style>{{ css }}</style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
+</head>
+<body class="plan">
+  <header>
+    <h1>Plan: {{ title }}</h1>
+    <div class="header-meta">
+      <span class="mode-badge">{{ unit_count }} unit{{ unit_count_suffix }}{% if topology_count > 0 %} · {{ topology_count }} with topology{% endif %}</span>
+      <div class="header-actions">
+        <button id="theme-toggle" type="button" title="Toggle dark mode">
+          <span class="icon-light">&#9788;</span>
+          <span class="icon-dark">&#9790;</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="plan-main">
+    <aside class="plan-toc">
+      <h2>Units</h2>
+      <ul>
+        {% for unit in units %}
+        <li><a href="#{{ unit.anchor }}"><span class="unit-prefix">{{ unit.prefix }}</span> {{ unit.title }}</a></li>
+        {% endfor %}
+      </ul>
+    </aside>
+
+    <section class="plan-content">
+      <article class="plan-overview-card" id="overview">
+        <h2>Overview</h2>
+        <div id="overview-md" class="markdown-body"></div>
+      </article>
+
+      {% for unit in units %}
+      <article class="unit-card" id="{{ unit.anchor }}">
+        <header class="unit-header">
+          <h2>Unit {{ unit.prefix }} — {{ unit.title }}</h2>
+          <div class="unit-chips">
+            <span class="chip chip-blocked-by">Blocked by: {{ unit.blocked_by_label }}</span>
+            <span class="chip chip-agents">{{ unit.agents_label }}</span>
+            {% if unit.has_topology %}
+            <span class="chip chip-topology">topology</span>
+            {% endif %}
+          </div>
+        </header>
+
+        <p class="unit-summary">{{ unit.summary }}</p>
+
+        <div class="unit-body markdown-body" data-key="{{ unit.index }}"></div>
+
+        {% for graph in unit.mermaid_graphs %}
+        <div class="diagram-block">
+          <pre class="mermaid">{{ graph }}</pre>
+        </div>
+        {% endfor %}
+
+        {% if !unit.review_steps.is_empty() %}
+        <div class="unit-review">
+          <h3>Review</h3>
+          <ul>
+            {% for step in unit.review_steps %}
+            <li><code>{{ step }}</code></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="unit-footer"><a href="#overview">↑ overview</a></div>
+      </article>
+      {% endfor %}
+    </section>
+  </main>
+
+  <script>
+    window.__overviewMarkdown = {{ overview_markdown_json }};
+    window.__unitBodies = {{ unit_bodies_json }};
+  </script>
+  <script>{{ js }}</script>
+</body>
+</html>

@@ -1,166 +1,181 @@
 ---
 name: planview
-description: Visualize multi-agent task decomposition as Mermaid diagrams. Use when a task requires multiple agents and you need to plan the topology before execution begins. In plan mode, always run /planview before calling ExitPlanMode.
+description: Decompose a multi-step task into reviewable units and emit a plan markdown that the ExitPlanMode hook materializes as a directory under <plan_dir_root>/ (default `plan/`). Use in plan mode before ExitPlanMode. When the plan crystallizes, structure it as explicit units (## Unit 01: <title>, ## Unit 02: <title>, …) so each unit is reviewable on its own and finishable in one session.
 allowed-tools: Read, Grep, Glob, Bash
+user-invocable: false
 ---
 
 # planview
 
-You produce topology JSON. The renderer handles everything else — validation, diagrams, HTML, browser. Your job is to analyze the task, decompose it into agents, and output conforming JSON.
+You produce a **plan markdown** for the caller. The renderer (the ExitPlanMode hook) handles validation, materialization (writing `overview.md` + `progress.md` + per-unit md files), HTML rendering, and browser launch. Your job is to analyze the task, decompose it into units, and output conforming markdown.
+
+A unit may carry an optional **topology** fence when it dispatches multiple agents in a meaningful structure. Most units have no topology fence.
 
 ## Process
 
-### Step 1: Analyze and Produce Topology
+### Step 1: Analyze and produce a plan
 
-Read the codebase using Read, Grep, Glob, then decompose the task into a topology JSON conforming to the schema below.
+Read the codebase using Read, Grep, Glob, then decompose the task into the markdown shape below.
 
-### Step 2: Save and Render
+### Step 2: Return the markdown
 
-Save the topology JSON to `/tmp/planview-${CLAUDE_SESSION_ID}.json`.
+Output the complete plan markdown in a single ` ```markdown ` fence so the caller can copy-paste it into ExitPlanMode's `plan` argument. The caller (main agent) decides what to do — typically reviews and either accepts (calls ExitPlanMode) or re-invokes you with adjustments.
 
-- If `--open` is in the original arguments: pipe JSON to the renderer binary for immediate browser display
-- If `--open` is NOT present: save JSON only (the ExitPlanMode hook renders later)
+You do **not** save the markdown anywhere. The hook reads it directly from PreToolUse stdin's `tool_input.plan` field when ExitPlanMode fires; nothing else needs to mediate.
 
-If the renderer fails, log the error but don't abort.
+## Markdown shape
 
-Append a `## Topology` section to the active plan file with the JSON path:
 ```
-## Topology
-`/tmp/planview-${CLAUDE_SESSION_ID}.json`
-```
+# <task summary>
 
-### Step 3: Return the Topology
+## Unit 01: <title>
 
-Output the complete JSON in a code fence. The caller decides what to do with it.
+<one or two sentences — what this unit accomplishes>
 
-## Data Model
+<rest of the body — Tasks, Acceptance, Notes, etc.>
 
-```typescript
-interface Agent {
-  id: string;                              // unique, [a-zA-Z0-9_-]+ only
-  role: string;                            // what this agent does
-  model: "haiku" | "sonnet" | "opus";      // model selection
-  tools: string[];                         // tools available to this agent
-  blocked_by: string[];                    // agent IDs that must complete first
-  background: boolean;                     // subagent mode only: fire-and-forget
-  output: "inline" | { file: string };     // where agent writes output (default: "inline")
-  produces?: string;                       // human description of output (2-5 words)
-  execution_mode?: "team" | "subagents";   // set when agent dispatches sub-agents
-  agents?: Agent[];                        // nested sub-agents (recursive)
-}
+## Unit 02: <title>
 
-interface Topology {
-  task_summary: string;                    // one-line task description
-  execution_mode: "team" | "subagents";    // top-level orchestration mode
-  agents: Agent[];                         // the agents in this topology
-}
+<summary>
+
+<body>
+
+...
 ```
 
-### JSON Schema
+The `# Title` H1 (exactly one `#`, followed by a space) is the task summary, used to derive the plan slug. Always emit a `# Title` H1 above any `## Unit NN:` heading — if a `## Unit NN:` line appears before the H1 the parser rejects the plan. (Fallback: if no H1 is present, the first non-blank line of leading prose is taken as the title — fine for hand-written drafts but not what you should emit.)
 
-```json
+Each `## Unit NN: <title>` heading starts a new unit; the first paragraph after the heading is the unit summary, the rest is the body.
+
+Tolerated heading variants (the parser canonicalizes them — pick whichever reads best):
+
+```
+## Unit 1: Foo            single-digit number
+## Step 01: Foo           "Step" instead of "Unit"
+## 01: Foo                bare number, colon
+## 01. Foo                bare number, period
+## 01 - Foo               bare number, hyphen
+## 01 — Foo               bare number, em-dash
+```
+
+### Per-unit topology fence
+
+When a unit dispatches multiple agents, embed a topology JSON in a fenced block whose info string is exactly `topology`:
+
+````markdown
+## Unit 03: Parallel review
+
+Two reviewers run concurrently against the same diff.
+
+```topology
 {
-  "task_summary": "string",
-  "execution_mode": "team | subagents",
+  "task_summary": "Parallel review",
+  "execution_mode": "subagents",
   "agents": [
     {
-      "id": "string",
-      "role": "string",
-      "model": "haiku | sonnet | opus",
-      "tools": ["string"],
-      "blocked_by": ["string"],
-      "background": false,
-      "output": "inline | { \"file\": \"path\" }",
-      "produces": "string (optional)",
-      "execution_mode": "team | subagents (optional)",
-      "agents": ["Agent[] (optional, recursive)"]
+      "id": "reviewer-a",
+      "role": "Reviews CLAUDE.md compliance",
+      "model": "sonnet",
+      "tools": ["Read", "Grep"],
+      "blocked_by": [],
+      "background": false
+    },
+    {
+      "id": "reviewer-b",
+      "role": "Reviews for security issues",
+      "model": "sonnet",
+      "tools": ["Read", "Grep"],
+      "blocked_by": [],
+      "background": false
     }
   ]
 }
 ```
 
-### Field Semantics
+Acceptance: both reviewers post findings to the parent agent.
+````
 
-| Field | Type | Description |
-|---|---|---|
-| `task_summary` | `string` | One-line description of the overall task |
-| `execution_mode` | `"team" \| "subagents"` | How agents are orchestrated at the top level |
-| `agents` | `Agent[]` | The agents in this topology |
-| `id` | `string` | Unique identifier. `[a-zA-Z0-9_-]+` only. |
-| `role` | `string` | What this agent does |
-| `model` | `"haiku" \| "sonnet" \| "opus"` | Model selection |
-| `tools` | `string[]` | Tools available to this agent |
-| `blocked_by` | `string[]` | Agent IDs that must complete before this one starts |
-| `background` | `boolean` | Subagent mode only. `true` = fire-and-forget |
-| `output` | `"inline" \| { file: string }` | Where the agent writes output. Default: `"inline"`. |
-| `produces` | `string?` | Human description of what this agent outputs (2-5 words) |
-| `execution_mode` | `string?` | Set when this agent dispatches its own sub-agents |
-| `agents` | `Agent[]?` | Nested sub-agents (recursive structure) |
+The parser extracts and validates the JSON, attaches it to the unit, and strips the fence from the body so the renderer doesn't draw the graph twice. Use one fence per unit at most.
 
-## Execution Modes
+## Topology shape
 
-### Subagents (default)
+```typescript
+interface Topology {
+  task_summary: string;            // informational when nested under a Unit
+  execution_mode: "team" | "subagents";
+  agents: Agent[];
+}
 
-Main agent dispatches focused subtasks in rounds. Each round dispatches all unblocked agents in parallel, waits for completion, then dispatches the next batch. Each round is a phase. Agents don't communicate with each other — all data flows through the main agent (hub-and-spoke).
+interface Agent {
+  id: string;                      // ^[a-zA-Z0-9_-]+$
+  role: string;
+  model: "haiku" | "sonnet" | "opus";
+  tools: string[];
+  blocked_by: string[];
+  background: boolean;
+  output?: "inline" | { file: string };  // default "inline"
+  produces?: string;
+  execution_mode?: "team" | "subagents";  // when this agent dispatches sub-agents
+  agents?: Agent[];                       // nested
+}
+```
 
-### Team
-
-Main agent creates a team. Agents self-coordinate using SendMessage and shared task list. `blocked_by` is enforced through task dependencies. Agents persist across phases.
-
-### Arrows
-
-In both modes, `blocked_by` expresses intended execution order and data flow. In subagents mode, it's effectively enforced. In team mode, it shows planned data flow (agents can freely communicate via SendMessage).
-
-### Nested Agents
-
-Agents can dispatch their own sub-agents by including `execution_mode` and `agents` fields. If nested mode is `"team"`, children get a communication boundary rectangle.
-
-### Output
-
-| Strategy | Behavior | Diagram shape |
-|---|---|---|
-| `"inline"` | Result returns to caller's context window | Rectangle |
-| `{ "file": "path" }` | Agent writes output to a file | Stadium/pill |
-
-The `produces` field describes what an agent outputs in human terms.
+See [`docs/data-model.md`](../../../docs/data-model.md) for full field semantics, examples, and execution-mode behavior.
 
 ## Heuristics
 
-### Tool Assignment
+### Unit splitting
 
-- **Read-only agents** (researchers, auditors): `["Read", "Grep", "Glob"]`
-- **Implementation agents** (coders): `["Read", "Edit", "Write", "Bash"]`
-- **Test agents**: `["Read", "Write", "Bash"]`
+Each unit must be:
 
-### Execution Mode
+1. **Reviewable on its own** — a code review or adversarial-review pass can check it without needing context from sibling units.
+2. **Finishable in one session including reviews** — the work, the review, the fixes, and the commit all fit in one focused pass.
 
-- **`team`**: long-running coordinated work, agents need to communicate, share state
-- **`subagents`** (default): focused subtasks with clear inputs/outputs, no inter-agent communication
+No fixed line/time budget. Most plans land at **3–7 units**. Two-unit plans are rare; ten-unit plans usually want to split into two plans.
 
-### Background
+### Topology decision
 
-- **`true`**: long-running independent work not blocking others (e.g., linter)
-- **`false`** (default): on the critical path, dependents wait
+Default to no topology fence. Only attach one when a unit:
 
-### Output
+- Dispatches **more than one agent** with **meaningful structure** — e.g. parallel review by two distinct roles, a writer + a tester running concurrently, or a researcher whose output feeds an implementer.
 
-- **`"inline"`** (default): small output, main agent needs to reason about it
-- **`{ "file": "path" }`**: large output, saves context window
+Single-agent units (just "main does the work") **never carry a topology fence**. If you find yourself writing a one-agent topology, drop it — the unit is single-agent.
+
+### Slug
+
+The parser derives the plan slug from the H1 task summary automatically (kebab-case, ≤ 60 chars, `^[a-z0-9-]+$`, alphanumerics only). You don't write a slug field; pick a task summary that produces a sensible slug. Example: H1 = `Migrate the auth flow to PKCE` → slug = `migrate-the-auth-flow-to-pkce`.
+
+If the H1 has no alphanumerics, the parser rejects the plan; pick a different summary.
+
+### Unit IDs and blocked_by between units
+
+The parser auto-derives unit IDs (`NN-<slug-of-title>`) and sets each unit's `blocked_by` to the previous unit's ID by default — sequential. You don't need to write either.
+
+If two units genuinely run in parallel (independent tracks that converge later), call that out in the unit body so a reader knows; the materialized plan still serializes them sequentially in the dir listing, but reviewers can read your note. Non-linear ordering at the plan-markdown level is **not** supported in v1.
+
+### review_steps
+
+The default review step is `/code-review:code-review`. The parser hard-codes this — you don't list it. If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body so the human reviewer takes the right action when the unit lands.
 
 ## Hard Rules
 
-1. **NEVER** generate HTML. Always delegate to the renderer binary.
-2. **NEVER** render or open browser unless `--open` is in the original arguments.
-3. **NEVER** execute the topology. The skill is a planner only.
+1. **NEVER** generate HTML. The renderer handles that.
+2. **NEVER** call the renderer binary. Return markdown only; the hook (or `planview materialize`) handles rendering.
+3. **NEVER** execute the plan. The skill is a planner only.
 4. **NEVER** loop or ask for approval. One-shot generator.
-5. On re-invocation with adjustments, regenerate the **FULL** topology from scratch (no patching).
+5. On re-invocation with adjustments, regenerate the **FULL** markdown from scratch — no patching.
+6. **NEVER** save the markdown to disk yourself. Return it to the caller; ExitPlanMode delivers it to the hook via `tool_input.plan`.
 
 ## Design Constraints
 
-### Why One-Shot
+### Why one-shot
 
-`AskUserQuestion` does not surface to the user inside a forked subagent — the fork runs to completion autonomously. The skill produces and returns. The caller (main agent) handles iteration using `AskUserQuestion` at the main agent level, then re-invokes the skill with feedback baked into the prompt.
+`AskUserQuestion` does not surface inside a forked subagent — the fork runs to completion autonomously. The skill produces and returns. The caller (main agent) handles iteration using `AskUserQuestion` at the main-agent level, then re-invokes the skill with feedback baked into the prompt.
 
-### Why Fork Works Inside Plan Mode
+### Why fork works inside plan mode
 
-Plan mode blocks Edit, Write, NotebookEdit, and Task tools. But the Skill tool is not restricted. When invoked, the forked subagent operates in its own context — outside plan mode's tool restrictions. It can run Bash (to invoke the renderer) and generate the topology.
+Plan mode blocks Edit, Write, NotebookEdit, and Task tools. The Skill tool isn't restricted. When invoked, the forked subagent operates in its own context — outside plan-mode tool restrictions. It can run Bash and read the codebase to inform decomposition.
+
+### Why a per-unit topology fence, not a plan-level one
+
+The plan-level shape is "a list of units in order." Topology is for the within-unit dispatch pattern when a unit really does dispatch multiple agents. v1 deliberately omits a plan-level topology diagram; the plan dir + per-unit topology fence covers the cases where multi-agent visualization helps.

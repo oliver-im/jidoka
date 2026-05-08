@@ -1,0 +1,22 @@
+{
+  "task_summary": "Plan with duplicate unit id",
+  "slug": "dup",
+  "units": [
+    {
+      "id": "01-foo",
+      "title": "Foo",
+      "summary": "First.",
+      "blocked_by": [],
+      "review_steps": [],
+      "body_markdown": ""
+    },
+    {
+      "id": "01-foo",
+      "title": "Foo",
+      "summary": "Second.",
+      "blocked_by": [],
+      "review_steps": [],
+      "body_markdown": ""
+    }
+  ]
+}

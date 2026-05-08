@@ -1,0 +1,33 @@
+{
+  "name": "planview",
+  "version": "0.3.0",
+  "description": "Materialize multi-unit plans on ExitPlanMode; render Mermaid topology diagrams",
+  "type": "module",
+  "private": true,
+  "main": "dist/cli.js",
+  "bin": {
+    "planview": "dist/cli.js"
+  },
+  "scripts": {
+    "build:assets": "node scripts/generate-assets.mjs",
+    "build": "npm run build:assets && node scripts/build.mjs",
+    "typecheck": "npm run build:assets && tsc --noEmit",
+    "pretest": "npm run build",
+    "test": "vitest run",
+    "test:watch": "npm run build:assets && vitest"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "eta": "^4.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}

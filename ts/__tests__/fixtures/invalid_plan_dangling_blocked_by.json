@@ -1,0 +1,14 @@
+{
+  "task_summary": "Plan with a dangling blocked_by",
+  "slug": "dangling",
+  "units": [
+    {
+      "id": "01-foo",
+      "title": "Foo",
+      "summary": "Do foo.",
+      "blocked_by": ["99-nonexistent"],
+      "review_steps": [],
+      "body_markdown": ""
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "planview",
+  "description": "Materialize multi-unit plans (with optional per-unit topology) under notes/plan/<YYMMDD-N-slug>/ on ExitPlanMode. The /planview slash command produces a Plan; the ExitPlanMode hook writes the dir and opens overview.html in the browser.",
+  "version": "0.3.0",
+  "author": {
+    "name": "Oliver Im"
+  },
+  "homepage": "https://github.com/oliverim/planview",
+  "repository": "https://github.com/oliverim/planview",
+  "keywords": [
+    "plan-mode",
+    "planning",
+    "agents",
+    "topology",
+    "mermaid",
+    "notes",
+    "claude-code"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "task_summary": "Plan with a unit cycle",
+  "slug": "cycle",
+  "units": [
+    {
+      "id": "01-a",
+      "title": "A",
+      "summary": "A.",
+      "blocked_by": ["02-b"],
+      "review_steps": [],
+      "body_markdown": ""
+    },
+    {
+      "id": "02-b",
+      "title": "B",
+      "summary": "B.",
+      "blocked_by": ["01-a"],
+      "review_steps": [],
+      "body_markdown": ""
+    }
+  ]
+}

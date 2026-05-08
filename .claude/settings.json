@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "planview hook"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-$CLAUDE_PROJECT_DIR}/dist/cli.js\" hook"
           }
         ]
       }
