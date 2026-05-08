@@ -1,2 +1,5 @@
 /node_modules
 /ts/assets.generated.ts
+
+# Git worktrees
+/worktrees/
