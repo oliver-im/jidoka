@@ -2,6 +2,7 @@
 name: planview:configure
 description: Edit the existing planview config at ~/.claude/plugins/planview/config.json with diff-style prompts, preserving any manually added keys. Use when the user says "change planview settings" or "update my planview config".
 allowed-tools: Read, Write, Bash, AskUserQuestion
+disable-model-invocation: true
 ---
 
 # planview:configure

@@ -2,6 +2,7 @@
 name: planview:setup
 description: Walk the user through first-run setup for the planview plugin and write ~/.claude/plugins/planview/config.json. Use when the user says "set up planview", "configure planview from scratch", or runs the slash command for the first time.
 allowed-tools: Read, Write, Bash, AskUserQuestion
+disable-model-invocation: true
 ---
 
 # planview:setup
