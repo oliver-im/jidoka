@@ -1,0 +1,16 @@
+# Unit <%= it.prefix %> — <%= it.title %>
+
+**Blocked by:** <%= it.blockedBy %>
+**Agents involved:** <%= it.agents %>
+**Topology:** <%= it.topologyLabel %>
+
+## Summary
+
+<%= it.summaryBlock -%>
+<%= it.bodyBlock -%>
+<%= it.topologyBlock -%>
+## Review
+
+<%= it.reviewItems %>
+---
+See `progress.md` for the cursor and overall plan state.

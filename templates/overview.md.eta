@@ -1,0 +1,31 @@
+# <%= it.dirName %> — <%= it.taskSummary %>
+
+## Goal
+
+<%= it.goal %>
+
+## Context
+
+_Why-now and the context that motivated this plan._
+
+## Decisions (locked, v1)
+
+_Lock decisions here so units don't have to re-litigate them._
+
+## Out of scope (v1)
+
+_Items deferred or explicitly not addressed._
+
+## Unit list
+
+| # | Title | Blocked by | Reviews |
+|---|---|---|---|
+<%= it.unitRows %>
+
+## Cross-cutting constraints
+
+_Conventions, invariants, etc._
+
+## References
+
+_Linked docs and external context._
