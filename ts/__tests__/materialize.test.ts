@@ -88,7 +88,7 @@ describe("resolveTargetDir", () => {
     rmSync(base, { recursive: true, force: true });
   });
 
-  it("counter is shared with sibling research/backlog/done/plan", () => {
+  it("ignores entries in sibling dirs outside plansRoot", () => {
     const base = makeTempDir("siblings");
     const plansRoot = join(base, "plan");
     mkdirSync(plansRoot, { recursive: true });
@@ -97,7 +97,7 @@ describe("resolveTargetDir", () => {
     mkdirSync(join(base, "done", "plan", "260505-1-bar"), { recursive: true });
 
     const target = resolveTargetDir(samplePlan(), plansRoot, "260505");
-    expect(target.endsWith("260505-3-pivot-renderer")).toBe(true);
+    expect(target.endsWith("260505-0-pivot-renderer")).toBe(true);
     rmSync(base, { recursive: true, force: true });
   });
 

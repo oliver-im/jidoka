@@ -86,10 +86,6 @@ Defaults assume "files-on-disk is the value, the browser is opt-in" — most use
 
 To customize the review pipeline (e.g. add `/codex:review`, `/simplify`, or `/codex:adversarial-review` to the unit-level pipeline; populate the plan-level pipeline; define new tools), run `planview:configure` and walk the **Tools** and **Review pipelines** sections. See [`docs/data-model.md`](docs/data-model.md#review-pipelines) for the schema.
 
-### Optional: shared daily counter
-
-If `<plan_dir_root>` has siblings named `research/`, `backlog/`, or `done/plan/` at the same parent, planview shares the daily counter `N` across them so identifiers like `260505-2-foo` are unambiguous across note types. This is purely opportunistic — the scan runs unconditionally and is harmless when those siblings don't exist (the counter just resets per day per plan dir).
-
 ### Setup wizard
 
 To set or change config interactively:

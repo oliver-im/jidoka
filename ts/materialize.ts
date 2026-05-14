@@ -6,7 +6,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, join } from "node:path";
 import type { Config } from "./config.js";
 import { renderPlanHtml } from "./html.js";
 import { buildOverviewMd, buildProgressMd, buildUnitMd } from "./render-md.js";
@@ -92,9 +92,11 @@ export function resolvePipelines(plan: Plan, config: Config): void {
 
 /**
  * Computes the target plan dir under `plansRoot` for `plan` on `today`. Does
- * not create the directory. The shared daily counter is one greater than the
- * highest existing `^<today>-(\d+)-` entry across `plansRoot`,
- * `<parent>/research`, `<parent>/backlog`, and `<parent>/done/plan`.
+ * not create the directory. The daily counter is one greater than the highest
+ * existing `^<today>-(\d+)-` entry inside `plansRoot`. Sibling note dirs
+ * (backlog, research, archived plans, etc.) are not scanned — keeping that
+ * convention out of the code. A `N` previously occupied by a now-moved entry
+ * can therefore reappear; rename at move-time if it bothers you.
  */
 export function resolveTargetDir(
   plan: Plan,
@@ -110,18 +112,6 @@ function nextCounter(plansRoot: string, today: string): number {
   considerDir(plansRoot, today, (n) => {
     maxN = maxN === undefined ? n : Math.max(maxN, n);
   });
-  const parent = dirname(plansRoot);
-  if (parent && parent !== plansRoot) {
-    for (const sib of [
-      join(parent, "research"),
-      join(parent, "backlog"),
-      join(parent, "done", "plan"),
-    ]) {
-      considerDir(sib, today, (n) => {
-        maxN = maxN === undefined ? n : Math.max(maxN, n);
-      });
-    }
-  }
   return maxN === undefined ? 0 : maxN + 1;
 }
 
@@ -153,7 +143,7 @@ function considerDir(
 
 /**
  * Materializes a validated `plan` into a fresh dir under `plansRoot` using
- * the shared daily counter. Returns the absolute path of the new dir.
+ * the daily counter. Returns the absolute path of the new dir.
  */
 export function materialize(
   plan: Plan,

@@ -373,9 +373,9 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 - Project file may only set the keys marked above. Other keys are warn-and-ignored. Non-boolean values for the boolean keys are warn-and-ignored. `plan_dir_root` strings are validated (`isAbsolute` and `..` segments rejected) before being applied.
 - `mergeForWrite(base, cfg)` round-trips the global file preserving any manually added keys — used by `planview:configure`.
 
-### Optional shared daily counter
+### Daily counter
 
-`materialize.ts` scans `<parent>/research`, `<parent>/backlog`, and `<parent>/done/plan` for entries matching `^<today>-(\d+)-` when picking the next `N`. This is opportunistic — it lets users who organize all their note types under the same parent share a chronological counter (so `260505-2-foo` is unambiguous across plan/research/backlog). When those siblings don't exist, the scan finds nothing and the counter just increments per day per plan dir. The convention is purely the user's choice; planview imposes nothing about the structure outside of `<plan_dir_root>` itself.
+`materialize.ts` scans `plansRoot` only for entries matching `^<today>-(\d+)-` when picking the next `N`. Sibling dirs (a `backlog/`, `research/`, archived-plan tree, etc.) are deliberately not scanned: the user's filing convention does not belong in the code. An `N` previously occupied by an entry that has since been moved out of `plansRoot` can therefore reappear; rename at move-time if it bothers you.
 
 ### Skills
 
