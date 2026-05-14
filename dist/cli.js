@@ -18057,8 +18057,7 @@ var topologySchema = external_exports.object({
   agents: external_exports.array(agentSchema)
 });
 var toolSchema = external_exports.object({
-  run: external_exports.string().min(1, "tool.run must be a non-empty string"),
-  fallback: external_exports.string().min(1, "tool.fallback must be a non-empty string").optional()
+  run: external_exports.string().min(1, "tool.run must be a non-empty string")
 });
 var toolsSchema = external_exports.record(external_exports.string().min(1), toolSchema);
 var reviewStepSchema = external_exports.object({
@@ -18140,7 +18139,7 @@ var defaultConfig = {
   plan_level_topology: false,
   tools: {
     "anthropic-cr": { run: "/code-review:code-review" },
-    codex: { run: "/codex:{op}", fallback: "codex agent {op}" },
+    codex: { run: "/codex:{op}" },
     simplify: { run: "/simplify" }
   },
   review_pipelines: {
@@ -19053,7 +19052,7 @@ var JS = `// planview client-side JS \u2014 embedded via include_str!()
 })();
 `;
 var PAGE_TEMPLATE = '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Topology: <%= it.task_summary %></title>\n  <style><%= it.css %></style>\n  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js"></script>\n  <% if (it.has_plan) { %>\n  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>\n  <% } %>\n</head>\n<body class="<% if (it.has_plan) { %>has-plan<% } else { %>no-plan<% } %>">\n\n  <header>\n    <h1><%= it.task_summary %></h1>\n    <div class="header-meta">\n      <span class="mode-badge">Mode: <%= it.mode_label %></span>\n      <div class="header-actions">\n        <button id="theme-toggle" type="button" title="Toggle dark mode">\n          <span class="icon-light">&#9788;</span>\n          <span class="icon-dark">&#9790;</span>\n        </button>\n        <button id="download-png" type="button" title="Download as PNG">&#8681; PNG</button>\n      </div>\n    </div>\n  </header>\n\n  <main>\n    <% if (it.has_plan) { %>\n    <aside class="plan-panel">\n      <h2>Plan</h2>\n      <div id="plan-content"></div>\n    </aside>\n    <% } %>\n\n    <section class="diagram-panel">\n      <div class="diagrams">\n        <% it.mermaid_graphs.forEach((graph, idx) => { %>\n        <div class="diagram-block">\n          <% if (it.phase_labels.length > 0) { %>\n          <h3 class="phase-label"><%= it.phase_labels[idx] %></h3>\n          <% } %>\n          <pre class="mermaid"><%= graph %></pre>\n        </div>\n        <% }); %>\n      </div>\n\n      <div class="legend">\n        <h3>Legend</h3>\n        <div class="legend-grid">\n          <div class="legend-section">\n            <h4>Model</h4>\n            <div class="legend-items">\n              <div class="legend-item">\n                <span class="swatch swatch-haiku"></span> haiku\n              </div>\n              <div class="legend-item">\n                <span class="swatch swatch-sonnet"></span> sonnet\n              </div>\n              <div class="legend-item">\n                <span class="swatch swatch-opus"></span> opus\n              </div>\n              <div class="legend-item">\n                <span class="swatch swatch-main"></span> main agent\n              </div>\n            </div>\n          </div>\n          <div class="legend-section">\n            <h4>Output</h4>\n            <div class="legend-items">\n              <div class="legend-item">\n                <span class="shape shape-rect"></span> inline\n              </div>\n              <div class="legend-item">\n                <span class="shape shape-pill"></span> file\n              </div>\n            </div>\n          </div>\n        </div>\n      </div>\n\n      <div class="overview">\n        <h3>Topology Overview</h3>\n        <pre class="overview-text"><%= it.description %></pre>\n      </div>\n    </section>\n  </main>\n\n  <% if (it.has_plan) { %>\n  <script>window.__planMarkdown = <%= it.plan_markdown_json %>;</script>\n  <% } %>\n  <script><%= it.js %></script>\n</body>\n</html>\n';
-var PLAN_TEMPLATE = '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Plan: <%= it.title %></title>\n  <style><%= it.css %></style>\n  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>\n</head>\n<body class="plan">\n  <header>\n    <h1>Plan: <%= it.title %></h1>\n    <div class="header-meta">\n      <span class="mode-badge"><%= it.unit_count %> unit<%= it.unit_count_suffix %><% if (it.topology_count > 0) { %> \xB7 <%= it.topology_count %> with topology<% } %></span>\n      <div class="header-actions">\n        <button id="theme-toggle" type="button" title="Toggle dark mode">\n          <span class="icon-light">&#9788;</span>\n          <span class="icon-dark">&#9790;</span>\n        </button>\n      </div>\n    </div>\n  </header>\n\n  <main class="plan-main">\n    <aside class="plan-toc">\n      <h2>Units</h2>\n      <ul>\n        <% it.units.forEach((unit) => { %>\n        <li><a href="#<%= unit.anchor %>"><span class="unit-prefix"><%= unit.prefix %></span> <%= unit.title %></a></li>\n        <% }); %>\n      </ul>\n    </aside>\n\n    <section class="plan-content">\n      <article class="plan-overview-card" id="overview">\n        <h2>Overview</h2>\n        <div id="overview-md" class="markdown-body"></div>\n      </article>\n\n      <% it.units.forEach((unit) => { %>\n      <article class="unit-card" id="<%= unit.anchor %>">\n        <header class="unit-header">\n          <h2>Unit <%= unit.prefix %> \u2014 <%= unit.title %></h2>\n          <div class="unit-chips">\n            <span class="chip chip-blocked-by">Blocked by: <%= unit.blocked_by_label %></span>\n            <span class="chip chip-agents"><%= unit.agents_label %></span>\n            <% if (unit.has_topology) { %>\n            <span class="chip chip-topology">topology</span>\n            <% } %>\n          </div>\n        </header>\n\n        <p class="unit-summary"><%= unit.summary %></p>\n\n        <div class="unit-body markdown-body" data-key="<%= unit.index %>"></div>\n\n        <% unit.mermaid_graphs.forEach((graph) => { %>\n        <div class="diagram-block">\n          <pre class="mermaid"><%= graph %></pre>\n        </div>\n        <% }); %>\n\n        <% if (unit.review_steps.length > 0) { %>\n        <div class="unit-review">\n          <h3>Review pipeline</h3>\n          <ul>\n            <% unit.review_steps.forEach((step) => { %>\n            <li>\n              <code><%= step.primary %></code>\n              <% if (step.note) { %>\n              <div class="review-note"><em><%= step.note %></em></div>\n              <% } %>\n              <% if (step.fallback) { %>\n              <div class="review-fallback">Fallback: <code><%= step.fallback %></code></div>\n              <% } %>\n            </li>\n            <% }); %>\n          </ul>\n        </div>\n        <% } %>\n\n        <div class="unit-footer"><a href="#overview">\u2191 overview</a></div>\n      </article>\n      <% }); %>\n    </section>\n  </main>\n\n  <script>\n    window.__overviewMarkdown = <%= it.overview_markdown_json %>;\n    window.__unitBodies = <%= it.unit_bodies_json %>;\n  </script>\n  <script><%= it.js %></script>\n</body>\n</html>\n';
+var PLAN_TEMPLATE = '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Plan: <%= it.title %></title>\n  <style><%= it.css %></style>\n  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>\n</head>\n<body class="plan">\n  <header>\n    <h1>Plan: <%= it.title %></h1>\n    <div class="header-meta">\n      <span class="mode-badge"><%= it.unit_count %> unit<%= it.unit_count_suffix %><% if (it.topology_count > 0) { %> \xB7 <%= it.topology_count %> with topology<% } %></span>\n      <div class="header-actions">\n        <button id="theme-toggle" type="button" title="Toggle dark mode">\n          <span class="icon-light">&#9788;</span>\n          <span class="icon-dark">&#9790;</span>\n        </button>\n      </div>\n    </div>\n  </header>\n\n  <main class="plan-main">\n    <aside class="plan-toc">\n      <h2>Units</h2>\n      <ul>\n        <% it.units.forEach((unit) => { %>\n        <li><a href="#<%= unit.anchor %>"><span class="unit-prefix"><%= unit.prefix %></span> <%= unit.title %></a></li>\n        <% }); %>\n      </ul>\n    </aside>\n\n    <section class="plan-content">\n      <article class="plan-overview-card" id="overview">\n        <h2>Overview</h2>\n        <div id="overview-md" class="markdown-body"></div>\n      </article>\n\n      <% it.units.forEach((unit) => { %>\n      <article class="unit-card" id="<%= unit.anchor %>">\n        <header class="unit-header">\n          <h2>Unit <%= unit.prefix %> \u2014 <%= unit.title %></h2>\n          <div class="unit-chips">\n            <span class="chip chip-blocked-by">Blocked by: <%= unit.blocked_by_label %></span>\n            <span class="chip chip-agents"><%= unit.agents_label %></span>\n            <% if (unit.has_topology) { %>\n            <span class="chip chip-topology">topology</span>\n            <% } %>\n          </div>\n        </header>\n\n        <p class="unit-summary"><%= unit.summary %></p>\n\n        <div class="unit-body markdown-body" data-key="<%= unit.index %>"></div>\n\n        <% unit.mermaid_graphs.forEach((graph) => { %>\n        <div class="diagram-block">\n          <pre class="mermaid"><%= graph %></pre>\n        </div>\n        <% }); %>\n\n        <% if (unit.review_steps.length > 0) { %>\n        <div class="unit-review">\n          <h3>Review pipeline</h3>\n          <ul>\n            <% unit.review_steps.forEach((step) => { %>\n            <li>\n              <code><%= step.primary %></code>\n              <% if (step.note) { %>\n              <div class="review-note"><em><%= step.note %></em></div>\n              <% } %>\n            </li>\n            <% }); %>\n          </ul>\n        </div>\n        <% } %>\n\n        <div class="unit-footer"><a href="#overview">\u2191 overview</a></div>\n      </article>\n      <% }); %>\n    </section>\n  </main>\n\n  <script>\n    window.__overviewMarkdown = <%= it.overview_markdown_json %>;\n    window.__unitBodies = <%= it.unit_bodies_json %>;\n  </script>\n  <script><%= it.js %></script>\n</body>\n</html>\n';
 
 // ts/mermaid.ts
 function mermaid(topology) {
@@ -19215,9 +19214,6 @@ function renderPipelineChecklist(pipeline) {
     if (step.note !== void 0 && step.note.length > 0) {
       lines.push(`  - _${step.note}_`);
     }
-    if (step.fallback !== void 0) {
-      lines.push(`  - Fallback: \`${step.fallback}\``);
-    }
   }
   return lines.join("\n") + "\n";
 }
@@ -19306,7 +19302,6 @@ function renderPlanHtml(plan, dirName) {
 }
 function reviewStepCard(step) {
   const out = { primary: htmlEscape(step.primary) };
-  if (step.fallback !== void 0) out.fallback = htmlEscape(step.fallback);
   if (step.note !== void 0) out.note = htmlEscape(step.note);
   return out;
 }
@@ -19372,7 +19367,7 @@ function resolveStep(step, scope, index, tools) {
       `${scope}.steps[${index}]: unknown tool '${step.tool}' (defined tools: ${known || "(none)"})`
     );
   }
-  const needsOp = tool.run.includes("{op}") || tool.fallback !== void 0 && tool.fallback.includes("{op}");
+  const needsOp = tool.run.includes("{op}");
   if (needsOp && step.op === void 0) {
     throw new MaterializeError(
       "invalid_config",
@@ -19390,9 +19385,6 @@ function resolveStep(step, scope, index, tools) {
   const op = step.op;
   const primary = op === void 0 ? tool.run : tool.run.replaceAll("{op}", op);
   const resolved = { primary };
-  if (tool.fallback !== void 0) {
-    resolved.fallback = op === void 0 ? tool.fallback : tool.fallback.replaceAll("{op}", op);
-  }
   if (step.note !== void 0) {
     resolved.note = step.note;
   }

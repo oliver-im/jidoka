@@ -72,9 +72,6 @@
               <% if (step.note) { %>
               <div class="review-note"><em><%= step.note %></em></div>
               <% } %>
-              <% if (step.fallback) { %>
-              <div class="review-fallback">Fallback: <code><%= step.fallback %></code></div>
-              <% } %>
             </li>
             <% }); %>
           </ul>

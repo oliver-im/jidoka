@@ -43,9 +43,7 @@ function resolveStep(
       `${scope}.steps[${index}]: unknown tool '${step.tool}' (defined tools: ${known || "(none)"})`,
     );
   }
-  const needsOp =
-    tool.run.includes("{op}") ||
-    (tool.fallback !== undefined && tool.fallback.includes("{op}"));
+  const needsOp = tool.run.includes("{op}");
   if (needsOp && step.op === undefined) {
     throw new MaterializeError(
       "invalid_config",
@@ -63,10 +61,6 @@ function resolveStep(
   const op = step.op;
   const primary = op === undefined ? tool.run : tool.run.replaceAll("{op}", op);
   const resolved: ResolvedReviewStep = { primary };
-  if (tool.fallback !== undefined) {
-    resolved.fallback =
-      op === undefined ? tool.fallback : tool.fallback.replaceAll("{op}", op);
-  }
   if (step.note !== undefined) {
     resolved.note = step.note;
   }
@@ -74,9 +68,9 @@ function resolveStep(
 }
 
 /**
- * Walks the config-side `unit` and `plan` pipelines, resolves each step into
- * a primary + optional fallback command (substituting `{op}` from the step),
- * and attaches the resulting `ResolvedReviewPipeline` to the in-memory plan
+ * Walks the config-side `unit` and `plan` pipelines, resolves each step's
+ * `tool.run` template (substituting `{op}` from the step), and attaches the
+ * resulting `ResolvedReviewPipeline` to the in-memory plan
  * (`plan.plan_review_pipeline`) and to each unit (`unit.review_pipeline`).
  *
  * Throws `MaterializeError("invalid_config", ...)` when a step references an

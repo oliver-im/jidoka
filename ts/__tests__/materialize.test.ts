@@ -143,7 +143,7 @@ describe("materialize", () => {
     rmSync(base, { recursive: true, force: true });
   });
 
-  it("renders unit pipeline with codex op-substituted plus fallback", () => {
+  it("renders unit pipeline with codex op substituted and a note", () => {
     const base = makeTempDir("codex");
     const plansRoot = join(base, "plan");
     mkdirSync(plansRoot, { recursive: true });
@@ -157,7 +157,6 @@ describe("materialize", () => {
     expect(u01).toContain("- [ ] `/code-review:code-review`");
     expect(u01).toContain("- [ ] `/codex:review`");
     expect(u01).toContain("  - _Use when slash buffer fits._");
-    expect(u01).toContain("  - Fallback: `codex agent review`");
     expect(u01).toContain("- [ ] `/simplify`");
     rmSync(base, { recursive: true, force: true });
   });
@@ -178,7 +177,6 @@ describe("materialize", () => {
     );
     expect(progress).toContain("- [ ] `/code-review:code-review`");
     expect(progress).toContain("- [ ] `/codex:adversarial-review`");
-    expect(progress).toContain("  - Fallback: `codex agent adversarial-review`");
     rmSync(base, { recursive: true, force: true });
   });
 

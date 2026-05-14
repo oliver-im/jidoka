@@ -117,10 +117,7 @@ describe("buildProgressMd", () => {
       plan_review_pipeline: {
         steps: [
           { primary: "/code-review:code-review" },
-          {
-            primary: "/codex:adversarial-review",
-            fallback: "codex agent adversarial-review",
-          },
+          { primary: "/codex:adversarial-review" },
         ],
       },
     };
@@ -131,7 +128,6 @@ describe("buildProgressMd", () => {
     );
     expect(md).toContain("- [ ] `/code-review:code-review`");
     expect(md).toContain("- [ ] `/codex:adversarial-review`");
-    expect(md).toContain("  - Fallback: `codex agent adversarial-review`");
   });
 });
 
@@ -153,14 +149,13 @@ describe("buildUnitMd", () => {
     );
   });
 
-  it("renders a step's fallback and note as sub-bullets", () => {
+  it("renders a step's note as a sub-bullet", () => {
     const u: Unit = {
       ...minimalUnit("01-rich"),
       review_pipeline: {
         steps: [
           {
             primary: "/codex:review",
-            fallback: "codex agent review",
             note: "Use when slash buffer fits.",
           },
         ],
@@ -169,7 +164,6 @@ describe("buildUnitMd", () => {
     const md = buildUnitMd(u);
     expect(md).toContain("- [ ] `/codex:review`");
     expect(md).toContain("  - _Use when slash buffer fits._");
-    expect(md).toContain("  - Fallback: `codex agent review`");
   });
 
   it("renders blocked_by as comma-joined", () => {

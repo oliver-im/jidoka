@@ -33,10 +33,12 @@ A JSON file at `~/.claude/plugins/planview/config.json` with the following keys:
 ```json
 {
   "anthropic-cr": { "run": "/code-review:code-review" },
-  "codex":        { "run": "/codex:{op}", "fallback": "codex agent {op}" },
+  "codex":        { "run": "/codex:{op}" },
   "simplify":     { "run": "/simplify" }
 }
 ```
+
+Every Tool is a Claude Code plugin slash command. There is no bash escape hatch and no fallback.
 
 ### Default `review_pipelines` to write
 
@@ -47,7 +49,7 @@ A JSON file at `~/.claude/plugins/planview/config.json` with the following keys:
 }
 ```
 
-These defaults match planview's pre-config behavior — only `/code-review:code-review` runs after each Unit, and nothing runs at the Plan level. `codex` and `simplify` are pre-defined as Tools so opting them in via `planview:configure` is a pick-from-list rather than typing a new Tool from scratch. Customizing the review pipeline (adding codex, simplify, adversarial, fallbacks) happens through `planview:configure` after setup.
+These defaults match planview's pre-config behavior — only `/code-review:code-review` runs after each Unit, and nothing runs at the Plan level. `codex` and `simplify` are pre-defined as Tools so opting them in via `planview:configure` is a pick-from-list rather than typing a new Tool from scratch. Customizing the review pipeline (adding codex, simplify, adversarial) happens through `planview:configure` after setup.
 
 ## Process
 

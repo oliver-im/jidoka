@@ -60,7 +60,6 @@ export function renderTopologyHtml(
 
 interface ReviewStepCard {
   primary: string;
-  fallback?: string;
   note?: string;
 }
 
@@ -125,7 +124,6 @@ export function renderPlanHtml(plan: Plan, dirName: string): string {
 
 function reviewStepCard(step: ResolvedReviewStep): ReviewStepCard {
   const out: ReviewStepCard = { primary: htmlEscape(step.primary) };
-  if (step.fallback !== undefined) out.fallback = htmlEscape(step.fallback);
   if (step.note !== undefined) out.note = htmlEscape(step.note);
   return out;
 }

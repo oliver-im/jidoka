@@ -111,9 +111,6 @@ function renderPipelineChecklist(
     if (step.note !== undefined && step.note.length > 0) {
       lines.push(`  - _${step.note}_`);
     }
-    if (step.fallback !== undefined) {
-      lines.push(`  - Fallback: \`${step.fallback}\``);
-    }
   }
   return lines.join("\n") + "\n";
 }

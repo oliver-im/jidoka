@@ -42,16 +42,16 @@ Any other top-level key the user manually added stays in place untouched.
 
 ## Tools editor
 
-Tools live under `tools` as a map of `<name>` → `{ "run": "<template>", "fallback"?: "<template>" }`. Both templates may include the `{op}` placeholder, which gets substituted from a pipeline step's `op` field at materialize time.
+Tools live under `tools` as a map of `<name>` → `{ "run": "<slash-command-template>" }`. Every Tool is a Claude Code plugin slash command (e.g. `/code-review:code-review`, `/codex:{op}`). There is no bash escape hatch and no fallback. The `run` template may include the `{op}` placeholder, which gets substituted from a pipeline step's `op` field at materialize time.
 
 ### Display
 
-List the current tools with both templates. Example:
+List the current tools. Example:
 
 ```
 Current tools:
   anthropic-cr  →  /code-review:code-review
-  codex         →  /codex:{op}      (fallback: codex agent {op})
+  codex         →  /codex:{op}
   simplify      →  /simplify
 ```
 
@@ -59,8 +59,8 @@ Current tools:
 
 Ask: `Add tool / Edit tool / Remove tool / Keep`. Loop until `Keep`.
 
-- **Add tool**: ask `name` (must match `^[a-z][a-z0-9-]*$` — kebab-case, starts with a letter), then `run` template (non-empty), then optional `fallback` template (empty input → no fallback).
-- **Edit tool**: pick a tool from the list. Ask `run` (default = current), then `fallback` (default = current; explicit `(remove)` selection deletes the fallback). Foreign sub-fields on the tool entry that aren't `run` / `fallback` are NOT shown but ARE preserved on write — same invariant as the rest of the configure skill.
+- **Add tool**: ask `name` (must match `^[a-z][a-z0-9-]*$` — kebab-case, starts with a letter), then `run` template (non-empty slash command). Reject inputs that don't begin with `/`.
+- **Edit tool**: pick a tool from the list. Ask `run` (default = current). Foreign sub-fields on the tool entry that aren't `run` are NOT shown but ARE preserved on write — same invariant as the rest of the configure skill. The legacy `fallback` sub-field is purged on write.
 - **Remove tool**: pick a tool, confirm. Warn if any review-pipeline step references it (the materialize step would later fail validation on unknown-tool).
 
 Reference [`docs/data-model.md`](../../../docs/data-model.md) for the schema details if you need depth.
@@ -92,7 +92,7 @@ review_pipelines.plan:
 
 For each scope (unit, plan), ask: `Add step / Edit step / Remove step / Keep`. Loop until `Keep` for that scope, then move to the next.
 
-- **Add step**: pick a Tool from the Tools section (offer `Define new tool` as a shortcut into the Tools editor; return to this flow when done). If the chosen Tool's `run` or `fallback` contains `{op}`, ask for the `op` value (non-empty). Else skip the op prompt. Then ask for an optional `note` (empty input → no note).
+- **Add step**: pick a Tool from the Tools section (offer `Define new tool` as a shortcut into the Tools editor; return to this flow when done). If the chosen Tool's `run` contains `{op}`, ask for the `op` value (non-empty). Else skip the op prompt. Then ask for an optional `note` (empty input → no note).
 - **Edit step**: pick the step by position. Ask which fields to change (tool / op / note). The op prompt only appears if the (current or new) tool template contains `{op}`.
 - **Remove step**: pick the step by position, confirm.
 

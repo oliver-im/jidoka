@@ -90,12 +90,10 @@ export const topologySchema: z.ZodType<Topology> = z.object({
 
 export interface Tool {
   run: string;
-  fallback?: string;
 }
 
 export const toolSchema: z.ZodType<Tool> = z.object({
   run: z.string().min(1, "tool.run must be a non-empty string"),
-  fallback: z.string().min(1, "tool.fallback must be a non-empty string").optional(),
 });
 
 export const toolsSchema = z.record(z.string().min(1), toolSchema);
@@ -131,11 +129,10 @@ export const reviewPipelinesSchema: z.ZodType<ReviewPipelines> = z.object({
 });
 
 // Materialize/render-time shape: a step with the tool reference resolved and
-// `{op}` substituted in both templates. The renderer consumes this directly;
+// `{op}` substituted into `tool.run`. The renderer consumes this directly;
 // nothing serializes it back to disk.
 export interface ResolvedReviewStep {
   primary: string;
-  fallback?: string;
   note?: string;
 }
 

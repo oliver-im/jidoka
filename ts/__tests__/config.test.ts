@@ -31,10 +31,7 @@ describe("defaults", () => {
     expect(defaultConfig.tools["anthropic-cr"]).toEqual({
       run: "/code-review:code-review",
     });
-    expect(defaultConfig.tools.codex).toEqual({
-      run: "/codex:{op}",
-      fallback: "codex agent {op}",
-    });
+    expect(defaultConfig.tools.codex).toEqual({ run: "/codex:{op}" });
     expect(defaultConfig.tools.simplify).toEqual({ run: "/simplify" });
     expect(defaultConfig.review_pipelines.unit.steps).toEqual([
       { tool: "anthropic-cr" },
@@ -257,7 +254,6 @@ describe("mergeForWrite", () => {
       tools: {
         codex: {
           run: "/codex:{op}",
-          fallback: "codex agent {op}",
           experimental_x: true,
         },
       },
@@ -266,20 +262,15 @@ describe("mergeForWrite", () => {
     const tools = merged.tools as Record<string, Record<string, unknown>>;
     expect(tools.codex.experimental_x).toBe(true);
     expect(tools.codex.run).toBe("/codex:{op}");
-    expect(tools.codex.fallback).toBe("codex agent {op}");
   });
 
-  it("drops fallback from a known tool when cfg removes it", () => {
+  it("purges the legacy fallback sub-field from a tool entry on write", () => {
     const base = {
       tools: {
         codex: { run: "/codex:{op}", fallback: "codex agent {op}" },
       },
     };
-    const cfg: typeof defaultConfig = {
-      ...defaultConfig,
-      tools: { codex: { run: "/codex:{op}" } },
-    };
-    const merged = mergeForWrite(base, cfg);
+    const merged = mergeForWrite(base, defaultConfig);
     const tools = merged.tools as Record<string, Record<string, unknown>>;
     expect(tools.codex.run).toBe("/codex:{op}");
     expect(tools.codex.fallback).toBeUndefined();

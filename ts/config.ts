@@ -25,7 +25,7 @@ export const defaultConfig: Config = {
   plan_level_topology: false,
   tools: {
     "anthropic-cr": { run: "/code-review:code-review" },
-    codex: { run: "/codex:{op}", fallback: "codex agent {op}" },
+    codex: { run: "/codex:{op}" },
     simplify: { run: "/simplify" },
   },
   review_pipelines: {
@@ -201,8 +201,10 @@ export function loadGlobalRaw(): Record<string, unknown> | undefined {
  * tool entry that survived the configure pass) and into `review_pipelines`
  * (foreign scope keys alongside the standard `unit`/`plan`). Tool names
  * themselves are skill-managed — a tool absent from `cfg.tools` was removed
- * by the user and is dropped. Step objects are array elements without stable
- * identity, so foreign keys inside individual steps are NOT preserved.
+ * by the user and is dropped. The legacy `fallback` sub-field is purged
+ * actively so the on-disk shape stays consistent with the current schema.
+ * Step objects are array elements without stable identity, so foreign keys
+ * inside individual steps are NOT preserved.
  */
 export function mergeForWrite(
   base: Record<string, unknown> | undefined,
@@ -231,11 +233,7 @@ function mergeTools(
   for (const [name, tool] of Object.entries(cfg)) {
     const baseEntry = isObject(baseTools[name]) ? baseTools[name] : {};
     const merged: Record<string, unknown> = { ...baseEntry, run: tool.run };
-    if (tool.fallback !== undefined) {
-      merged.fallback = tool.fallback;
-    } else {
-      delete merged.fallback;
-    }
+    delete merged.fallback;
     out[name] = merged;
   }
   return out;
