@@ -26,6 +26,21 @@ describe("defaults", () => {
     expect(defaultConfig.html_output).toBe(false);
     expect(defaultConfig.plan_level_topology).toBe(false);
   });
+
+  it("ships baseline tools and a unit-level pipeline matching today's behavior", () => {
+    expect(defaultConfig.tools["anthropic-cr"]).toEqual({
+      run: "/code-review:code-review",
+    });
+    expect(defaultConfig.tools.codex).toEqual({
+      run: "/codex:{op}",
+      fallback: "codex agent {op}",
+    });
+    expect(defaultConfig.tools.simplify).toEqual({ run: "/simplify" });
+    expect(defaultConfig.review_pipelines.unit.steps).toEqual([
+      { tool: "anthropic-cr" },
+    ]);
+    expect(defaultConfig.review_pipelines.plan.steps).toEqual([]);
+  });
 });
 
 describe("loadFromPaths", () => {
@@ -120,6 +135,74 @@ describe("loadFromPaths", () => {
     expect(cfg).toEqual(defaultConfig);
     rmSync(dir, { recursive: true, force: true });
   });
+
+  it("hydrates missing tools and review_pipelines from defaults", () => {
+    const dir = makeTempDir("partial");
+    const path = join(dir, "config.json");
+    writeFileSync(
+      path,
+      JSON.stringify({ plan_dir_root: "custom" }),
+    );
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.plan_dir_root).toBe("custom");
+    expect(cfg.tools).toEqual(defaultConfig.tools);
+    expect(cfg.review_pipelines).toEqual(defaultConfig.review_pipelines);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("accepts a user-defined tool entry and a custom unit pipeline", () => {
+    const dir = makeTempDir("custom-pipeline");
+    const path = join(dir, "config.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        tools: {
+          "my-tool": { run: "/my:thing" },
+        },
+        review_pipelines: {
+          unit: { steps: [{ tool: "my-tool", note: "smoke" }] },
+          plan: { steps: [] },
+        },
+      }),
+    );
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.tools["my-tool"]).toEqual({ run: "/my:thing" });
+    expect(cfg.review_pipelines.unit.steps).toEqual([
+      { tool: "my-tool", note: "smoke" },
+    ]);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("falls back to defaults when a tool entry has a non-string run", () => {
+    const dir = makeTempDir("bad-tool");
+    const path = join(dir, "config.json");
+    writeFileSync(
+      path,
+      JSON.stringify({ tools: { bad: { run: 42 } } }),
+    );
+    const cfg = loadFromPaths(path, undefined);
+    // Zod rejects the whole config; we fall back to defaults rather than
+    // hydrating a partial structure with one broken entry.
+    expect(cfg).toEqual(defaultConfig);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("rejects tools and review_pipelines as project overrides", () => {
+    const dir = makeTempDir("scope");
+    const path = join(dir, ".planview.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        tools: { sneaky: { run: "/sneaky" } },
+        review_pipelines: { unit: { steps: [] }, plan: { steps: [] } },
+      }),
+    );
+    const cfg = loadFromPaths(undefined, path);
+    // Project overrides for user-scope keys are dropped; defaults survive.
+    expect(cfg.tools).toEqual(defaultConfig.tools);
+    expect(cfg.review_pipelines).toEqual(defaultConfig.review_pipelines);
+    rmSync(dir, { recursive: true, force: true });
+  });
 });
 
 describe("validateProjectPlanDirRoot", () => {
@@ -151,5 +234,69 @@ describe("mergeForWrite", () => {
   it("starts from empty when base undefined", () => {
     const merged = mergeForWrite(undefined, defaultConfig);
     expect(merged.plan_dir_root).toBe("plan");
+    expect(merged.tools).toEqual(defaultConfig.tools);
+    expect(merged.review_pipelines).toEqual(defaultConfig.review_pipelines);
+  });
+
+  it("keeps tools the configure skill didn't enumerate", () => {
+    const base = {
+      tools: {
+        weird: { run: "/weird" },
+        "anthropic-cr": { run: "/code-review:code-review" },
+      },
+    };
+    const merged = mergeForWrite(base, defaultConfig);
+    const tools = merged.tools as Record<string, unknown>;
+    expect(tools.weird).toEqual({ run: "/weird" });
+    expect(tools["anthropic-cr"]).toEqual({ run: "/code-review:code-review" });
+  });
+
+  it("preserves foreign sub-fields on a known tool entry", () => {
+    const base = {
+      tools: {
+        codex: {
+          run: "/codex:{op}",
+          fallback: "codex agent {op}",
+          experimental_x: true,
+        },
+      },
+    };
+    const merged = mergeForWrite(base, defaultConfig);
+    const tools = merged.tools as Record<string, Record<string, unknown>>;
+    expect(tools.codex.experimental_x).toBe(true);
+    expect(tools.codex.run).toBe("/codex:{op}");
+    expect(tools.codex.fallback).toBe("codex agent {op}");
+  });
+
+  it("drops fallback from a known tool when cfg removes it", () => {
+    const base = {
+      tools: {
+        codex: { run: "/codex:{op}", fallback: "codex agent {op}" },
+      },
+    };
+    const cfg: typeof defaultConfig = {
+      ...defaultConfig,
+      tools: { codex: { run: "/codex:{op}" } },
+    };
+    const merged = mergeForWrite(base, cfg);
+    const tools = merged.tools as Record<string, Record<string, unknown>>;
+    expect(tools.codex.run).toBe("/codex:{op}");
+    expect(tools.codex.fallback).toBeUndefined();
+    expect("fallback" in tools.codex).toBe(false);
+  });
+
+  it("preserves foreign scope keys on review_pipelines", () => {
+    const base = {
+      review_pipelines: {
+        unit: { steps: [] },
+        plan: { steps: [] },
+        session: { steps: [{ tool: "anthropic-cr" }] },
+      },
+    };
+    const merged = mergeForWrite(base, defaultConfig);
+    const rp = merged.review_pipelines as Record<string, unknown>;
+    expect(rp.session).toEqual({ steps: [{ tool: "anthropic-cr" }] });
+    expect(rp.unit).toEqual(defaultConfig.review_pipelines.unit);
+    expect(rp.plan).toEqual(defaultConfig.review_pipelines.plan);
   });
 });

@@ -33,7 +33,6 @@ import { parseTopologyJson } from "./types.js";
  *
  *   - `id` = `NN-<slugified-title>` (sequential, 1-based, 2-digit pad)
  *   - `blocked_by` = `[units[k-1].id]` for k > 0, else `[]`
- *   - `review_steps` = `["/code-review:code-review"]`
  *   - `agents_involved` is omitted
  *   - `topology` is omitted unless the unit body contains a fenced
  *     ```` ```topology ```` block, in which case the fence content is
@@ -103,7 +102,6 @@ export function parsePlanMarkdown(md: string): ParseResult<Plan> {
       title: cur.title,
       summary,
       blocked_by: k === 0 ? [] : [units[k - 1]!.id],
-      review_steps: ["/code-review:code-review"],
       body_markdown: fence.value.bodyWithoutFence,
     };
     if (fence.value.topology !== undefined) {

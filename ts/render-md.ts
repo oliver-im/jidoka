@@ -2,7 +2,12 @@ import { Eta } from "eta";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { mermaid } from "./mermaid.js";
-import type { Plan, Topology, Unit } from "./types.js";
+import type {
+  Plan,
+  ResolvedReviewPipeline,
+  Topology,
+  Unit,
+} from "./types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const templatesDir = join(here, "..", "templates");
@@ -34,8 +39,7 @@ export function buildOverviewMd(plan: Plan, dirName: string): string {
         unit.blocked_by.length === 0
           ? "—"
           : unit.blocked_by.map((b) => unitIdPrefix(b) ?? b).join(", ");
-      const reviews =
-        unit.review_steps.length === 0 ? "—" : unit.review_steps.join(" + ");
+      const reviews = overviewReviewsCell(unit.review_pipeline);
       return `| ${prefix} | ${unit.title} | ${blockedBy} | ${reviews} |`;
     })
     .join("\n");
@@ -50,7 +54,8 @@ export function buildOverviewMd(plan: Plan, dirName: string): string {
 
 export function buildProgressMd(plan: Plan, dirName: string): string {
   const cursor = plan.units[0]?.id ?? "(no units)";
-  return eta.render("progress.md.eta", { dirName, cursor });
+  const planReviewBlock = renderPlanReviewBlock(plan.plan_review_pipeline);
+  return eta.render("progress.md.eta", { dirName, cursor, planReviewBlock });
 }
 
 export function buildUnitMd(unit: Unit): string {
@@ -79,10 +84,7 @@ export function buildUnitMd(unit: Unit): string {
   const topologyBlock =
     unit.topology !== undefined ? unitTopologyBlock(unit.topology) + "\n\n" : "";
 
-  const reviewItems =
-    unit.review_steps.length === 0
-      ? "- [ ] _No review steps recorded._\n"
-      : unit.review_steps.map((s) => `- [ ] ${s}`).join("\n") + "\n";
+  const reviewItems = renderPipelineChecklist(unit.review_pipeline);
 
   return eta.render("unit.md.eta", {
     prefix,
@@ -95,6 +97,47 @@ export function buildUnitMd(unit: Unit): string {
     topologyBlock,
     reviewItems,
   });
+}
+
+function renderPipelineChecklist(
+  pipeline: ResolvedReviewPipeline | undefined,
+): string {
+  if (pipeline === undefined || pipeline.steps.length === 0) {
+    return "- [ ] _No review steps configured._\n";
+  }
+  const lines: string[] = [];
+  for (const step of pipeline.steps) {
+    lines.push(`- [ ] \`${step.primary}\``);
+    if (step.note !== undefined && step.note.length > 0) {
+      lines.push(`  - _${step.note}_`);
+    }
+    if (step.fallback !== undefined) {
+      lines.push(`  - Fallback: \`${step.fallback}\``);
+    }
+  }
+  return lines.join("\n") + "\n";
+}
+
+function renderPlanReviewBlock(
+  pipeline: ResolvedReviewPipeline | undefined,
+): string {
+  let out = "## Plan-level review\n\n";
+  if (pipeline === undefined || pipeline.steps.length === 0) {
+    out +=
+      "_No plan-level reviews configured. After the last unit, surface a summary and ask the user before archiving._\n";
+    return out;
+  }
+  out +=
+    "After the last unit's review lands and is committed, run these against the cumulative plan diff:\n\n";
+  out += renderPipelineChecklist(pipeline);
+  return out;
+}
+
+function overviewReviewsCell(
+  pipeline: ResolvedReviewPipeline | undefined,
+): string {
+  if (pipeline === undefined || pipeline.steps.length === 0) return "—";
+  return pipeline.steps.map((s) => s.primary).join(" + ");
 }
 
 function unitTopologyBlock(topology: Topology): string {

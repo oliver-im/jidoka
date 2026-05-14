@@ -162,7 +162,7 @@ function runMaterialize(
 
   let target: string;
   try {
-    target = materialize(parsed.value, plansRoot, today);
+    target = materialize(parsed.value, plansRoot, today, cfg);
     if (cfg.html_output) writePlanHtml(parsed.value, target);
   } catch (e) {
     process.stderr.write(`error: ${(e as Error).message}\n`);

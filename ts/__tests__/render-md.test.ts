@@ -28,8 +28,10 @@ const minimalUnit = (id: string, blockedBy: string[] = []): Unit => ({
   title: `Title for ${id}`,
   summary: `Summary for ${id}.`,
   blocked_by: blockedBy,
-  review_steps: ["/code-review:code-review"],
   body_markdown: `## Tasks\n\nDo ${id}.\n`,
+  review_pipeline: {
+    steps: [{ primary: "/code-review:code-review" }],
+  },
 });
 
 describe("unitIdPrefix", () => {
@@ -62,8 +64,12 @@ describe("buildOverviewMd", () => {
     expect(md).toContain("## Decisions (locked, v1)");
     expect(md).toContain("## Out of scope (v1)");
     expect(md).toContain("## Unit list");
-    expect(md).toContain("| 01 | Title for 01-prep | — | /code-review:code-review |");
-    expect(md).toContain("| 02 | Title for 02-impl | 01 | /code-review:code-review |");
+    expect(md).toContain(
+      "| 01 | Title for 01-prep | — | /code-review:code-review |",
+    );
+    expect(md).toContain(
+      "| 02 | Title for 02-impl | 01 | /code-review:code-review |",
+    );
     expect(md).toContain("## Cross-cutting constraints");
     expect(md).toContain("## References");
     expect(md.endsWith("\n")).toBe(true);
@@ -94,11 +100,38 @@ describe("buildProgressMd", () => {
     expect(md).toContain("## Done");
     expect(md).toContain("## Blockers");
     expect(md).toContain("## Notes");
+    expect(md).toContain("## Plan-level review");
+    expect(md).toContain("_No plan-level reviews configured.");
   });
 
   it("falls back when no units", () => {
     const plan: Plan = { task_summary: "x", slug: "x", units: [] };
     expect(buildProgressMd(plan, "x")).toContain("**Cursor:** (no units)");
+  });
+
+  it("renders a configured plan-level pipeline", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      plan_review_pipeline: {
+        steps: [
+          { primary: "/code-review:code-review" },
+          {
+            primary: "/codex:adversarial-review",
+            fallback: "codex agent adversarial-review",
+          },
+        ],
+      },
+    };
+    const md = buildProgressMd(plan, "260505-0-x");
+    expect(md).toContain("## Plan-level review");
+    expect(md).toContain(
+      "After the last unit's review lands and is committed",
+    );
+    expect(md).toContain("- [ ] `/code-review:code-review`");
+    expect(md).toContain("- [ ] `/codex:adversarial-review`");
+    expect(md).toContain("  - Fallback: `codex agent adversarial-review`");
   });
 });
 
@@ -113,11 +146,30 @@ describe("buildUnitMd", () => {
     expect(md).toContain("Summary for 01-foo.");
     expect(md).toContain("## Tasks");
     expect(md).toContain("Do 01-foo.");
-    expect(md).toContain("## Review");
-    expect(md).toContain("- [ ] /code-review:code-review");
+    expect(md).toContain("## Review pipeline");
+    expect(md).toContain("- [ ] `/code-review:code-review`");
     expect(md).toContain(
       "See `progress.md` for the cursor and overall plan state.",
     );
+  });
+
+  it("renders a step's fallback and note as sub-bullets", () => {
+    const u: Unit = {
+      ...minimalUnit("01-rich"),
+      review_pipeline: {
+        steps: [
+          {
+            primary: "/codex:review",
+            fallback: "codex agent review",
+            note: "Use when slash buffer fits.",
+          },
+        ],
+      },
+    };
+    const md = buildUnitMd(u);
+    expect(md).toContain("- [ ] `/codex:review`");
+    expect(md).toContain("  - _Use when slash buffer fits._");
+    expect(md).toContain("  - Fallback: `codex agent review`");
   });
 
   it("renders blocked_by as comma-joined", () => {
@@ -130,9 +182,15 @@ describe("buildUnitMd", () => {
     expect(buildUnitMd(u)).toContain("**Agents involved:** a, b");
   });
 
-  it("emits no review steps placeholder when list empty", () => {
-    const u: Unit = { ...minimalUnit("01-x"), review_steps: [] };
-    expect(buildUnitMd(u)).toContain("- [ ] _No review steps recorded._");
+  it("emits no review steps placeholder when pipeline empty", () => {
+    const u: Unit = { ...minimalUnit("01-x"), review_pipeline: { steps: [] } };
+    expect(buildUnitMd(u)).toContain("- [ ] _No review steps configured._");
+  });
+
+  it("emits no review steps placeholder when pipeline absent", () => {
+    const u: Unit = { ...minimalUnit("01-x") };
+    delete u.review_pipeline;
+    expect(buildUnitMd(u)).toContain("- [ ] _No review steps configured._");
   });
 
   it("embeds mermaid block when unit has topology", () => {

@@ -29,11 +29,17 @@ When a user asks to resume a plan at `notes/plan/<slug>/`:
 
 After completing the cursor unit:
 
-- Run the unit's review steps (typically `/code-review:code-review`, sometimes an agent-CLI adversarial review).
+- Run the Unit-level review pipeline from the cursor unit's md (`## Review pipeline` section — typically `/code-review:code-review`, sometimes `/codex:review` or `/simplify` depending on the user's config).
 - Commit per the unit's commit guidance.
 - Update `progress.md`: move the unit into Done with a one-liner, advance the cursor to the next unit id.
 
 If the cursor unit is blocked (an external dependency, a question for the user, a review finding that needs discussion), record it under Blockers in `progress.md` and stop — do not jump to a different unit.
+
+When the cursor unit was the **last** Unit in the plan:
+
+- After its Unit-level review and commit, read `progress.md`'s `## Plan-level review` section and walk that pipeline against the cumulative plan diff.
+- Surface findings to the user.
+- On approval, archive the plan dir to `done/plan/<YYMMDD-N-slug>/` per the top-level archiving convention. Don't archive before the user signs off — even if `## Plan-level review` is empty.
 
 ## Cross-references
 

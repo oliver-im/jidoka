@@ -88,15 +88,72 @@ export const topologySchema: z.ZodType<Topology> = z.object({
   agents: z.array(agentSchema),
 });
 
+export interface Tool {
+  run: string;
+  fallback?: string;
+}
+
+export const toolSchema: z.ZodType<Tool> = z.object({
+  run: z.string().min(1, "tool.run must be a non-empty string"),
+  fallback: z.string().min(1, "tool.fallback must be a non-empty string").optional(),
+});
+
+export const toolsSchema = z.record(z.string().min(1), toolSchema);
+
+export interface ReviewStep {
+  tool: string;
+  op?: string;
+  note?: string;
+}
+
+export const reviewStepSchema: z.ZodType<ReviewStep> = z.object({
+  tool: z.string().min(1, "review step 'tool' must be a non-empty string"),
+  op: z.string().min(1).optional(),
+  note: z.string().optional(),
+});
+
+export interface ReviewPipeline {
+  steps: ReviewStep[];
+}
+
+export const reviewPipelineSchema: z.ZodType<ReviewPipeline> = z.object({
+  steps: z.array(reviewStepSchema),
+});
+
+export interface ReviewPipelines {
+  unit: ReviewPipeline;
+  plan: ReviewPipeline;
+}
+
+export const reviewPipelinesSchema: z.ZodType<ReviewPipelines> = z.object({
+  unit: reviewPipelineSchema,
+  plan: reviewPipelineSchema,
+});
+
+// Materialize/render-time shape: a step with the tool reference resolved and
+// `{op}` substituted in both templates. The renderer consumes this directly;
+// nothing serializes it back to disk.
+export interface ResolvedReviewStep {
+  primary: string;
+  fallback?: string;
+  note?: string;
+}
+
+export interface ResolvedReviewPipeline {
+  steps: ResolvedReviewStep[];
+}
+
 export interface Unit {
   id: string;
   title: string;
   summary: string;
   blocked_by: string[];
   agents_involved?: string[];
-  review_steps: string[];
   body_markdown: string;
   topology?: Topology;
+  // Materializer-attached. Never present on parsed input; set by
+  // `resolvePipelines` after schema validation.
+  review_pipeline?: ResolvedReviewPipeline;
 }
 
 export const unitSchema: z.ZodType<Unit> = z.object({
@@ -105,7 +162,6 @@ export const unitSchema: z.ZodType<Unit> = z.object({
   summary: z.string(),
   blocked_by: z.array(z.string()),
   agents_involved: z.array(z.string()).optional(),
-  review_steps: z.array(z.string()),
   body_markdown: z.string(),
   // `topology: null` is the producer-contract sentinel for "no embedded
   // topology"; both omission and explicit null normalize to undefined.
@@ -119,6 +175,9 @@ export interface Plan {
   task_summary: string;
   slug: string;
   units: Unit[];
+  // Materializer-attached. Never present on parsed input; set by
+  // `resolvePipelines` after schema validation.
+  plan_review_pipeline?: ResolvedReviewPipeline;
 }
 
 export const planSchema: z.ZodType<Plan> = z.object({

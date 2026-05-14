@@ -39,7 +39,9 @@ describe("parsePlanMarkdown — fixtures", () => {
     expect(plan.units[6]!.blocked_by).toEqual(["06-skill-emits-markdown"]);
 
     for (const u of plan.units) {
-      expect(u.review_steps).toEqual(["/code-review:code-review"]);
+      // The parser no longer emits review info; the materializer attaches a
+      // resolved pipeline at materialize time using the user's config.
+      expect(u.review_pipeline).toBeUndefined();
     }
 
     expect(plan.units[0]!.summary).toBe(

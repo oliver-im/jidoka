@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import { basename, isAbsolute, join } from "node:path";
 import { z } from "zod";
-import { loadConfig } from "./config.js";
+import { type Config, loadConfig } from "./config.js";
 import {
   MaterializeError,
   materializeAt,
@@ -39,6 +39,7 @@ interface HookConfig {
   plansRoot: string;
   autoOpenBrowser: boolean;
   htmlOutput: boolean;
+  cfg: Config;
 }
 
 function configFromEnv(): HookConfig {
@@ -58,6 +59,7 @@ function configFromEnv(): HookConfig {
     plansRoot,
     autoOpenBrowser: cfg.auto_open_browser && !noOpen,
     htmlOutput: cfg.html_output,
+    cfg,
   };
 }
 
@@ -133,7 +135,7 @@ export function runWithInput(input: string, config: HookConfig): void {
   }
   const finalDirName = basename(target);
   try {
-    materializeAt(plan, staging, finalDirName);
+    materializeAt(plan, staging, config.cfg, finalDirName);
     if (config.htmlOutput) writePlanHtml(plan, staging, finalDirName);
   } catch (e) {
     rmSync(staging, { recursive: true, force: true });

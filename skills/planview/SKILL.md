@@ -155,7 +155,7 @@ If two units genuinely run in parallel (independent tracks that converge later),
 
 ### review_steps
 
-The default review step is `/code-review:code-review`. The parser hard-codes this — you don't list it. If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body so the human reviewer takes the right action when the unit lands.
+You don't emit review info at all. Review pipelines come from the user's config at `~/.claude/plugins/planview/config.json`; the materializer resolves them and renders the result into each Unit md (`## Review pipeline`) and `progress.md` (`## Plan-level review`). If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body — the body is the per-unit escape hatch when the configured pipeline doesn't fit.
 
 ## Hard Rules
 

@@ -43,7 +43,6 @@ const minimalUnit = (id: string): Unit => ({
   title: `title for ${id}`,
   summary: `summary for ${id}`,
   blocked_by: [],
-  review_steps: ["/code-review:code-review"],
   body_markdown: "",
 });
 

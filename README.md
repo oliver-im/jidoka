@@ -79,8 +79,12 @@ planview reads a layered config: built-in defaults < `~/.claude/plugins/planview
 | `auto_open_browser` | `false` | ✓ | Open `overview.html` in the browser after materialize. |
 | `html_output` | `false` | ✓ | Render `overview.html` alongside the markdown files. |
 | `plan_level_topology` | `false` | — | Reserved for v2; currently always false. |
+| `tools` | three defaults shipped (`anthropic-cr`, `codex`, `simplify`) | — | Named reviewer definitions referenced by `review_pipelines`. Each entry is `{ "run": "<template>", "fallback"?: "<template>" }`; both templates may use `{op}` for subcommand substitution. |
+| `review_pipelines` | `unit` = `[{ "tool": "anthropic-cr" }]`, `plan` = `[]` | — | Two ordered pipelines of `{ tool, op?, note? }` steps. `unit` runs after each Unit (rendered into the Unit md). `plan` runs after the last Unit (rendered into `progress.md` as `## Plan-level review`). |
 
 Defaults assume "files-on-disk is the value, the browser is opt-in" — most users view plan dirs in their editor (Obsidian, VS Code, iA Writer). Flip `auto_open_browser=true` and/or `html_output=true` if you want the rendered HTML view too.
+
+To customize the review pipeline (e.g. add `/codex:review`, `/simplify`, or `/codex:adversarial-review` to the unit-level pipeline; populate the plan-level pipeline; define new tools), run `planview:configure` and walk the **Tools** and **Review pipelines** sections. See [`docs/data-model.md`](docs/data-model.md#review-pipelines) for the schema.
 
 ### Optional: shared daily counter
 

@@ -56,6 +56,9 @@ interface Plan {
   task_summary: string;            // one-line description of the overall task
   slug: string;                    // kebab-case, ≤ 60 chars, ^[a-z0-9-]+$
   units: Unit[];                   // 1-N units, sequential by default
+  // Materializer-attached at materialize time from the user config; never
+  // present on parsed input.
+  plan_review_pipeline?: ResolvedReviewPipeline;
 }
 
 interface Unit {
@@ -64,9 +67,11 @@ interface Unit {
   summary: string;
   blocked_by: string[];            // unit ids in the same plan
   agents_involved?: string[];      // free-form labels for the unit metadata
-  review_steps: string[];          // ["/code-review:code-review", "agent-cli", ...]
   body_markdown: string;           // the full unit body — Tasks, Acceptance, etc.
   topology?: Topology;             // optional multi-agent dispatch shape
+  // Materializer-attached at materialize time from the user config; never
+  // present on parsed input.
+  review_pipeline?: ResolvedReviewPipeline;
 }
 ```
 
@@ -85,13 +90,14 @@ interface Unit {
       "summary": "string",
       "blocked_by": ["string"],
       "agents_involved": ["string (optional)"],
-      "review_steps": ["string"],
       "body_markdown": "string",
       "topology": "Topology (optional)"
     }
   ]
 }
 ```
+
+Review pipelines aren't part of the wire format — the parser doesn't accept them and the skill doesn't produce them. They come from the user's config (`~/.claude/plugins/planview/config.json`) and are attached to the in-memory plan at materialize time. See [Review pipelines](#review-pipelines) below.
 
 ### Plan Field Semantics
 
@@ -105,9 +111,9 @@ interface Unit {
 | `summary` | `string` | One or two sentences. Shown above the body markdown in both md and HTML. |
 | `blocked_by` | `string[]` | Unit ids this unit depends on. Must reference siblings in the same plan; cycles and self-deps are rejected at validation time. |
 | `agents_involved` | `string[]?` | Optional labels for the unit metadata block. Omit for "main only". |
-| `review_steps` | `string[]` | Slash-commands or human-readable strings (e.g. `/code-review:code-review`, `agent-cli`, `manual smoke per acceptance`). Rendered as a checklist in the unit md and HTML card. |
 | `body_markdown` | `string` | The full body of the unit, embedded verbatim into `<id>.md` and re-rendered client-side for the HTML card. Typically `## Tasks`, `## Acceptance`, etc. |
 | `topology` | `Topology?` | Optional. When set, validated with the standard topology rules and rendered as a per-unit Mermaid block. |
+| `review_pipeline` | `ResolvedReviewPipeline?` | Materializer-attached. Comes from `review_pipelines.unit` in the user's config, with `{op}` substitution applied. Rendered as a checklist in the Unit md and HTML card. |
 
 ## Topology Data Model (per-unit, optional)
 
@@ -220,6 +226,71 @@ When both modes appear in a topology (e.g., top-level subagents with a nested te
 
 The `produces` field describes what an agent outputs in human terms. It appears in the topology overview text.
 
+## Review pipelines
+
+Review steps come from the user's config at `~/.claude/plugins/planview/config.json` (managed by `planview:setup` and `planview:configure`). The materializer resolves them at materialize time and attaches the resolved structure to each Unit (rendered into the Unit md) and to the Plan (rendered into `progress.md` as `## Plan-level review`).
+
+### Config shape
+
+```typescript
+interface Tool {
+  run: string;          // command template; `{op}` substituted from step
+  fallback?: string;    // optional secondary template
+}
+
+interface ReviewStep {
+  tool: string;         // key in `tools`
+  op?: string;          // required iff tool template contains `{op}`
+  note?: string;
+}
+
+interface ReviewPipeline {
+  steps: ReviewStep[];
+}
+
+interface ReviewPipelines {
+  unit: ReviewPipeline;   // runs after each Unit
+  plan: ReviewPipeline;   // runs after the last Unit
+}
+```
+
+### Resolved shape (materialize/render time)
+
+```typescript
+interface ResolvedReviewStep {
+  primary: string;      // tool.run with `{op}` substituted
+  fallback?: string;    // tool.fallback with `{op}` substituted, if defined
+  note?: string;        // from the step
+}
+
+interface ResolvedReviewPipeline {
+  steps: ResolvedReviewStep[];
+}
+```
+
+The resolved shape is internal — never serialized back to disk, never accepted as parser input. Use the config shape when writing or reading the config file; the resolved shape only exists in the in-memory `Plan` / `Unit` after materialization.
+
+### Substitution rule
+
+`{op}` is the only recognized placeholder. The materializer does a literal `replaceAll("{op}", step.op)` on both `tool.run` and `tool.fallback`. Other `{...}` substrings are passed through verbatim.
+
+### Slash-vs-bash inference
+
+The renderer decides how to display a resolved command (slash command vs shell command) by the leading character of the resolved string:
+
+- `^/[a-zA-Z][a-zA-Z0-9_-]*(?::[a-zA-Z][a-zA-Z0-9_-]*)?(?:\s|$)` → slash command (e.g. `/code-review:code-review`, `/codex:review --pr 1`).
+- Anything else → bash command (e.g. `codex agent review`, `/usr/local/bin/foo`).
+
+The inference is render-time; no field on the step needs to declare type.
+
+### Validation
+
+The materializer denies the ExitPlanMode hook (or fails the `materialize` CLI) when:
+
+- A step references an unknown tool key.
+- A step's `op` is missing and either `tool.run` or `tool.fallback` contains `{op}`.
+- A step provides `op` but neither template contains `{op}`.
+
 ### Terminology
 
 | Term | Meaning |
@@ -228,4 +299,8 @@ The `produces` field describes what an agent outputs in human terms. It appears 
 | Unit | One step in a plan. Reviewable on its own. Materialized to `<id>.md`. |
 | Topology | Per-unit (optional) multi-agent dispatch shape. Rendered as a Mermaid block inside the unit's md and HTML card. |
 | Phase | A wave of work derived from `blocked_by` dependencies inside a topology. In subagents mode, the main agent dispatches each phase explicitly. |
-| Step | Numbered items in the topology overview. The dependency-derived order within a phase. Parallel agents share a step with letter suffixes (2a, 2b). |
+| Step (topology) | Numbered items in the topology overview. The dependency-derived order within a phase. Parallel agents share a step with letter suffixes (2a, 2b). |
+| Tool | A named reviewer definition in `config.tools` carrying a primary `run` template and optional `fallback` template. Both templates may use `{op}` for subcommand substitution. |
+| ReviewStep | A reference to a Tool from inside a `ReviewPipeline.steps` list, with an optional `op` (when the tool templates one) and an optional `note`. |
+| ReviewPipeline | An ordered list of ReviewSteps. Each plan has two: `unit` (run per Unit) and `plan` (run after the last Unit). |
+| Plan-level review | The `progress.md` section rendered from `review_pipelines.plan`. Surfaces after every Unit is reviewed and committed; the resume protocol stops here and asks the user before archiving. |

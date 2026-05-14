@@ -8,6 +8,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { defaultConfig } from "../config.js";
 import { __testing, type HookConfig } from "../hook.js";
 
 const { runWithInput, isValidSessionId } = __testing;
@@ -27,6 +28,7 @@ const testConfig = (project: string): HookConfig => ({
   plansRoot: join(project, "notes/plan"),
   autoOpenBrowser: false,
   htmlOutput: true,
+  cfg: defaultConfig,
 });
 
 const validPlanMd = `# Hook test plan

@@ -7,6 +7,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { type Config, defaultConfig } from "../config.js";
 import {
   MaterializeError,
   materialize,
@@ -32,8 +33,31 @@ const unitNoTopology = (id: string, blockedBy: string[] = []): Unit => ({
   title: `Title for ${id}`,
   summary: `Summary for ${id}.`,
   blocked_by: blockedBy,
-  review_steps: ["/code-review:code-review"],
   body_markdown: `## Tasks\n\nDo ${id}.\n`,
+});
+
+const cfgWithUnitPipeline = (
+  steps: Config["review_pipelines"]["unit"]["steps"],
+  tools: Config["tools"] = defaultConfig.tools,
+): Config => ({
+  ...defaultConfig,
+  tools,
+  review_pipelines: {
+    unit: { steps },
+    plan: defaultConfig.review_pipelines.plan,
+  },
+});
+
+const cfgWithPlanPipeline = (
+  steps: Config["review_pipelines"]["plan"]["steps"],
+  tools: Config["tools"] = defaultConfig.tools,
+): Config => ({
+  ...defaultConfig,
+  tools,
+  review_pipelines: {
+    unit: defaultConfig.review_pipelines.unit,
+    plan: { steps },
+  },
 });
 
 const samplePlan = (): Plan => ({
@@ -94,7 +118,7 @@ describe("materialize", () => {
     mkdirSync(plansRoot, { recursive: true });
 
     const plan = samplePlan();
-    const target = materialize(plan, plansRoot, "260505");
+    const target = materialize(plan, plansRoot, "260505", defaultConfig);
 
     expect(target.endsWith("260505-0-pivot-renderer")).toBe(true);
 
@@ -105,15 +129,80 @@ describe("materialize", () => {
 
     const progress = readFileSync(join(target, "progress.md"), "utf8");
     expect(progress).toContain("**Cursor:** 01-prep");
+    expect(progress).toContain("## Plan-level review");
+    expect(progress).toContain("_No plan-level reviews configured.");
 
     const u01 = readFileSync(join(target, "01-prep.md"), "utf8");
     expect(u01.startsWith("# Unit 01 — Title for 01-prep")).toBe(true);
     expect(u01).toContain("**Blocked by:** none");
     expect(u01).toContain("**Agents involved:** main only");
     expect(u01).toContain("**Topology:** none");
-    expect(u01).toContain("- [ ] /code-review:code-review");
+    expect(u01).toContain("## Review pipeline");
+    expect(u01).toContain("- [ ] `/code-review:code-review`");
 
     rmSync(base, { recursive: true, force: true });
+  });
+
+  it("renders unit pipeline with codex op-substituted plus fallback", () => {
+    const base = makeTempDir("codex");
+    const plansRoot = join(base, "plan");
+    mkdirSync(plansRoot, { recursive: true });
+    const cfg = cfgWithUnitPipeline([
+      { tool: "anthropic-cr" },
+      { tool: "codex", op: "review", note: "Use when slash buffer fits." },
+      { tool: "simplify" },
+    ]);
+    const target = materialize(samplePlan(), plansRoot, "260505", cfg);
+    const u01 = readFileSync(join(target, "01-prep.md"), "utf8");
+    expect(u01).toContain("- [ ] `/code-review:code-review`");
+    expect(u01).toContain("- [ ] `/codex:review`");
+    expect(u01).toContain("  - _Use when slash buffer fits._");
+    expect(u01).toContain("  - Fallback: `codex agent review`");
+    expect(u01).toContain("- [ ] `/simplify`");
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  it("renders plan-level review with substituted op", () => {
+    const base = makeTempDir("plan-review");
+    const plansRoot = join(base, "plan");
+    mkdirSync(plansRoot, { recursive: true });
+    const cfg = cfgWithPlanPipeline([
+      { tool: "anthropic-cr" },
+      { tool: "codex", op: "adversarial-review" },
+    ]);
+    const target = materialize(samplePlan(), plansRoot, "260505", cfg);
+    const progress = readFileSync(join(target, "progress.md"), "utf8");
+    expect(progress).toContain("## Plan-level review");
+    expect(progress).toContain(
+      "After the last unit's review lands and is committed",
+    );
+    expect(progress).toContain("- [ ] `/code-review:code-review`");
+    expect(progress).toContain("- [ ] `/codex:adversarial-review`");
+    expect(progress).toContain("  - Fallback: `codex agent adversarial-review`");
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  it("rejects steps that reference an unknown tool", () => {
+    const cfg = cfgWithUnitPipeline([{ tool: "ghost" }]);
+    expect(() =>
+      materializeAt(samplePlan(), join(makeTempDir("ghost"), "plan"), cfg),
+    ).toThrow(/unknown tool 'ghost'/);
+  });
+
+  it("rejects steps missing required op", () => {
+    const cfg = cfgWithUnitPipeline([{ tool: "codex" }]);
+    expect(() =>
+      materializeAt(samplePlan(), join(makeTempDir("noop"), "plan"), cfg),
+    ).toThrow(/template requires '\{op\}'/);
+  });
+
+  it("rejects steps with extra op for an untemplated tool", () => {
+    const cfg = cfgWithUnitPipeline([
+      { tool: "simplify", op: "deep" },
+    ]);
+    expect(() =>
+      materializeAt(samplePlan(), join(makeTempDir("extra-op"), "plan"), cfg),
+    ).toThrow(/no '\{op\}' placeholder/);
   });
 
   it("emits mermaid block for unit with topology", () => {
@@ -147,7 +236,7 @@ describe("materialize", () => {
       units: [unit],
     };
 
-    const target = materialize(plan, plansRoot, "260505");
+    const target = materialize(plan, plansRoot, "260505", defaultConfig);
     const md = readFileSync(join(target, "01-team.md"), "utf8");
     expect(md).toContain("**Topology:** present");
     expect(md).toContain("**Agents involved:** writer, reviewer");
@@ -163,9 +252,11 @@ describe("materialize", () => {
     const base = makeTempDir("collision");
     const target = join(base, "260505-0-pivot-renderer");
     mkdirSync(target, { recursive: true });
-    expect(() => materializeAt(samplePlan(), target)).toThrow(MaterializeError);
+    expect(() => materializeAt(samplePlan(), target, defaultConfig)).toThrow(
+      MaterializeError,
+    );
     try {
-      materializeAt(samplePlan(), target);
+      materializeAt(samplePlan(), target, defaultConfig);
     } catch (e) {
       expect(e).toBeInstanceOf(MaterializeError);
       expect((e as MaterializeError).kind).toBe("target_dir_exists");
@@ -179,7 +270,7 @@ describe("writePlanHtml", () => {
     const base = makeTempDir("html");
     const plansRoot = join(base, "plan");
     mkdirSync(plansRoot, { recursive: true });
-    const target = materialize(samplePlan(), plansRoot, "260505");
+    const target = materialize(samplePlan(), plansRoot, "260505", defaultConfig);
     writePlanHtml(samplePlan(), target);
     const html = readFileSync(join(target, "overview.html"), "utf8");
     expect(html).toContain("<!DOCTYPE html>");

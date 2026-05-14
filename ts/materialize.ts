@@ -7,19 +7,93 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import type { Config } from "./config.js";
 import { renderPlanHtml } from "./html.js";
 import { buildOverviewMd, buildProgressMd, buildUnitMd } from "./render-md.js";
-import type { Plan } from "./types.js";
+import type {
+  Plan,
+  ResolvedReviewStep,
+  ReviewStep,
+  Tool,
+} from "./types.js";
 
 export class MaterializeError extends Error {
   constructor(
-    public readonly kind: "target_dir_exists" | "io",
+    public readonly kind: "target_dir_exists" | "io" | "invalid_config",
     public readonly path: string,
     message: string,
   ) {
     super(message);
     this.name = "MaterializeError";
   }
+}
+
+function resolveStep(
+  step: ReviewStep,
+  scope: string,
+  index: number,
+  tools: Record<string, Tool>,
+): ResolvedReviewStep {
+  const tool = tools[step.tool];
+  if (tool === undefined) {
+    const known = Object.keys(tools).sort().join(", ");
+    throw new MaterializeError(
+      "invalid_config",
+      "<config>",
+      `${scope}.steps[${index}]: unknown tool '${step.tool}' (defined tools: ${known || "(none)"})`,
+    );
+  }
+  const needsOp =
+    tool.run.includes("{op}") ||
+    (tool.fallback !== undefined && tool.fallback.includes("{op}"));
+  if (needsOp && step.op === undefined) {
+    throw new MaterializeError(
+      "invalid_config",
+      "<config>",
+      `${scope}.steps[${index}]: tool '${step.tool}' template requires '{op}' but the step provides none`,
+    );
+  }
+  if (!needsOp && step.op !== undefined) {
+    throw new MaterializeError(
+      "invalid_config",
+      "<config>",
+      `${scope}.steps[${index}]: tool '${step.tool}' template has no '{op}' placeholder but the step provides one ('${step.op}')`,
+    );
+  }
+  const op = step.op;
+  const primary = op === undefined ? tool.run : tool.run.replaceAll("{op}", op);
+  const resolved: ResolvedReviewStep = { primary };
+  if (tool.fallback !== undefined) {
+    resolved.fallback =
+      op === undefined ? tool.fallback : tool.fallback.replaceAll("{op}", op);
+  }
+  if (step.note !== undefined) {
+    resolved.note = step.note;
+  }
+  return resolved;
+}
+
+/**
+ * Walks the config-side `unit` and `plan` pipelines, resolves each step into
+ * a primary + optional fallback command (substituting `{op}` from the step),
+ * and attaches the resulting `ResolvedReviewPipeline` to the in-memory plan
+ * (`plan.plan_review_pipeline`) and to each unit (`unit.review_pipeline`).
+ *
+ * Throws `MaterializeError("invalid_config", ...)` when a step references an
+ * unknown tool, or when `op` is missing/extra relative to the tool template.
+ */
+export function resolvePipelines(plan: Plan, config: Config): void {
+  const tools = config.tools;
+  for (const unit of plan.units) {
+    const steps = config.review_pipelines.unit.steps.map((step, i) =>
+      resolveStep(step, "review_pipelines.unit", i, tools),
+    );
+    unit.review_pipeline = { steps };
+  }
+  const planSteps = config.review_pipelines.plan.steps.map((step, i) =>
+    resolveStep(step, "review_pipelines.plan", i, tools),
+  );
+  plan.plan_review_pipeline = { steps: planSteps };
 }
 
 /**
@@ -91,9 +165,10 @@ export function materialize(
   plan: Plan,
   plansRoot: string,
   today: string,
+  config: Config,
 ): string {
   const target = resolveTargetDir(plan, plansRoot, today);
-  materializeAt(plan, target);
+  materializeAt(plan, target, config);
   return target;
 }
 
@@ -108,8 +183,11 @@ export function materialize(
 export function materializeAt(
   plan: Plan,
   targetDir: string,
+  config: Config,
   dirNameOverride?: string,
 ): void {
+  resolvePipelines(plan, config);
+
   if (existsSync(targetDir)) {
     throw new MaterializeError(
       "target_dir_exists",

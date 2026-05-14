@@ -64,10 +64,18 @@
 
         <% if (unit.review_steps.length > 0) { %>
         <div class="unit-review">
-          <h3>Review</h3>
+          <h3>Review pipeline</h3>
           <ul>
             <% unit.review_steps.forEach((step) => { %>
-            <li><code><%= step %></code></li>
+            <li>
+              <code><%= step.primary %></code>
+              <% if (step.note) { %>
+              <div class="review-note"><em><%= step.note %></em></div>
+              <% } %>
+              <% if (step.fallback) { %>
+              <div class="review-fallback">Fallback: <code><%= step.fallback %></code></div>
+              <% } %>
+            </li>
             <% }); %>
           </ul>
         </div>

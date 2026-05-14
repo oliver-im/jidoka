@@ -9,7 +9,7 @@
 <%= it.summaryBlock -%>
 <%= it.bodyBlock -%>
 <%= it.topologyBlock -%>
-## Review
+## Review pipeline
 
 <%= it.reviewItems %>
 ---
