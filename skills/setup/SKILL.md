@@ -1,7 +1,7 @@
 ---
 name: planview:setup
 description: Interactive first-run setup for the planview plugin. Writes ~/.claude/plugins/planview/config.json.
-allowed-tools: Read, Write, Bash(mkdir:*), Bash(test:*), AskUserQuestion
+allowed-tools: Read, Write, Bash, AskUserQuestion
 disable-model-invocation: true
 ---
 
