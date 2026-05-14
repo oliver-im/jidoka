@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
+import stripJsonComments from "strip-json-comments";
 import { z } from "zod";
 import {
   type ReviewPipelines,
@@ -103,7 +104,7 @@ function readJson(path: string): unknown {
     return undefined;
   }
   try {
-    return JSON.parse(raw);
+    return JSON.parse(stripJsonComments(raw));
   } catch (e) {
     process.stderr.write(
       `planview: invalid JSON in ${path}: ${(e as Error).message}\n`,

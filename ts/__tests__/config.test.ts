@@ -133,6 +133,30 @@ describe("loadFromPaths", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it("parses JSONC — strips // and /* */ comments before parsing", () => {
+    const dir = makeTempDir("jsonc");
+    const path = join(dir, "config.json");
+    writeFileSync(
+      path,
+      `{
+        // Top-level scalar comment.
+        "plan_dir_root": "commented/plans",
+        /* Block comment
+           spanning multiple lines. */
+        "auto_open_browser": true,
+        // Tool with an inline comment.
+        "tools": {
+          "anthropic-cr": { "run": "/code-review:code-review" }  // not a comment-in-string
+        }
+      }`,
+    );
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.plan_dir_root).toBe("commented/plans");
+    expect(cfg.auto_open_browser).toBe(true);
+    expect(cfg.tools["anthropic-cr"].run).toBe("/code-review:code-review");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it("hydrates missing tools and review_pipelines from defaults", () => {
     const dir = makeTempDir("partial");
     const path = join(dir, "config.json");

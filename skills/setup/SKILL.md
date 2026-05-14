@@ -11,7 +11,7 @@ Interactive first-run configuration for the planview plugin. Runs **outside** th
 
 ## What you write
 
-A JSON file at `~/.claude/plugins/planview/config.json`. Every run writes all six top-level keys (even at default) so the file is self-documenting and easy to hand-edit afterward.
+A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/planview/config.json`. Every run writes all six top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
 
 | Key | Type | Default | Question to ask |
 |---|---|---|---|
@@ -22,24 +22,56 @@ A JSON file at `~/.claude/plugins/planview/config.json`. Every run writes all si
 | `tools` | object | see below | _(don't ask; write the shipped tool defaults)_ |
 | `review_pipelines` | object | see below | _(don't ask; write the shipped pipeline defaults)_ |
 
-### Default `tools` to write
+### Template to write
 
-```json
+Use this exact JSONC layout, substituting the four scalar answers from the questionnaire. The comments are part of the file — preserve them verbatim:
+
+```jsonc
 {
-  "anthropic-cr": { "run": "/code-review:code-review" },
-  "codex":        { "run": "/codex:{op}" },
-  "simplify":     { "run": "/simplify" }
-}
-```
+  // Where planview writes plan dirs (project-relative).
+  // Common alternatives: "plans", "notes/plan", "docs/plans".
+  "plan_dir_root": "plan",
 
-Every Tool is a Claude Code plugin slash command. There is no bash escape hatch and no fallback.
+  // Open overview.html in the browser after a successful materialize.
+  // Most users view the markdown in their editor; set true for a browser pop.
+  "auto_open_browser": false,
 
-### Default `review_pipelines` to write
+  // Render overview.html alongside the .md files. Off by default;
+  // set true if you want the rendered HTML view.
+  "html_output": false,
 
-```json
-{
-  "unit": { "steps": [ { "tool": "anthropic-cr" } ] },
-  "plan": { "steps": [] }
+  // Reserved for v2 — leave as false.
+  "plan_level_topology": false,
+
+  // Every tool is a Claude Code plugin slash command. The {op} placeholder
+  // is substituted from a pipeline step's "op" field at materialize time.
+  // There is no bash escape hatch and no fallback.
+  "tools": {
+    "anthropic-cr": { "run": "/code-review:code-review" },
+    "codex":        { "run": "/codex:{op}" },
+    "simplify":     { "run": "/simplify" }
+  },
+
+  // Review pipelines run on materialized plans.
+  //   unit: runs after each Unit lands. Rendered into each Unit md.
+  //   plan: runs after the last Unit's review and commit. Rendered
+  //         into progress.md as "## Plan-level review".
+  // Each step references a tool name above. If the tool's run template
+  // contains {op}, set "op" on the step to substitute it. Optional "note"
+  // adds a one-line annotation to the rendered step.
+  // Example with codex + simplify after each unit and adversarial-review at plan close:
+  //   "unit": { "steps": [
+  //     { "tool": "anthropic-cr" },
+  //     { "tool": "codex", "op": "review" },
+  //     { "tool": "simplify" }
+  //   ] },
+  //   "plan": { "steps": [
+  //     { "tool": "codex", "op": "adversarial-review" }
+  //   ] }
+  "review_pipelines": {
+    "unit": { "steps": [ { "tool": "anthropic-cr" } ] },
+    "plan": { "steps": [] }
+  }
 }
 ```
 
@@ -49,7 +81,7 @@ These defaults match planview's pre-config behavior — only `/code-review:code-
 
 1. Check whether `~/.claude/plugins/planview/config.json` already exists (Read or Bash with `test -f`). If it does, show its contents and ask the user whether to overwrite it or keep what's there. If they want surgical edits, point them at the file path and the README's "Editing tools and review pipelines" section.
 2. Walk through each user-facing setting in order using `AskUserQuestion`. Show the default in the prompt; accept Enter-for-default. Validate input as you go (no empty `plan_dir_root`, etc.). The auto-populated keys (`plan_level_topology`, `tools`, `review_pipelines`) are not asked; they get written at their defaults.
-3. Show a preview of the resulting JSON (formatted, two-space indent), including the auto-populated `tools` and `review_pipelines` sections. Ask `confirm / edit / abort`.
-4. On `confirm`: `mkdir -p ~/.claude/plugins/planview && write the file`. Print the path. Mention that customizing the review pipeline (adding codex/simplify steps, defining new tools, populating the plan-level pipeline) is a direct edit of this JSON — point at the README's "Editing tools and review pipelines" section for schema and examples.
+3. Show a preview of the resulting JSONC (template above with the four scalar answers substituted in, comments preserved). Ask `confirm / edit / abort`.
+4. On `confirm`: `mkdir -p ~/.claude/plugins/planview && write the file`. Print the path. Mention that customizing the review pipeline (adding codex/simplify steps, defining new tools, populating the plan-level pipeline) is a direct edit of this file — the inline comments document the schema, and the README's "Editing tools and review pipelines" section has additional examples.
 5. On `edit`: jump back to the question whose answer the user wants to change.
 6. On `abort`: write nothing.
