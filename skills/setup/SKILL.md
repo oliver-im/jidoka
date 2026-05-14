@@ -1,7 +1,7 @@
 ---
 name: planview:setup
 description: Interactive first-run setup for the planview plugin. Writes ~/.claude/plugins/planview/config.json.
-allowed-tools: Read, Write, Bash, AskUserQuestion
+allowed-tools: Read, Write, Bash(mkdir:*), Bash(test:*), AskUserQuestion
 disable-model-invocation: true
 ---
 
@@ -11,7 +11,7 @@ Interactive first-run configuration for the planview plugin. Runs **outside** th
 
 ## What you write
 
-A JSON file at `~/.claude/plugins/planview/config.json` with the following keys:
+A JSON file at `~/.claude/plugins/planview/config.json`. Every run writes all six top-level keys (even at default) so the file is self-documenting and easy to hand-edit afterward.
 
 | Key | Type | Default | Question to ask |
 |---|---|---|---|
@@ -53,10 +53,3 @@ These defaults match planview's pre-config behavior — only `/code-review:code-
 4. On `confirm`: `mkdir -p ~/.claude/plugins/planview && write the file`. Print the path. Mention that customizing the review pipeline (adding codex/simplify steps, defining new tools, populating the plan-level pipeline) is a direct edit of this JSON — point at the README's "Editing tools and review pipelines" section for schema and examples.
 5. On `edit`: jump back to the question whose answer the user wants to change.
 6. On `abort`: write nothing.
-
-## Hard rules
-
-1. **NEVER** write outside `~/.claude/plugins/planview/`. Don't touch project-level `.planview.json` from this skill.
-2. **NEVER** silently overwrite an existing config — ask first.
-3. **ALWAYS** include all six top-level keys in the written JSON, even at default — the layered loader handles missing fields, but explicit values make the file self-documenting and easier to hand-edit afterward.
-4. **NEVER** invoke the planview binary or run `/planview`. This skill only writes config; runtime effects are observed through normal use.

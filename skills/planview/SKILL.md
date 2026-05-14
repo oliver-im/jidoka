@@ -157,14 +157,11 @@ If two units genuinely run in parallel (independent tracks that converge later),
 
 You don't emit review info at all. Review pipelines come from the user's config at `~/.claude/plugins/planview/config.json`; the materializer resolves them and renders the result into each Unit md (`## Review pipeline`) and `progress.md` (`## Plan-level review`). If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body — the body is the per-unit escape hatch when the configured pipeline doesn't fit.
 
-## Hard Rules
+## Contract
 
-1. **NEVER** generate HTML. The renderer handles that.
-2. **NEVER** call the renderer binary. Return markdown only; the hook (or `planview materialize`) handles rendering.
-3. **NEVER** execute the plan. The skill is a planner only.
-4. **NEVER** loop or ask for approval. One-shot generator.
-5. On re-invocation with adjustments, regenerate the **FULL** markdown from scratch — no patching.
-6. **NEVER** save the markdown to disk yourself. Return it to the caller; ExitPlanMode delivers it to the hook via `tool_input.plan`.
+- **Output**: one markdown plan in a ` ```markdown ` fence, returned to the caller.
+- **One-shot**: produce, return, exit. On re-invocation regenerate the full markdown from scratch — no patching of prior output.
+- **Scope is read-only analysis + markdown emission.** File writes, HTML rendering, binary invocations, plan execution all belong to the hook downstream.
 
 ## Design Constraints
 
