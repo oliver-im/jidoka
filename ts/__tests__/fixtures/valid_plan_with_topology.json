@@ -7,7 +7,6 @@
       "title": "Prep",
       "summary": "Single-agent prep step.",
       "blocked_by": [],
-      "review_steps": ["/code-review:code-review"],
       "body_markdown": "Body."
     },
     {
@@ -16,7 +15,6 @@
       "summary": "Dispatch a team to build the feature.",
       "blocked_by": ["01-prep"],
       "agents_involved": ["frontend", "backend", "integrator"],
-      "review_steps": ["/code-review:code-review", "agent-cli"],
       "body_markdown": "## Tasks\n\nDispatch the team.\n",
       "topology": {
         "task_summary": "Coordinate a team refactor",

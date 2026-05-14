@@ -197,11 +197,12 @@ export function loadGlobalRaw(): Record<string, unknown> | undefined {
 /**
  * Merges known config fields into `base`, preserving unknown keys.
  *
- * Preservation reaches one level into `tools` (foreign tool names AND foreign
- * sub-fields on tool entries the configure skill walked) and into
- * `review_pipelines` (foreign scope keys alongside the standard `unit`/`plan`).
- * Step objects are array elements without stable identity, so foreign keys
- * inside individual steps are NOT preserved.
+ * Preservation reaches one level into `tools` (foreign sub-fields on each
+ * tool entry that survived the configure pass) and into `review_pipelines`
+ * (foreign scope keys alongside the standard `unit`/`plan`). Tool names
+ * themselves are skill-managed — a tool absent from `cfg.tools` was removed
+ * by the user and is dropped. Step objects are array elements without stable
+ * identity, so foreign keys inside individual steps are NOT preserved.
  */
 export function mergeForWrite(
   base: Record<string, unknown> | undefined,
@@ -226,7 +227,7 @@ function mergeTools(
   cfg: Record<string, Tool>,
 ): Record<string, unknown> {
   const baseTools = isObject(base) ? base : {};
-  const out: Record<string, unknown> = { ...baseTools };
+  const out: Record<string, unknown> = {};
   for (const [name, tool] of Object.entries(cfg)) {
     const baseEntry = isObject(baseTools[name]) ? baseTools[name] : {};
     const merged: Record<string, unknown> = { ...baseEntry, run: tool.run };

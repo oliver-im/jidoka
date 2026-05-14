@@ -238,7 +238,7 @@ describe("mergeForWrite", () => {
     expect(merged.review_pipelines).toEqual(defaultConfig.review_pipelines);
   });
 
-  it("keeps tools the configure skill didn't enumerate", () => {
+  it("drops tools the user removed from cfg", () => {
     const base = {
       tools: {
         weird: { run: "/weird" },
@@ -247,7 +247,8 @@ describe("mergeForWrite", () => {
     };
     const merged = mergeForWrite(base, defaultConfig);
     const tools = merged.tools as Record<string, unknown>;
-    expect(tools.weird).toEqual({ run: "/weird" });
+    expect(tools.weird).toBeUndefined();
+    expect("weird" in tools).toBe(false);
     expect(tools["anthropic-cr"]).toEqual({ run: "/code-review:code-review" });
   });
 

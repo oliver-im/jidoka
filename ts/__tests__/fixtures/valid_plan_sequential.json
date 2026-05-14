@@ -7,7 +7,6 @@
       "title": "Add types",
       "summary": "Introduce the new types.",
       "blocked_by": [],
-      "review_steps": ["/code-review:code-review"],
       "body_markdown": "Body."
     },
     {
@@ -16,7 +15,6 @@
       "summary": "Add validation.",
       "blocked_by": ["01-types"],
       "agents_involved": ["main"],
-      "review_steps": ["/code-review:code-review", "agent-cli"],
       "body_markdown": "Body."
     },
     {
@@ -24,7 +22,6 @@
       "title": "Render",
       "summary": "Render output.",
       "blocked_by": ["02-validate"],
-      "review_steps": ["/code-review:code-review"],
       "body_markdown": "Body."
     }
   ]
