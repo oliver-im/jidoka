@@ -181,8 +181,9 @@ export function validateProjectPlanDirRoot(s: string): string | undefined {
 
 /**
  * Reads the global config as a raw JSON value, preserving manually-added
- * keys. Used by `planview:configure` to round-trip without losing fields the
- * questionnaire doesn't know about.
+ * keys. Used by `planview:setup` when overwriting an existing file, so
+ * fields the questionnaire doesn't know about (and hand-edited
+ * `tools` / `review_pipelines` entries) survive the round-trip.
  */
 export function loadGlobalRaw(): Record<string, unknown> | undefined {
   const path = globalConfigPath();
@@ -198,7 +199,7 @@ export function loadGlobalRaw(): Record<string, unknown> | undefined {
  * Merges known config fields into `base`, preserving unknown keys.
  *
  * Preservation reaches one level into `tools` (foreign sub-fields on each
- * tool entry that survived the configure pass) and into `review_pipelines`
+ * tool entry the setup skill didn't touch) and into `review_pipelines`
  * (foreign scope keys alongside the standard `unit`/`plan`). Tool names
  * themselves are skill-managed — a tool absent from `cfg.tools` was removed
  * by the user and is dropped. The legacy `fallback` sub-field is purged

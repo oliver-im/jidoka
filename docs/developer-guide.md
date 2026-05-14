@@ -371,7 +371,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 - Missing files are not errors: layer falls through silently.
 - Invalid JSON or shape mismatch on the global file: stderr warning, fall back to defaults.
 - Project file may only set the keys marked above. Other keys are warn-and-ignored. Non-boolean values for the boolean keys are warn-and-ignored. `plan_dir_root` strings are validated (`isAbsolute` and `..` segments rejected) before being applied.
-- `mergeForWrite(base, cfg)` round-trips the global file preserving any manually added keys — used by `planview:configure`.
+- `mergeForWrite(base, cfg)` round-trips the global file preserving any manually added keys — used by `planview:setup` when overwriting an existing file.
 
 ### Daily counter
 
@@ -379,10 +379,9 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 
 ### Skills
 
-Two skills front the config UX (run outside the planning fork so `AskUserQuestion` works):
+One skill fronts the config UX (runs outside the planning fork so `AskUserQuestion` works):
 
-- `planview:setup` — first-run Q&A walkthrough that writes the global file from scratch. Triggered by phrases like "set up planview".
-- `planview:configure` — diff-style edits that preserve manually added keys. Triggered by "change planview settings".
+- `planview:setup` — first-run Q&A walkthrough that writes the global file. Triggered by phrases like "set up planview". Handles only the scalar knobs; `tools` and `review_pipelines` are hand-edited in the JSON afterward (see README → Editing tools and review pipelines). The hook re-validates on next plan-mode use, so no separate validator is needed.
 
 ## Plugin Manifest
 

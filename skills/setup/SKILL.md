@@ -43,14 +43,14 @@ Every Tool is a Claude Code plugin slash command. There is no bash escape hatch 
 }
 ```
 
-These defaults match planview's pre-config behavior — only `/code-review:code-review` runs after each Unit, and nothing runs at the Plan level. `codex` and `simplify` are pre-defined as Tools so opting them in via `planview:configure` is a pick-from-list rather than typing a new Tool from scratch. Customizing the review pipeline (adding codex, simplify, adversarial) happens through `planview:configure` after setup.
+These defaults match planview's pre-config behavior — only `/code-review:code-review` runs after each Unit, and nothing runs at the Plan level. `codex` and `simplify` are pre-defined as Tools so the user only has to reference them by name in `review_pipelines` to enable them — no Tool definition needed. Customizing the review pipeline (adding codex, simplify, adversarial) is a hand-edit of `~/.claude/plugins/planview/config.json` after setup; see the README's "Editing tools and review pipelines" section. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
 
 ## Process
 
-1. Check whether `~/.claude/plugins/planview/config.json` already exists (Read or Bash with `test -f`). If it does, ask the user whether to overwrite it or run `planview:configure` instead.
+1. Check whether `~/.claude/plugins/planview/config.json` already exists (Read or Bash with `test -f`). If it does, show its contents and ask the user whether to overwrite it or keep what's there. If they want surgical edits, point them at the file path and the README's "Editing tools and review pipelines" section.
 2. Walk through each user-facing setting in order using `AskUserQuestion`. Show the default in the prompt; accept Enter-for-default. Validate input as you go (no empty `plan_dir_root`, etc.). The auto-populated keys (`plan_level_topology`, `tools`, `review_pipelines`) are not asked; they get written at their defaults.
 3. Show a preview of the resulting JSON (formatted, two-space indent), including the auto-populated `tools` and `review_pipelines` sections. Ask `confirm / edit / abort`.
-4. On `confirm`: `mkdir -p ~/.claude/plugins/planview && write the file`. Print the path. Mention that `planview:configure` is the entry point for customizing the review pipeline (e.g., adding codex/simplify, defining new tools, populating the plan-level pipeline).
+4. On `confirm`: `mkdir -p ~/.claude/plugins/planview && write the file`. Print the path. Mention that customizing the review pipeline (adding codex/simplify steps, defining new tools, populating the plan-level pipeline) is a direct edit of this JSON — point at the README's "Editing tools and review pipelines" section for schema and examples.
 5. On `edit`: jump back to the question whose answer the user wants to change.
 6. On `abort`: write nothing.
 
@@ -58,5 +58,5 @@ These defaults match planview's pre-config behavior — only `/code-review:code-
 
 1. **NEVER** write outside `~/.claude/plugins/planview/`. Don't touch project-level `.planview.json` from this skill.
 2. **NEVER** silently overwrite an existing config — ask first.
-3. **ALWAYS** include all six top-level keys in the written JSON, even at default — the layered loader handles missing fields, but explicit values make the file self-documenting and survive cleanly through `planview:configure` round-trips.
+3. **ALWAYS** include all six top-level keys in the written JSON, even at default — the layered loader handles missing fields, but explicit values make the file self-documenting and easier to hand-edit afterward.
 4. **NEVER** invoke the planview binary or run `/planview`. This skill only writes config; runtime effects are observed through normal use.

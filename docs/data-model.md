@@ -228,7 +228,7 @@ The `produces` field describes what an agent outputs in human terms. It appears 
 
 ## Review pipelines
 
-Review steps come from the user's config at `~/.claude/plugins/planview/config.json` (managed by `planview:setup` and `planview:configure`). The materializer resolves them at materialize time and attaches the resolved structure to each Unit (rendered into the Unit md) and to the Plan (rendered into `progress.md` as `## Plan-level review`).
+Review steps come from the user's config at `~/.claude/plugins/planview/config.json` (scaffolded by `planview:setup`; structured fields hand-edited afterward). The materializer resolves them at materialize time and attaches the resolved structure to each Unit (rendered into the Unit md) and to the Plan (rendered into `progress.md` as `## Plan-level review`).
 
 ### Config shape
 

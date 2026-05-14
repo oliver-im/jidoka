@@ -84,16 +84,33 @@ planview reads a layered config: built-in defaults < `~/.claude/plugins/planview
 
 Defaults assume "files-on-disk is the value, the browser is opt-in" — most users view plan dirs in their editor (Obsidian, VS Code, iA Writer). Flip `auto_open_browser=true` and/or `html_output=true` if you want the rendered HTML view too.
 
-To customize the review pipeline (e.g. add `/codex:review`, `/simplify`, or `/codex:adversarial-review` to the unit-level pipeline; populate the plan-level pipeline; define new tools), run `planview:configure` and walk the **Tools** and **Review pipelines** sections. See [`docs/data-model.md`](docs/data-model.md#review-pipelines) for the schema.
+### First-time setup
 
-### Setup wizard
+Tell Claude Code "**set up planview**" to invoke the `planview:setup` skill — a short Q&A that writes `~/.claude/plugins/planview/config.json` from scratch. It runs outside the planning fork (so `AskUserQuestion` works there).
 
-To set or change config interactively:
+### Editing tools and review pipelines
 
-- Tell Claude Code "**set up planview**" — invokes the `planview:setup` skill, walks all knobs with Q&A, and writes the global config file.
-- Tell Claude Code "**change planview settings**" — invokes the `planview:configure` skill, which diff-edits the existing config and preserves any manually added keys.
+After first-time setup, hand-edit `~/.claude/plugins/planview/config.json` directly — the structured fields (`tools`, `review_pipelines`) are easier to revise in your text editor than through a Q&A loop. Schema reference: [`docs/data-model.md`](docs/data-model.md#review-pipelines).
 
-Both skills run outside the planning fork (so `AskUserQuestion` works there).
+The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe: a malformed config surfaces a deny payload the next time you exit plan mode, with the parse / schema error inline.
+
+Example — adding `/codex:review` after `anthropic-cr` on every unit and `/codex:adversarial-review` at plan-close:
+
+```json
+{
+  "review_pipelines": {
+    "unit": [
+      { "tool": "anthropic-cr" },
+      { "tool": "codex", "op": "review" }
+    ],
+    "plan": [
+      { "tool": "codex", "op": "adversarial-review" }
+    ]
+  }
+}
+```
+
+The three built-in tools (`anthropic-cr`, `codex`, `simplify`) are shipped as defaults — you only need to declare `tools` when defining a new one.
 
 ## Documentation
 
