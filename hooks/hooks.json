@@ -1,4 +1,5 @@
 {
+  "description": "Materialize plan-mode output as a reviewable plan directory on ExitPlanMode.",
   "hooks": {
     "PreToolUse": [
       {
@@ -6,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT:-$CLAUDE_PROJECT_DIR}/dist/cli.js\" hook"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/dist/cli.js\" hook"
           }
         ]
       }

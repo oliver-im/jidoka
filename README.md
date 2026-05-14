@@ -25,7 +25,7 @@ The bundled CLI lands at `dist/cli.js` (committed). Requires Node ≥ 20.
 
 ### Use as a Claude Code plugin (recommended)
 
-Enabling the plugin auto-loads `.claude/skills/` and `.claude/settings.json`. The ExitPlanMode hook invokes the bundled CLI via `$CLAUDE_PLUGIN_ROOT/dist/cli.js` — no PATH setup needed.
+Enabling the plugin auto-loads the skills under `skills/` and the ExitPlanMode hook declared in `hooks/hooks.json`. The hook invokes the bundled CLI via `$CLAUDE_PLUGIN_ROOT/dist/cli.js` — no PATH setup needed.
 
 ### Standalone CLI (optional)
 
@@ -44,7 +44,7 @@ planview --example    # opens a showcase diagram in the browser
 
 ### Hook Setup
 
-The repository's `.claude/settings.json` already wires the PreToolUse hook. To add the hook to a project that doesn't use the plugin, add this to that project's `.claude/settings.json`:
+The plugin's `hooks/hooks.json` already wires the PreToolUse hook. To add the hook to a project that doesn't use the plugin, add this to that project's `.claude/settings.json` (replacing `$CLAUDE_PLUGIN_ROOT` with the actual path to a planview checkout):
 
 ```json
 {

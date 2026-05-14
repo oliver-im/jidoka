@@ -1,0 +1,19 @@
+{
+  "name": "planview-local",
+  "owner": {
+    "name": "Oliver Im"
+  },
+  "metadata": {
+    "description": "Local marketplace for the planview plugin",
+    "version": "0.3.0"
+  },
+  "plugins": [
+    {
+      "name": "planview",
+      "source": "./",
+      "description": "Materialize multi-unit plans (with optional per-unit topology) under <plan_dir_root>/<YYMMDD-N-slug>/ on ExitPlanMode. The /planview slash command produces a Plan; the ExitPlanMode hook writes the dir and optionally renders HTML.",
+      "category": "planning",
+      "tags": ["plan-mode", "planning", "agents", "topology", "mermaid", "claude-code"]
+    }
+  ]
+}

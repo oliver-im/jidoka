@@ -386,7 +386,7 @@ Two skills front the config UX (run outside the planning fork so `AskUserQuestio
 
 ## Plugin Manifest
 
-The plugin ships with `.claude-plugin/plugin.json` (metadata) and `.claude/settings.json` (the ExitPlanMode hook). The skill at `.claude/skills/planview/SKILL.md` is auto-loaded when the plugin is enabled, so installing the plugin IS the prompt-injection — no per-project AGENTS.md needed.
+The plugin ships with `.claude-plugin/plugin.json` (metadata), `.claude-plugin/marketplace.json` (local-install marketplace), and `hooks/hooks.json` (the ExitPlanMode hook). Skills live at `skills/<name>/SKILL.md` and are auto-discovered by the plugin loader, so installing the plugin IS the prompt-injection — no per-project AGENTS.md needed.
 
 ```json
 {
@@ -396,7 +396,7 @@ The plugin ships with `.claude-plugin/plugin.json` (metadata) and `.claude/setti
 }
 ```
 
-The hook in `.claude/settings.json`:
+The hook in `hooks/hooks.json`:
 
 ```json
 {
