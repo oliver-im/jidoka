@@ -22,7 +22,15 @@ interface Result {
 }
 
 function run(args: string[], opts: { stdin?: string; env?: NodeJS.ProcessEnv } = {}): Result {
-  const env = { ...process.env, PLANVIEW_NO_OPEN: "1", ...opts.env };
+  // Override HOME so the global-config layer (`~/.claude/plugins/planview/config.json`)
+  // resolves to a missing path and falls back to defaults. Without this, smoke
+  // tests pick up the developer's real config and become non-hermetic.
+  const env = {
+    ...process.env,
+    HOME: "/nonexistent-planview-smoke-home",
+    PLANVIEW_NO_OPEN: "1",
+    ...opts.env,
+  };
   const result = spawnSync("node", [cli, ...args], {
     input: opts.stdin,
     env,
