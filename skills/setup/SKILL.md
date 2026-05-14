@@ -1,6 +1,6 @@
 ---
 name: planview:setup
-description: Walk the user through first-run setup for the planview plugin and write ~/.claude/plugins/planview/config.json. Use when the user says "set up planview", "configure planview from scratch", or runs the slash command for the first time.
+description: Interactive first-run setup for the planview plugin. Writes ~/.claude/plugins/planview/config.json.
 allowed-tools: Read, Write, Bash, AskUserQuestion
 disable-model-invocation: true
 ---
@@ -8,12 +8,6 @@ disable-model-invocation: true
 # planview:setup
 
 Interactive first-run configuration for the planview plugin. Runs **outside** the planning fork — `AskUserQuestion` works here, unlike inside `/planview`.
-
-## When to use
-
-- User explicitly asks to "set up planview".
-- User runs the slash command for the first time (no `~/.claude/plugins/planview/config.json` exists yet).
-- The `planview:configure` skill detected a missing config and redirected here.
 
 ## What you write
 

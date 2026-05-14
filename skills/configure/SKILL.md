@@ -1,6 +1,6 @@
 ---
 name: planview:configure
-description: Edit the existing planview config at ~/.claude/plugins/planview/config.json with diff-style prompts, preserving any manually added keys. Use when the user says "change planview settings" or "update my planview config".
+description: Diff-style editor for an existing planview config at ~/.claude/plugins/planview/config.json. Preserves manually added keys.
 allowed-tools: Read, Write, Bash, AskUserQuestion
 disable-model-invocation: true
 ---
@@ -9,12 +9,7 @@ disable-model-invocation: true
 
 Diff-style editor for an **existing** `~/.claude/plugins/planview/config.json`. Runs outside the planning fork — `AskUserQuestion` works here.
 
-## When to use
-
-- User asks to change a planview setting or "update my planview config".
-- User wants to see their current planview configuration.
-
-If no config exists, redirect to `planview:setup` instead of writing a fresh one — keeps the entry points clean.
+If no config exists when this skill runs, redirect to `planview:setup` instead of writing a fresh one.
 
 ## Process
 
