@@ -49,8 +49,14 @@ export function buildOverviewMd(plan: Plan, dirName: string): string {
 
 export function buildProgressMd(plan: Plan, dirName: string): string {
   const cursor = plan.units[0]?.id ?? "(no units)";
+  const preReviewBlock = renderPreReviewBlock(plan.pre_review);
   const planReviewBlock = renderPlanReviewBlock(plan.plan_review);
-  return eta.render("progress.md.eta", { dirName, cursor, planReviewBlock });
+  return eta.render("progress.md.eta", {
+    dirName,
+    cursor,
+    preReviewBlock,
+    planReviewBlock,
+  });
 }
 
 export function buildUnitMd(unit: Unit): string {
@@ -99,6 +105,19 @@ function renderPipelineChecklist(commands: string[] | undefined): string {
     return "- [ ] _No review steps configured._\n";
   }
   return commands.map((c) => `- [ ] \`${c}\``).join("\n") + "\n";
+}
+
+function renderPreReviewBlock(commands: string[] | undefined): string {
+  let out = "## Pre-execution review\n\n";
+  if (commands === undefined || commands.length === 0) {
+    out +=
+      "_No pre-execution review configured. Proceed to the cursor unit._\n";
+    return out;
+  }
+  out +=
+    "Before starting the first unit, run these against the freshly materialized plan dir:\n\n";
+  out += renderPipelineChecklist(commands);
+  return out;
 }
 
 function renderPlanReviewBlock(commands: string[] | undefined): string {

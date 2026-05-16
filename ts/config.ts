@@ -10,6 +10,7 @@ export interface Config {
   auto_open_browser: boolean;
   html_output: boolean;
   plan_level_topology: boolean;
+  pre_review: string[];
   unit_review: string[];
   plan_review: string[];
 }
@@ -19,6 +20,7 @@ export const defaultConfig: Config = {
   auto_open_browser: false,
   html_output: false,
   plan_level_topology: false,
+  pre_review: ["/planview:pre-plan-review"],
   unit_review: ["/code-review:code-review"],
   plan_review: [],
 };
@@ -28,6 +30,7 @@ const configSchema = z.object({
   auto_open_browser: z.boolean().default(defaultConfig.auto_open_browser),
   html_output: z.boolean().default(defaultConfig.html_output),
   plan_level_topology: z.boolean().default(defaultConfig.plan_level_topology),
+  pre_review: z.array(reviewCommandSchema).default(defaultConfig.pre_review),
   unit_review: z.array(reviewCommandSchema).default(defaultConfig.unit_review),
   plan_review: z.array(reviewCommandSchema).default(defaultConfig.plan_review),
 });
@@ -195,6 +198,7 @@ export function mergeForWrite(
   out.auto_open_browser = cfg.auto_open_browser;
   out.html_output = cfg.html_output;
   out.plan_level_topology = cfg.plan_level_topology;
+  out.pre_review = [...cfg.pre_review];
   out.unit_review = [...cfg.unit_review];
   out.plan_review = [...cfg.plan_review];
   return out;

@@ -46,6 +46,11 @@ const cfgWithPlanReview = (plan_review: string[]): Config => ({
   plan_review,
 });
 
+const cfgWithPreReview = (pre_review: string[]): Config => ({
+  ...defaultConfig,
+  pre_review,
+});
+
 const samplePlan = (): Plan => ({
   task_summary: "Pivot the renderer",
   slug: "pivot-renderer",
@@ -115,6 +120,8 @@ describe("materialize", () => {
 
     const progress = readFileSync(join(target, "progress.md"), "utf8");
     expect(progress).toContain("**Cursor:** 01-prep");
+    expect(progress).toContain("## Pre-execution review");
+    expect(progress).toContain("- [ ] `/planview:pre-plan-review`");
     expect(progress).toContain("## Plan-level review");
     expect(progress).toContain("_No plan-level reviews configured.");
 
@@ -162,6 +169,51 @@ describe("materialize", () => {
     );
     expect(progress).toContain("- [ ] `/code-review:code-review`");
     expect(progress).toContain("- [ ] `/codex:adversarial-review`");
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  it("renders pre-execution review with configured commands", () => {
+    const base = makeTempDir("pre-review");
+    const plansRoot = join(base, "plan");
+    mkdirSync(plansRoot, { recursive: true });
+    const cfg = cfgWithPreReview([
+      "/planview:pre-plan-review",
+      "/codex:adversarial-review",
+    ]);
+    const target = materialize(samplePlan(), plansRoot, "260505", cfg);
+    const progress = readFileSync(join(target, "progress.md"), "utf8");
+    expect(progress).toContain("## Pre-execution review");
+    expect(progress).toContain(
+      "Before starting the first unit, run these",
+    );
+    expect(progress).toContain("- [ ] `/planview:pre-plan-review`");
+    expect(progress).toContain("- [ ] `/codex:adversarial-review`");
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  it("renders empty pre-execution review as opt-out placeholder", () => {
+    const base = makeTempDir("pre-review-empty");
+    const plansRoot = join(base, "plan");
+    mkdirSync(plansRoot, { recursive: true });
+    const cfg = cfgWithPreReview([]);
+    const target = materialize(samplePlan(), plansRoot, "260505", cfg);
+    const progress = readFileSync(join(target, "progress.md"), "utf8");
+    expect(progress).toContain("## Pre-execution review");
+    expect(progress).toContain("_No pre-execution review configured.");
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  it("places pre-execution review before plan-level review in progress.md", () => {
+    const base = makeTempDir("pre-order");
+    const plansRoot = join(base, "plan");
+    mkdirSync(plansRoot, { recursive: true });
+    const target = materialize(samplePlan(), plansRoot, "260505", defaultConfig);
+    const progress = readFileSync(join(target, "progress.md"), "utf8");
+    const preIdx = progress.indexOf("## Pre-execution review");
+    const planIdx = progress.indexOf("## Plan-level review");
+    expect(preIdx).toBeGreaterThan(-1);
+    expect(planIdx).toBeGreaterThan(-1);
+    expect(preIdx).toBeLessThan(planIdx);
     rmSync(base, { recursive: true, force: true });
   });
 

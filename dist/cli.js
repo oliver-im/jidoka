@@ -18211,6 +18211,7 @@ var defaultConfig = {
   auto_open_browser: false,
   html_output: false,
   plan_level_topology: false,
+  pre_review: ["/planview:pre-plan-review"],
   unit_review: ["/code-review:code-review"],
   plan_review: []
 };
@@ -18219,6 +18220,7 @@ var configSchema = external_exports.object({
   auto_open_browser: external_exports.boolean().default(defaultConfig.auto_open_browser),
   html_output: external_exports.boolean().default(defaultConfig.html_output),
   plan_level_topology: external_exports.boolean().default(defaultConfig.plan_level_topology),
+  pre_review: external_exports.array(reviewCommandSchema).default(defaultConfig.pre_review),
   unit_review: external_exports.array(reviewCommandSchema).default(defaultConfig.unit_review),
   plan_review: external_exports.array(reviewCommandSchema).default(defaultConfig.plan_review)
 });
@@ -19238,8 +19240,14 @@ function buildOverviewMd(plan, dirName) {
 }
 function buildProgressMd(plan, dirName) {
   const cursor = plan.units[0]?.id ?? "(no units)";
+  const preReviewBlock = renderPreReviewBlock(plan.pre_review);
   const planReviewBlock = renderPlanReviewBlock(plan.plan_review);
-  return eta.render("progress.md.eta", { dirName, cursor, planReviewBlock });
+  return eta.render("progress.md.eta", {
+    dirName,
+    cursor,
+    preReviewBlock,
+    planReviewBlock
+  });
 }
 function buildUnitMd(unit) {
   const prefix = unitIdPrefix(unit.id) ?? unit.id;
@@ -19276,6 +19284,16 @@ function renderPipelineChecklist(commands) {
     return "- [ ] _No review steps configured._\n";
   }
   return commands.map((c) => `- [ ] \`${c}\``).join("\n") + "\n";
+}
+function renderPreReviewBlock(commands) {
+  let out = "## Pre-execution review\n\n";
+  if (commands === void 0 || commands.length === 0) {
+    out += "_No pre-execution review configured. Proceed to the cursor unit._\n";
+    return out;
+  }
+  out += "Before starting the first unit, run these against the freshly materialized plan dir:\n\n";
+  out += renderPipelineChecklist(commands);
+  return out;
 }
 function renderPlanReviewBlock(commands) {
   let out = "## Plan-level review\n\n";
@@ -19416,6 +19434,7 @@ function resolvePipelines(plan, config2) {
   for (const unit of plan.units) {
     unit.review = [...config2.unit_review];
   }
+  plan.pre_review = [...config2.pre_review];
   plan.plan_review = [...config2.plan_review];
 }
 function resolveTargetDir(plan, plansRoot, today) {

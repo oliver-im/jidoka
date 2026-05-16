@@ -98,6 +98,8 @@ describe("buildProgressMd", () => {
     expect(md).toContain("## Done");
     expect(md).toContain("## Blockers");
     expect(md).toContain("## Notes");
+    expect(md).toContain("## Pre-execution review");
+    expect(md).toContain("_No pre-execution review configured.");
     expect(md).toContain("## Plan-level review");
     expect(md).toContain("_No plan-level reviews configured.");
   });
@@ -121,6 +123,35 @@ describe("buildProgressMd", () => {
     );
     expect(md).toContain("- [ ] `/code-review:code-review`");
     expect(md).toContain("- [ ] `/codex:adversarial-review`");
+  });
+
+  it("renders a configured pre-execution review", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      pre_review: ["/planview:pre-plan-review"],
+    };
+    const md = buildProgressMd(plan, "260505-0-x");
+    expect(md).toContain("## Pre-execution review");
+    expect(md).toContain(
+      "Before starting the first unit, run these",
+    );
+    expect(md).toContain("- [ ] `/planview:pre-plan-review`");
+  });
+
+  it("orders Pre-execution review before Plan-level review", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      pre_review: ["/planview:pre-plan-review"],
+      plan_review: ["/codex:adversarial-review"],
+    };
+    const md = buildProgressMd(plan, "260505-0-x");
+    expect(md.indexOf("## Pre-execution review")).toBeLessThan(
+      md.indexOf("## Plan-level review"),
+    );
   });
 });
 

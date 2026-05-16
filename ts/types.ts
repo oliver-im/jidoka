@@ -128,6 +128,9 @@ export interface Plan {
   task_summary: string;
   slug: string;
   units: Unit[];
+  // Materializer-attached: a copy of config.pre_review. Never present on
+  // parsed input; set by `resolvePipelines` after schema validation.
+  pre_review?: string[];
   // Materializer-attached: a copy of config.plan_review. Never present on
   // parsed input; set by `resolvePipelines` after schema validation.
   plan_review?: string[];

@@ -31,6 +31,10 @@ describe("defaults", () => {
     expect(defaultConfig.unit_review).toEqual(["/code-review:code-review"]);
     expect(defaultConfig.plan_review).toEqual([]);
   });
+
+  it("ships a pre-execution review defaulting to /planview:pre-plan-review", () => {
+    expect(defaultConfig.pre_review).toEqual(["/planview:pre-plan-review"]);
+  });
 });
 
 describe("loadFromPaths", () => {
@@ -147,7 +151,7 @@ describe("loadFromPaths", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("hydrates missing unit_review and plan_review from defaults", () => {
+  it("hydrates missing unit_review, plan_review, pre_review from defaults", () => {
     const dir = makeTempDir("partial");
     const path = join(dir, "config.json");
     writeFileSync(path, JSON.stringify({ plan_dir_root: "custom" }));
@@ -155,6 +159,33 @@ describe("loadFromPaths", () => {
     expect(cfg.plan_dir_root).toBe("custom");
     expect(cfg.unit_review).toEqual(defaultConfig.unit_review);
     expect(cfg.plan_review).toEqual(defaultConfig.plan_review);
+    expect(cfg.pre_review).toEqual(defaultConfig.pre_review);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("accepts a custom pre_review list of slash commands", () => {
+    const dir = makeTempDir("custom-pre-review");
+    const path = join(dir, "config.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        pre_review: ["/planview:pre-plan-review", "/codex:adversarial-review"],
+      }),
+    );
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.pre_review).toEqual([
+      "/planview:pre-plan-review",
+      "/codex:adversarial-review",
+    ]);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("accepts an explicitly empty pre_review (opt-out)", () => {
+    const dir = makeTempDir("empty-pre-review");
+    const path = join(dir, "config.json");
+    writeFileSync(path, JSON.stringify({ pre_review: [] }));
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.pre_review).toEqual([]);
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -186,7 +217,7 @@ describe("loadFromPaths", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("rejects unit_review / plan_review as project overrides", () => {
+  it("rejects unit_review / plan_review / pre_review as project overrides", () => {
     const dir = makeTempDir("scope");
     const path = join(dir, ".planview.json");
     writeFileSync(
@@ -194,11 +225,13 @@ describe("loadFromPaths", () => {
       JSON.stringify({
         unit_review: ["/sneaky"],
         plan_review: ["/sneakier"],
+        pre_review: ["/sneakiest"],
       }),
     );
     const cfg = loadFromPaths(undefined, path);
     expect(cfg.unit_review).toEqual(defaultConfig.unit_review);
     expect(cfg.plan_review).toEqual(defaultConfig.plan_review);
+    expect(cfg.pre_review).toEqual(defaultConfig.pre_review);
     rmSync(dir, { recursive: true, force: true });
   });
 });
@@ -234,20 +267,24 @@ describe("mergeForWrite", () => {
     expect(merged.plan_dir_root).toBe("plan");
     expect(merged.unit_review).toEqual(defaultConfig.unit_review);
     expect(merged.plan_review).toEqual(defaultConfig.plan_review);
+    expect(merged.pre_review).toEqual(defaultConfig.pre_review);
   });
 
-  it("overwrites stale unit_review / plan_review from base", () => {
+  it("overwrites stale unit_review / plan_review / pre_review from base", () => {
     const base = {
       unit_review: ["/old:command"],
       plan_review: ["/old:plan-command"],
+      pre_review: ["/old:pre-command"],
     };
     const cfg = {
       ...defaultConfig,
       unit_review: ["/new:command"],
       plan_review: [],
+      pre_review: ["/new:pre-command"],
     };
     const merged = mergeForWrite(base, cfg);
     expect(merged.unit_review).toEqual(["/new:command"]);
     expect(merged.plan_review).toEqual([]);
+    expect(merged.pre_review).toEqual(["/new:pre-command"]);
   });
 });

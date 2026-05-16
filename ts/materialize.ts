@@ -24,14 +24,16 @@ export class MaterializeError extends Error {
 }
 
 /**
- * Copies the config's `unit_review` and `plan_review` slash-command arrays
- * onto the in-memory plan (`plan.plan_review`) and each unit (`unit.review`).
- * No tool lookup or `{op}` substitution — each entry is rendered verbatim.
+ * Copies the config's review slash-command arrays onto the in-memory plan:
+ * `pre_review` (plan-level pre-execution), `plan_review` (plan-level
+ * post-execution), and per-unit `unit_review`. Each entry is rendered
+ * verbatim — no tool lookup, no substitution.
  */
 export function resolvePipelines(plan: Plan, config: Config): void {
   for (const unit of plan.units) {
     unit.review = [...config.unit_review];
   }
+  plan.pre_review = [...config.pre_review];
   plan.plan_review = [...config.plan_review];
 }
 
