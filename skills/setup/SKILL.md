@@ -11,7 +11,7 @@ Interactive first-run configuration for the planview plugin. Runs **outside** th
 
 ## What you write
 
-A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/planview/config.json`. Every run writes all six top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
+A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/planview/config.json`. Every run writes all seven top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
 
 | Key | Type | Default | Question to ask |
 |---|---|---|---|
@@ -19,6 +19,7 @@ A JSONC file (JSON with `//` comments — the reader strips them before parsing)
 | `auto_open_browser` | bool | `false` | "Auto-open overview.html in the browser after a successful materialize? (default off — most users view the markdown in their editor; set true if you want a browser pop)" |
 | `html_output` | bool | `false` | "Render overview.html alongside the markdown files? (default off — set true if you want the rendered HTML view; otherwise just the .md files)" |
 | `plan_level_topology` | bool | `false` | _(reserved for v2 — don't ask; always write `false`)_ |
+| `pre_review` | string[] | `["/planview:pre-plan-review"]` | _(don't ask; write the shipped default)_ |
 | `unit_review` | string[] | `["/code-review:code-review"]` | _(don't ask; write the shipped default)_ |
 | `plan_review` | string[] | `[]` | _(don't ask; write the shipped default)_ |
 
@@ -43,21 +44,29 @@ Use this exact JSONC layout, substituting the three scalar answers from the ques
   // Reserved for v2 — leave as false.
   "plan_level_topology": false,
 
-  // Slash commands to run after each Unit lands. Rendered as a checklist
+  // Slash commands to run BEFORE Unit 01, against the freshly materialized
+  // plan dir. Rendered as "## Pre-execution review" in progress.md.
+  // The bundled /planview:pre-plan-review is an adversarial reviewer of
+  // the plan as a plan (no diff yet). Set to [] to skip the pre-flight.
+  "pre_review": [
+    "/planview:pre-plan-review"
+  ],
+
+  // Slash commands to run AFTER each Unit lands. Rendered as a checklist
   // in the Unit md. Each entry is a Claude Code plugin slash command.
   // Example: ["/code-review:code-review", "/codex:review", "/simplify"]
   "unit_review": [
     "/code-review:code-review"
   ],
 
-  // Slash commands to run after the last Unit's review and commit.
+  // Slash commands to run AFTER the last Unit's review and commit.
   // Rendered as "## Plan-level review" in progress.md.
   // Example: ["/codex:adversarial-review"]
   "plan_review": []
 }
 ```
 
-These defaults match planview's pre-config behavior — only `/code-review:code-review` runs after each Unit, and nothing runs at the Plan level. Customizing is a hand-edit of `~/.claude/plugins/planview/config.json` after setup: add slash commands to `unit_review` or `plan_review`. The README's "Editing review commands" section has more examples. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
+These defaults give you a sensible review pipeline out of the box: `/planview:pre-plan-review` flags structural plan issues before any unit lands, `/code-review:code-review` reviews each unit's diff, and the plan-level slot is opt-in. Customizing is a hand-edit of `~/.claude/plugins/planview/config.json` after setup: add or remove slash commands in any of the three arrays. The README's "Editing review commands" section has more examples. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
 
 ## Process
 

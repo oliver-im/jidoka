@@ -56,6 +56,9 @@ interface Plan {
   task_summary: string;            // one-line description of the overall task
   slug: string;                    // kebab-case, ≤ 60 chars, ^[a-z0-9-]+$
   units: Unit[];                   // 1-N units, sequential by default
+  // Materializer-attached at materialize time from `config.pre_review`;
+  // never present on parsed input.
+  pre_review?: string[];
   // Materializer-attached at materialize time from `config.plan_review`;
   // never present on parsed input.
   plan_review?: string[];
@@ -228,19 +231,28 @@ The `produces` field describes what an agent outputs in human terms. It appears 
 
 ## Review commands
 
-Review commands come from the user's config at `~/.claude/plugins/planview/config.json` (scaffolded by `planview:setup`; hand-edited afterward). The materializer copies them onto each Unit (rendered into the Unit md) and onto the Plan (rendered into `progress.md` as `## Plan-level review`).
+Review commands come from the user's config at `~/.claude/plugins/planview/config.json` (scaffolded by `planview:setup`; hand-edited afterward). The materializer copies them onto each Unit (rendered into the Unit md), onto the Plan as a pre-execution checklist (rendered into `progress.md` as `## Pre-execution review`), and onto the Plan as a post-execution checklist (rendered into `progress.md` as `## Plan-level review`).
 
 ### Config shape
 
 ```typescript
 interface Config {
   // ...other scalar keys...
+  pre_review: string[];    // runs after materialize, before Unit 01
   unit_review: string[];   // runs after each Unit lands
   plan_review: string[];   // runs after the last Unit's review
 }
 ```
 
 Each entry is a Claude Code plugin slash command (must start with `/`). No name lookup, no `{op}` substitution, no bash escape hatch. A user who wants a non-slash workflow runs it manually from the unit body.
+
+### Review stages
+
+| Stage | Config key | Renders into | Default | When it runs |
+|---|---|---|---|---|
+| Pre-execution | `pre_review` | `progress.md` (`## Pre-execution review`, above Done) | `["/planview:pre-plan-review"]` | After the plan dir is materialized, before the operator starts Unit 01. Reviews the plan *as a plan* — no diff exists yet. |
+| Per-unit | `unit_review` | Each `<id>.md` (`## Review pipeline`) | `["/code-review:code-review"]` | After the unit's diff lands and before it's committed. |
+| Plan-level | `plan_review` | `progress.md` (`## Plan-level review`, below Notes) | `[]` | After the last unit's review lands and is committed. Adversarial pass against the cumulative plan diff. |
 
 ### Validation
 
@@ -255,5 +267,6 @@ The materializer denies the ExitPlanMode hook (or fails the `materialize` CLI) w
 | Topology | Per-unit (optional) multi-agent dispatch shape. Rendered as a Mermaid block inside the unit's md and HTML card. |
 | Phase | A wave of work derived from `blocked_by` dependencies inside a topology. In subagents mode, the main agent dispatches each phase explicitly. |
 | Step (topology) | Numbered items in the topology overview. The dependency-derived order within a phase. Parallel agents share a step with letter suffixes (2a, 2b). |
-| Review command | A Claude Code plugin slash command listed in `unit_review` or `plan_review`. Rendered verbatim as a checkbox in the materialized plan. |
+| Review command | A Claude Code plugin slash command listed in `pre_review`, `unit_review`, or `plan_review`. Rendered verbatim as a checkbox in the materialized plan. |
+| Pre-execution review | The `progress.md` section rendered from `pre_review`, between the cursor line and Done. Runs on the first session before Unit 01 starts; reviews the plan as a plan. |
 | Plan-level review | The `progress.md` section rendered from `plan_review`. Surfaces after every Unit is reviewed and committed; the resume protocol stops here and asks the user before archiving. |
