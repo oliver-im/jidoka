@@ -92,20 +92,26 @@ Tell Claude Code "**set up planview**" to invoke the `planview:setup` skill — 
 
 After first-time setup, hand-edit `~/.claude/plugins/planview/config.json` directly — the structured fields (`tools`, `review_pipelines`) are easier to revise in your text editor than through a Q&A loop. Schema reference: [`docs/data-model.md`](docs/data-model.md#review-pipelines).
 
+The file is parsed as **JSONC** — `//` and `/* */` comments are stripped before parsing. The setup skill writes an annotated template by default, so the in-file comments are the primary "what does this key do" reference; the README is for examples and schema depth.
+
 The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe: a malformed config surfaces a deny payload the next time you exit plan mode, with the parse / schema error inline.
 
 Example — adding `/codex:review` after `anthropic-cr` on every unit and `/codex:adversarial-review` at plan-close:
 
-```json
+```jsonc
 {
   "review_pipelines": {
-    "unit": [
-      { "tool": "anthropic-cr" },
-      { "tool": "codex", "op": "review" }
-    ],
-    "plan": [
-      { "tool": "codex", "op": "adversarial-review" }
-    ]
+    "unit": {
+      "steps": [
+        { "tool": "anthropic-cr" },
+        { "tool": "codex", "op": "review" }
+      ]
+    },
+    "plan": {
+      "steps": [
+        { "tool": "codex", "op": "adversarial-review" }
+      ]
+    }
   }
 }
 ```
