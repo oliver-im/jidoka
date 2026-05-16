@@ -2,13 +2,7 @@ import { Eta } from "eta";
 import { CSS, JS, PAGE_TEMPLATE, PLAN_TEMPLATE } from "./assets.generated.js";
 import { mermaid } from "./mermaid.js";
 import { buildOverviewMd, unitIdPrefix } from "./render-md.js";
-import type {
-  Agent,
-  ExecutionMode,
-  Plan,
-  ResolvedReviewStep,
-  Topology,
-} from "./types.js";
+import type { Agent, ExecutionMode, Plan, Topology } from "./types.js";
 
 const eta = new Eta({ autoEscape: false });
 
@@ -58,11 +52,6 @@ export function renderTopologyHtml(
   return result;
 }
 
-interface ReviewStepCard {
-  primary: string;
-  note?: string;
-}
-
 interface UnitCard {
   index: number;
   anchor: string;
@@ -73,7 +62,7 @@ interface UnitCard {
   agents_label: string;
   has_topology: boolean;
   mermaid_graphs: string[];
-  review_steps: ReviewStepCard[];
+  review_commands: string[];
 }
 
 export function renderPlanHtml(plan: Plan, dirName: string): string {
@@ -103,7 +92,7 @@ export function renderPlanHtml(plan: Plan, dirName: string): string {
       agents_label: agentsLabel,
       has_topology: unit.topology !== undefined,
       mermaid_graphs: mermaidGraphs,
-      review_steps: (unit.review_pipeline?.steps ?? []).map(reviewStepCard),
+      review_commands: (unit.review ?? []).map(htmlEscape),
     };
   });
 
@@ -120,12 +109,6 @@ export function renderPlanHtml(plan: Plan, dirName: string): string {
     js: JS,
   };
   return eta.renderString(PLAN_TEMPLATE, locals);
-}
-
-function reviewStepCard(step: ResolvedReviewStep): ReviewStepCard {
-  const out: ReviewStepCard = { primary: htmlEscape(step.primary) };
-  if (step.note !== undefined) out.note = htmlEscape(step.note);
-  return out;
 }
 
 function buildModeLabel(topology: Topology): string {

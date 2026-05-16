@@ -36,28 +36,14 @@ const unitNoTopology = (id: string, blockedBy: string[] = []): Unit => ({
   body_markdown: `## Tasks\n\nDo ${id}.\n`,
 });
 
-const cfgWithUnitPipeline = (
-  steps: Config["review_pipelines"]["unit"]["steps"],
-  tools: Config["tools"] = defaultConfig.tools,
-): Config => ({
+const cfgWithUnitReview = (unit_review: string[]): Config => ({
   ...defaultConfig,
-  tools,
-  review_pipelines: {
-    unit: { steps },
-    plan: defaultConfig.review_pipelines.plan,
-  },
+  unit_review,
 });
 
-const cfgWithPlanPipeline = (
-  steps: Config["review_pipelines"]["plan"]["steps"],
-  tools: Config["tools"] = defaultConfig.tools,
-): Config => ({
+const cfgWithPlanReview = (plan_review: string[]): Config => ({
   ...defaultConfig,
-  tools,
-  review_pipelines: {
-    unit: defaultConfig.review_pipelines.unit,
-    plan: { steps },
-  },
+  plan_review,
 });
 
 const samplePlan = (): Plan => ({
@@ -143,31 +129,30 @@ describe("materialize", () => {
     rmSync(base, { recursive: true, force: true });
   });
 
-  it("renders unit pipeline with codex op substituted and a note", () => {
-    const base = makeTempDir("codex");
+  it("renders unit pipeline with multiple slash commands", () => {
+    const base = makeTempDir("multi");
     const plansRoot = join(base, "plan");
     mkdirSync(plansRoot, { recursive: true });
-    const cfg = cfgWithUnitPipeline([
-      { tool: "anthropic-cr" },
-      { tool: "codex", op: "review", note: "Use when slash buffer fits." },
-      { tool: "simplify" },
+    const cfg = cfgWithUnitReview([
+      "/code-review:code-review",
+      "/codex:review",
+      "/simplify",
     ]);
     const target = materialize(samplePlan(), plansRoot, "260505", cfg);
     const u01 = readFileSync(join(target, "01-prep.md"), "utf8");
     expect(u01).toContain("- [ ] `/code-review:code-review`");
     expect(u01).toContain("- [ ] `/codex:review`");
-    expect(u01).toContain("  - _Use when slash buffer fits._");
     expect(u01).toContain("- [ ] `/simplify`");
     rmSync(base, { recursive: true, force: true });
   });
 
-  it("renders plan-level review with substituted op", () => {
+  it("renders plan-level review", () => {
     const base = makeTempDir("plan-review");
     const plansRoot = join(base, "plan");
     mkdirSync(plansRoot, { recursive: true });
-    const cfg = cfgWithPlanPipeline([
-      { tool: "anthropic-cr" },
-      { tool: "codex", op: "adversarial-review" },
+    const cfg = cfgWithPlanReview([
+      "/code-review:code-review",
+      "/codex:adversarial-review",
     ]);
     const target = materialize(samplePlan(), plansRoot, "260505", cfg);
     const progress = readFileSync(join(target, "progress.md"), "utf8");
@@ -178,29 +163,6 @@ describe("materialize", () => {
     expect(progress).toContain("- [ ] `/code-review:code-review`");
     expect(progress).toContain("- [ ] `/codex:adversarial-review`");
     rmSync(base, { recursive: true, force: true });
-  });
-
-  it("rejects steps that reference an unknown tool", () => {
-    const cfg = cfgWithUnitPipeline([{ tool: "ghost" }]);
-    expect(() =>
-      materializeAt(samplePlan(), join(makeTempDir("ghost"), "plan"), cfg),
-    ).toThrow(/unknown tool 'ghost'/);
-  });
-
-  it("rejects steps missing required op", () => {
-    const cfg = cfgWithUnitPipeline([{ tool: "codex" }]);
-    expect(() =>
-      materializeAt(samplePlan(), join(makeTempDir("noop"), "plan"), cfg),
-    ).toThrow(/template requires '\{op\}'/);
-  });
-
-  it("rejects steps with extra op for an untemplated tool", () => {
-    const cfg = cfgWithUnitPipeline([
-      { tool: "simplify", op: "deep" },
-    ]);
-    expect(() =>
-      materializeAt(samplePlan(), join(makeTempDir("extra-op"), "plan"), cfg),
-    ).toThrow(/no '\{op\}' placeholder/);
   });
 
   it("emits mermaid block for unit with topology", () => {

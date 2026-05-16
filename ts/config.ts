@@ -3,20 +3,15 @@ import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import stripJsonComments from "strip-json-comments";
 import { z } from "zod";
-import {
-  type ReviewPipelines,
-  type Tool,
-  reviewPipelinesSchema,
-  toolsSchema,
-} from "./types.js";
+import { reviewCommandSchema } from "./types.js";
 
 export interface Config {
   plan_dir_root: string;
   auto_open_browser: boolean;
   html_output: boolean;
   plan_level_topology: boolean;
-  tools: Record<string, Tool>;
-  review_pipelines: ReviewPipelines;
+  unit_review: string[];
+  plan_review: string[];
 }
 
 export const defaultConfig: Config = {
@@ -24,15 +19,8 @@ export const defaultConfig: Config = {
   auto_open_browser: false,
   html_output: false,
   plan_level_topology: false,
-  tools: {
-    "anthropic-cr": { run: "/code-review:code-review" },
-    codex: { run: "/codex:{op}" },
-    simplify: { run: "/simplify" },
-  },
-  review_pipelines: {
-    unit: { steps: [{ tool: "anthropic-cr" }] },
-    plan: { steps: [] },
-  },
+  unit_review: ["/code-review:code-review"],
+  plan_review: [],
 };
 
 const configSchema = z.object({
@@ -40,8 +28,8 @@ const configSchema = z.object({
   auto_open_browser: z.boolean().default(defaultConfig.auto_open_browser),
   html_output: z.boolean().default(defaultConfig.html_output),
   plan_level_topology: z.boolean().default(defaultConfig.plan_level_topology),
-  tools: toolsSchema.default(defaultConfig.tools),
-  review_pipelines: reviewPipelinesSchema.default(defaultConfig.review_pipelines),
+  unit_review: z.array(reviewCommandSchema).default(defaultConfig.unit_review),
+  plan_review: z.array(reviewCommandSchema).default(defaultConfig.plan_review),
 });
 
 export function globalConfigPath(): string | undefined {
@@ -183,8 +171,7 @@ export function validateProjectPlanDirRoot(s: string): string | undefined {
 /**
  * Reads the global config as a raw JSON value, preserving manually-added
  * keys. Used by `planview:setup` when overwriting an existing file, so
- * fields the questionnaire doesn't know about (and hand-edited
- * `tools` / `review_pipelines` entries) survive the round-trip.
+ * fields the questionnaire doesn't know about survive the round-trip.
  */
 export function loadGlobalRaw(): Record<string, unknown> | undefined {
   const path = globalConfigPath();
@@ -198,15 +185,6 @@ export function loadGlobalRaw(): Record<string, unknown> | undefined {
 
 /**
  * Merges known config fields into `base`, preserving unknown keys.
- *
- * Preservation reaches one level into `tools` (foreign sub-fields on each
- * tool entry the setup skill didn't touch) and into `review_pipelines`
- * (foreign scope keys alongside the standard `unit`/`plan`). Tool names
- * themselves are skill-managed — a tool absent from `cfg.tools` was removed
- * by the user and is dropped. The legacy `fallback` sub-field is purged
- * actively so the on-disk shape stays consistent with the current schema.
- * Step objects are array elements without stable identity, so foreign keys
- * inside individual steps are NOT preserved.
  */
 export function mergeForWrite(
   base: Record<string, unknown> | undefined,
@@ -217,34 +195,7 @@ export function mergeForWrite(
   out.auto_open_browser = cfg.auto_open_browser;
   out.html_output = cfg.html_output;
   out.plan_level_topology = cfg.plan_level_topology;
-  out.tools = mergeTools(base?.tools, cfg.tools);
-  out.review_pipelines = mergeReviewPipelines(base?.review_pipelines, cfg.review_pipelines);
+  out.unit_review = [...cfg.unit_review];
+  out.plan_review = [...cfg.plan_review];
   return out;
-}
-
-function isObject(x: unknown): x is Record<string, unknown> {
-  return typeof x === "object" && x !== null && !Array.isArray(x);
-}
-
-function mergeTools(
-  base: unknown,
-  cfg: Record<string, Tool>,
-): Record<string, unknown> {
-  const baseTools = isObject(base) ? base : {};
-  const out: Record<string, unknown> = {};
-  for (const [name, tool] of Object.entries(cfg)) {
-    const baseEntry = isObject(baseTools[name]) ? baseTools[name] : {};
-    const merged: Record<string, unknown> = { ...baseEntry, run: tool.run };
-    delete merged.fallback;
-    out[name] = merged;
-  }
-  return out;
-}
-
-function mergeReviewPipelines(
-  base: unknown,
-  cfg: ReviewPipelines,
-): Record<string, unknown> {
-  const baseRP = isObject(base) ? base : {};
-  return { ...baseRP, unit: cfg.unit, plan: cfg.plan };
 }

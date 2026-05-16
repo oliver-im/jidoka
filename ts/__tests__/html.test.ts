@@ -270,21 +270,12 @@ describe("renderPlanHtml", () => {
     expect(html).toContain("dompurify@3.2.4");
   });
 
-  it("renders resolved review steps with a note", () => {
+  it("renders resolved review commands", () => {
     const plan = loadPlan("valid_plan_sequential.json");
-    plan.units[0]!.review_pipeline = {
-      steps: [
-        { primary: "/code-review:code-review" },
-        {
-          primary: "/codex:review",
-          note: "Use when slash buffer fits.",
-        },
-      ],
-    };
+    plan.units[0]!.review = ["/code-review:code-review", "/codex:review"];
     const html = renderPlanHtml(plan, "260505-0-sequential-refactor");
     expect(html).toContain("<code>/code-review:code-review</code>");
     expect(html).toContain("<code>/codex:review</code>");
-    expect(html).toContain("Use when slash buffer fits.");
     expect(html).toContain("<h3>Review pipeline</h3>");
   });
 

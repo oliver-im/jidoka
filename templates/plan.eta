@@ -62,17 +62,12 @@
         </div>
         <% }); %>
 
-        <% if (unit.review_steps.length > 0) { %>
+        <% if (unit.review_commands.length > 0) { %>
         <div class="unit-review">
           <h3>Review pipeline</h3>
           <ul>
-            <% unit.review_steps.forEach((step) => { %>
-            <li>
-              <code><%= step.primary %></code>
-              <% if (step.note) { %>
-              <div class="review-note"><em><%= step.note %></em></div>
-              <% } %>
-            </li>
+            <% unit.review_commands.forEach((cmd) => { %>
+            <li><code><%= cmd %></code></li>
             <% }); %>
           </ul>
         </div>

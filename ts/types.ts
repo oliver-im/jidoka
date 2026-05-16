@@ -88,57 +88,13 @@ export const topologySchema: z.ZodType<Topology> = z.object({
   agents: z.array(agentSchema),
 });
 
-export interface Tool {
-  run: string;
-}
-
-export const toolSchema: z.ZodType<Tool> = z.object({
-  run: z.string().min(1, "tool.run must be a non-empty string"),
-});
-
-export const toolsSchema = z.record(z.string().min(1), toolSchema);
-
-export interface ReviewStep {
-  tool: string;
-  op?: string;
-  note?: string;
-}
-
-export const reviewStepSchema: z.ZodType<ReviewStep> = z.object({
-  tool: z.string().min(1, "review step 'tool' must be a non-empty string"),
-  op: z.string().min(1).optional(),
-  note: z.string().optional(),
-});
-
-export interface ReviewPipeline {
-  steps: ReviewStep[];
-}
-
-export const reviewPipelineSchema: z.ZodType<ReviewPipeline> = z.object({
-  steps: z.array(reviewStepSchema),
-});
-
-export interface ReviewPipelines {
-  unit: ReviewPipeline;
-  plan: ReviewPipeline;
-}
-
-export const reviewPipelinesSchema: z.ZodType<ReviewPipelines> = z.object({
-  unit: reviewPipelineSchema,
-  plan: reviewPipelineSchema,
-});
-
-// Materialize/render-time shape: a step with the tool reference resolved and
-// `{op}` substituted into `tool.run`. The renderer consumes this directly;
-// nothing serializes it back to disk.
-export interface ResolvedReviewStep {
-  primary: string;
-  note?: string;
-}
-
-export interface ResolvedReviewPipeline {
-  steps: ResolvedReviewStep[];
-}
+// Each review command is a Claude Code plugin slash command, e.g.
+// "/code-review:code-review". The user lists them directly in the config;
+// there is no name lookup, no `{op}` substitution, no bash escape hatch.
+export const reviewCommandSchema = z
+  .string()
+  .min(1, "review command must be a non-empty string")
+  .startsWith("/", "review command must start with '/'");
 
 export interface Unit {
   id: string;
@@ -148,9 +104,9 @@ export interface Unit {
   agents_involved?: string[];
   body_markdown: string;
   topology?: Topology;
-  // Materializer-attached. Never present on parsed input; set by
-  // `resolvePipelines` after schema validation.
-  review_pipeline?: ResolvedReviewPipeline;
+  // Materializer-attached: a copy of config.unit_review. Never present on
+  // parsed input; set by `resolvePipelines` after schema validation.
+  review?: string[];
 }
 
 export const unitSchema: z.ZodType<Unit> = z.object({
@@ -172,9 +128,9 @@ export interface Plan {
   task_summary: string;
   slug: string;
   units: Unit[];
-  // Materializer-attached. Never present on parsed input; set by
-  // `resolvePipelines` after schema validation.
-  plan_review_pipeline?: ResolvedReviewPipeline;
+  // Materializer-attached: a copy of config.plan_review. Never present on
+  // parsed input; set by `resolvePipelines` after schema validation.
+  plan_review?: string[];
 }
 
 export const planSchema: z.ZodType<Plan> = z.object({

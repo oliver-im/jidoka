@@ -10,16 +10,11 @@ import { basename, join } from "node:path";
 import type { Config } from "./config.js";
 import { renderPlanHtml } from "./html.js";
 import { buildOverviewMd, buildProgressMd, buildUnitMd } from "./render-md.js";
-import type {
-  Plan,
-  ResolvedReviewStep,
-  ReviewStep,
-  Tool,
-} from "./types.js";
+import type { Plan } from "./types.js";
 
 export class MaterializeError extends Error {
   constructor(
-    public readonly kind: "target_dir_exists" | "io" | "invalid_config",
+    public readonly kind: "target_dir_exists" | "io",
     public readonly path: string,
     message: string,
   ) {
@@ -28,66 +23,16 @@ export class MaterializeError extends Error {
   }
 }
 
-function resolveStep(
-  step: ReviewStep,
-  scope: string,
-  index: number,
-  tools: Record<string, Tool>,
-): ResolvedReviewStep {
-  const tool = tools[step.tool];
-  if (tool === undefined) {
-    const known = Object.keys(tools).sort().join(", ");
-    throw new MaterializeError(
-      "invalid_config",
-      "<config>",
-      `${scope}.steps[${index}]: unknown tool '${step.tool}' (defined tools: ${known || "(none)"})`,
-    );
-  }
-  const needsOp = tool.run.includes("{op}");
-  if (needsOp && step.op === undefined) {
-    throw new MaterializeError(
-      "invalid_config",
-      "<config>",
-      `${scope}.steps[${index}]: tool '${step.tool}' template requires '{op}' but the step provides none`,
-    );
-  }
-  if (!needsOp && step.op !== undefined) {
-    throw new MaterializeError(
-      "invalid_config",
-      "<config>",
-      `${scope}.steps[${index}]: tool '${step.tool}' template has no '{op}' placeholder but the step provides one ('${step.op}')`,
-    );
-  }
-  const op = step.op;
-  const primary = op === undefined ? tool.run : tool.run.replaceAll("{op}", op);
-  const resolved: ResolvedReviewStep = { primary };
-  if (step.note !== undefined) {
-    resolved.note = step.note;
-  }
-  return resolved;
-}
-
 /**
- * Walks the config-side `unit` and `plan` pipelines, resolves each step's
- * `tool.run` template (substituting `{op}` from the step), and attaches the
- * resulting `ResolvedReviewPipeline` to the in-memory plan
- * (`plan.plan_review_pipeline`) and to each unit (`unit.review_pipeline`).
- *
- * Throws `MaterializeError("invalid_config", ...)` when a step references an
- * unknown tool, or when `op` is missing/extra relative to the tool template.
+ * Copies the config's `unit_review` and `plan_review` slash-command arrays
+ * onto the in-memory plan (`plan.plan_review`) and each unit (`unit.review`).
+ * No tool lookup or `{op}` substitution — each entry is rendered verbatim.
  */
 export function resolvePipelines(plan: Plan, config: Config): void {
-  const tools = config.tools;
   for (const unit of plan.units) {
-    const steps = config.review_pipelines.unit.steps.map((step, i) =>
-      resolveStep(step, "review_pipelines.unit", i, tools),
-    );
-    unit.review_pipeline = { steps };
+    unit.review = [...config.unit_review];
   }
-  const planSteps = config.review_pipelines.plan.steps.map((step, i) =>
-    resolveStep(step, "review_pipelines.plan", i, tools),
-  );
-  plan.plan_review_pipeline = { steps: planSteps };
+  plan.plan_review = [...config.plan_review];
 }
 
 /**

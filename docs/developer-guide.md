@@ -381,7 +381,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 
 One skill fronts the config UX (runs outside the planning fork so `AskUserQuestion` works):
 
-- `planview:setup` — first-run Q&A walkthrough that writes the global file. Triggered by phrases like "set up planview". Handles only the scalar knobs; `tools` and `review_pipelines` are hand-edited in the JSON afterward (see README → Editing tools and review pipelines). The hook re-validates on next plan-mode use, so no separate validator is needed.
+- `planview:setup` — first-run Q&A walkthrough that writes the global file. Triggered by phrases like "set up planview". Handles only the scalar knobs; `unit_review` and `plan_review` are hand-edited in the JSON afterward (see README → Editing review commands). The hook re-validates on next plan-mode use, so no separate validator is needed.
 
 ## Plugin Manifest
 

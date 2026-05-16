@@ -29,9 +29,7 @@ const minimalUnit = (id: string, blockedBy: string[] = []): Unit => ({
   summary: `Summary for ${id}.`,
   blocked_by: blockedBy,
   body_markdown: `## Tasks\n\nDo ${id}.\n`,
-  review_pipeline: {
-    steps: [{ primary: "/code-review:code-review" }],
-  },
+  review: ["/code-review:code-review"],
 });
 
 describe("unitIdPrefix", () => {
@@ -114,12 +112,7 @@ describe("buildProgressMd", () => {
       task_summary: "x",
       slug: "x",
       units: [minimalUnit("01-prep")],
-      plan_review_pipeline: {
-        steps: [
-          { primary: "/code-review:code-review" },
-          { primary: "/codex:adversarial-review" },
-        ],
-      },
+      plan_review: ["/code-review:code-review", "/codex:adversarial-review"],
     };
     const md = buildProgressMd(plan, "260505-0-x");
     expect(md).toContain("## Plan-level review");
@@ -149,23 +142,6 @@ describe("buildUnitMd", () => {
     );
   });
 
-  it("renders a step's note as a sub-bullet", () => {
-    const u: Unit = {
-      ...minimalUnit("01-rich"),
-      review_pipeline: {
-        steps: [
-          {
-            primary: "/codex:review",
-            note: "Use when slash buffer fits.",
-          },
-        ],
-      },
-    };
-    const md = buildUnitMd(u);
-    expect(md).toContain("- [ ] `/codex:review`");
-    expect(md).toContain("  - _Use when slash buffer fits._");
-  });
-
   it("renders blocked_by as comma-joined", () => {
     const u = minimalUnit("02-bar", ["01-a", "01-b"]);
     expect(buildUnitMd(u)).toContain("**Blocked by:** 01-a, 01-b");
@@ -176,14 +152,14 @@ describe("buildUnitMd", () => {
     expect(buildUnitMd(u)).toContain("**Agents involved:** a, b");
   });
 
-  it("emits no review steps placeholder when pipeline empty", () => {
-    const u: Unit = { ...minimalUnit("01-x"), review_pipeline: { steps: [] } };
+  it("emits no review steps placeholder when review list is empty", () => {
+    const u: Unit = { ...minimalUnit("01-x"), review: [] };
     expect(buildUnitMd(u)).toContain("- [ ] _No review steps configured._");
   });
 
-  it("emits no review steps placeholder when pipeline absent", () => {
+  it("emits no review steps placeholder when review is absent", () => {
     const u: Unit = { ...minimalUnit("01-x") };
-    delete u.review_pipeline;
+    delete u.review;
     expect(buildUnitMd(u)).toContain("- [ ] _No review steps configured._");
   });
 

@@ -79,8 +79,8 @@ planview reads a layered config: built-in defaults < `~/.claude/plugins/planview
 | `auto_open_browser` | `false` | ✓ | Open `overview.html` in the browser after materialize. |
 | `html_output` | `false` | ✓ | Render `overview.html` alongside the markdown files. |
 | `plan_level_topology` | `false` | — | Reserved for v2; currently always false. |
-| `tools` | three defaults shipped (`anthropic-cr`, `codex`, `simplify`) | — | Named reviewer definitions referenced by `review_pipelines`. Each entry is `{ "run": "<slash-command-template>" }`; the template may use `{op}` for subcommand substitution. Tools are Claude Code plugin slash commands only — no bash escape hatch, no fallback. |
-| `review_pipelines` | `unit` = `[{ "tool": "anthropic-cr" }]`, `plan` = `[]` | — | Two ordered pipelines of `{ tool, op?, note? }` steps. `unit` runs after each Unit (rendered into the Unit md). `plan` runs after the last Unit (rendered into `progress.md` as `## Plan-level review`). |
+| `unit_review` | `["/code-review:code-review"]` | — | Slash commands to run after each Unit. Rendered as a checklist in the Unit md. Each entry is a Claude Code plugin slash command (no bash escape hatch). |
+| `plan_review` | `[]` | — | Slash commands to run after the last Unit's review and commit. Rendered as `## Plan-level review` in `progress.md`. |
 
 Defaults assume "files-on-disk is the value, the browser is opt-in" — most users view plan dirs in their editor (Obsidian, VS Code, iA Writer). Flip `auto_open_browser=true` and/or `html_output=true` if you want the rendered HTML view too.
 
@@ -88,35 +88,30 @@ Defaults assume "files-on-disk is the value, the browser is opt-in" — most use
 
 Tell Claude Code "**set up planview**" to invoke the `planview:setup` skill — a short Q&A that writes `~/.claude/plugins/planview/config.json` from scratch. It runs outside the planning fork (so `AskUserQuestion` works there).
 
-### Editing tools and review pipelines
+### Editing review commands
 
-After first-time setup, hand-edit `~/.claude/plugins/planview/config.json` directly — the structured fields (`tools`, `review_pipelines`) are easier to revise in your text editor than through a Q&A loop. Schema reference: [`docs/data-model.md`](docs/data-model.md#review-pipelines).
+After first-time setup, hand-edit `~/.claude/plugins/planview/config.json` directly — `unit_review` and `plan_review` are just lists of slash commands. Schema reference: [`docs/data-model.md`](docs/data-model.md#review-commands).
 
 The file is parsed as **JSONC** — `//` and `/* */` comments are stripped before parsing. The setup skill writes an annotated template by default, so the in-file comments are the primary "what does this key do" reference; the README is for examples and schema depth.
 
 The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe: a malformed config surfaces a deny payload the next time you exit plan mode, with the parse / schema error inline.
 
-Example — adding `/codex:review` after `anthropic-cr` on every unit and `/codex:adversarial-review` at plan-close:
+Example — adding `/codex:review` and `/simplify` after each unit, and `/codex:adversarial-review` at plan-close:
 
 ```jsonc
 {
-  "review_pipelines": {
-    "unit": {
-      "steps": [
-        { "tool": "anthropic-cr" },
-        { "tool": "codex", "op": "review" }
-      ]
-    },
-    "plan": {
-      "steps": [
-        { "tool": "codex", "op": "adversarial-review" }
-      ]
-    }
-  }
+  "unit_review": [
+    "/code-review:code-review",
+    "/codex:review",
+    "/simplify"
+  ],
+  "plan_review": [
+    "/codex:adversarial-review"
+  ]
 }
 ```
 
-The three built-in tools (`anthropic-cr`, `codex`, `simplify`) are shipped as defaults — you only need to declare `tools` when defining a new one.
+Each entry is a Claude Code plugin slash command; the materializer renders it verbatim into a Unit md checkbox (and into `progress.md` for `plan_review`).
 
 ## Documentation
 

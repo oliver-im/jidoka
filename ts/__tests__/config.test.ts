@@ -27,16 +27,9 @@ describe("defaults", () => {
     expect(defaultConfig.plan_level_topology).toBe(false);
   });
 
-  it("ships baseline tools and a unit-level pipeline matching today's behavior", () => {
-    expect(defaultConfig.tools["anthropic-cr"]).toEqual({
-      run: "/code-review:code-review",
-    });
-    expect(defaultConfig.tools.codex).toEqual({ run: "/codex:{op}" });
-    expect(defaultConfig.tools.simplify).toEqual({ run: "/simplify" });
-    expect(defaultConfig.review_pipelines.unit.steps).toEqual([
-      { tool: "anthropic-cr" },
-    ]);
-    expect(defaultConfig.review_pipelines.plan.steps).toEqual([]);
+  it("ships a unit-level pipeline matching today's behavior", () => {
+    expect(defaultConfig.unit_review).toEqual(["/code-review:code-review"]);
+    expect(defaultConfig.plan_review).toEqual([]);
   });
 });
 
@@ -85,7 +78,6 @@ describe("loadFromPaths", () => {
       }),
     );
     const cfg = loadFromPaths(undefined, path);
-    // Unknown keys are stripped; defaults survive.
     expect(cfg).toEqual(defaultConfig);
     rmSync(dir, { recursive: true, force: true });
   });
@@ -144,84 +136,69 @@ describe("loadFromPaths", () => {
         /* Block comment
            spanning multiple lines. */
         "auto_open_browser": true,
-        // Tool with an inline comment.
-        "tools": {
-          "anthropic-cr": { "run": "/code-review:code-review" }  // not a comment-in-string
-        }
+        // Inline comment near a string with a slash inside.
+        "unit_review": [ "/code-review:code-review" ]  // not a comment-in-string
       }`,
     );
     const cfg = loadFromPaths(path, undefined);
     expect(cfg.plan_dir_root).toBe("commented/plans");
     expect(cfg.auto_open_browser).toBe(true);
-    expect(cfg.tools["anthropic-cr"].run).toBe("/code-review:code-review");
+    expect(cfg.unit_review).toEqual(["/code-review:code-review"]);
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("hydrates missing tools and review_pipelines from defaults", () => {
+  it("hydrates missing unit_review and plan_review from defaults", () => {
     const dir = makeTempDir("partial");
     const path = join(dir, "config.json");
-    writeFileSync(
-      path,
-      JSON.stringify({ plan_dir_root: "custom" }),
-    );
+    writeFileSync(path, JSON.stringify({ plan_dir_root: "custom" }));
     const cfg = loadFromPaths(path, undefined);
     expect(cfg.plan_dir_root).toBe("custom");
-    expect(cfg.tools).toEqual(defaultConfig.tools);
-    expect(cfg.review_pipelines).toEqual(defaultConfig.review_pipelines);
+    expect(cfg.unit_review).toEqual(defaultConfig.unit_review);
+    expect(cfg.plan_review).toEqual(defaultConfig.plan_review);
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("accepts a user-defined tool entry and a custom unit pipeline", () => {
+  it("accepts a custom unit pipeline of slash commands", () => {
     const dir = makeTempDir("custom-pipeline");
     const path = join(dir, "config.json");
     writeFileSync(
       path,
       JSON.stringify({
-        tools: {
-          "my-tool": { run: "/my:thing" },
-        },
-        review_pipelines: {
-          unit: { steps: [{ tool: "my-tool", note: "smoke" }] },
-          plan: { steps: [] },
-        },
+        unit_review: ["/code-review:code-review", "/codex:review"],
+        plan_review: ["/codex:adversarial-review"],
       }),
     );
     const cfg = loadFromPaths(path, undefined);
-    expect(cfg.tools["my-tool"]).toEqual({ run: "/my:thing" });
-    expect(cfg.review_pipelines.unit.steps).toEqual([
-      { tool: "my-tool", note: "smoke" },
+    expect(cfg.unit_review).toEqual([
+      "/code-review:code-review",
+      "/codex:review",
     ]);
+    expect(cfg.plan_review).toEqual(["/codex:adversarial-review"]);
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("falls back to defaults when a tool entry has a non-string run", () => {
-    const dir = makeTempDir("bad-tool");
+  it("falls back to defaults when a review entry isn't a slash command", () => {
+    const dir = makeTempDir("bad-review");
     const path = join(dir, "config.json");
-    writeFileSync(
-      path,
-      JSON.stringify({ tools: { bad: { run: 42 } } }),
-    );
+    writeFileSync(path, JSON.stringify({ unit_review: ["not-a-slash"] }));
     const cfg = loadFromPaths(path, undefined);
-    // Zod rejects the whole config; we fall back to defaults rather than
-    // hydrating a partial structure with one broken entry.
     expect(cfg).toEqual(defaultConfig);
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("rejects tools and review_pipelines as project overrides", () => {
+  it("rejects unit_review / plan_review as project overrides", () => {
     const dir = makeTempDir("scope");
     const path = join(dir, ".planview.json");
     writeFileSync(
       path,
       JSON.stringify({
-        tools: { sneaky: { run: "/sneaky" } },
-        review_pipelines: { unit: { steps: [] }, plan: { steps: [] } },
+        unit_review: ["/sneaky"],
+        plan_review: ["/sneakier"],
       }),
     );
     const cfg = loadFromPaths(undefined, path);
-    // Project overrides for user-scope keys are dropped; defaults survive.
-    expect(cfg.tools).toEqual(defaultConfig.tools);
-    expect(cfg.review_pipelines).toEqual(defaultConfig.review_pipelines);
+    expect(cfg.unit_review).toEqual(defaultConfig.unit_review);
+    expect(cfg.plan_review).toEqual(defaultConfig.plan_review);
     rmSync(dir, { recursive: true, force: true });
   });
 });
@@ -255,64 +232,22 @@ describe("mergeForWrite", () => {
   it("starts from empty when base undefined", () => {
     const merged = mergeForWrite(undefined, defaultConfig);
     expect(merged.plan_dir_root).toBe("plan");
-    expect(merged.tools).toEqual(defaultConfig.tools);
-    expect(merged.review_pipelines).toEqual(defaultConfig.review_pipelines);
+    expect(merged.unit_review).toEqual(defaultConfig.unit_review);
+    expect(merged.plan_review).toEqual(defaultConfig.plan_review);
   });
 
-  it("drops tools the user removed from cfg", () => {
+  it("overwrites stale unit_review / plan_review from base", () => {
     const base = {
-      tools: {
-        weird: { run: "/weird" },
-        "anthropic-cr": { run: "/code-review:code-review" },
-      },
+      unit_review: ["/old:command"],
+      plan_review: ["/old:plan-command"],
     };
-    const merged = mergeForWrite(base, defaultConfig);
-    const tools = merged.tools as Record<string, unknown>;
-    expect(tools.weird).toBeUndefined();
-    expect("weird" in tools).toBe(false);
-    expect(tools["anthropic-cr"]).toEqual({ run: "/code-review:code-review" });
-  });
-
-  it("preserves foreign sub-fields on a known tool entry", () => {
-    const base = {
-      tools: {
-        codex: {
-          run: "/codex:{op}",
-          experimental_x: true,
-        },
-      },
+    const cfg = {
+      ...defaultConfig,
+      unit_review: ["/new:command"],
+      plan_review: [],
     };
-    const merged = mergeForWrite(base, defaultConfig);
-    const tools = merged.tools as Record<string, Record<string, unknown>>;
-    expect(tools.codex.experimental_x).toBe(true);
-    expect(tools.codex.run).toBe("/codex:{op}");
-  });
-
-  it("purges the legacy fallback sub-field from a tool entry on write", () => {
-    const base = {
-      tools: {
-        codex: { run: "/codex:{op}", fallback: "codex agent {op}" },
-      },
-    };
-    const merged = mergeForWrite(base, defaultConfig);
-    const tools = merged.tools as Record<string, Record<string, unknown>>;
-    expect(tools.codex.run).toBe("/codex:{op}");
-    expect(tools.codex.fallback).toBeUndefined();
-    expect("fallback" in tools.codex).toBe(false);
-  });
-
-  it("preserves foreign scope keys on review_pipelines", () => {
-    const base = {
-      review_pipelines: {
-        unit: { steps: [] },
-        plan: { steps: [] },
-        session: { steps: [{ tool: "anthropic-cr" }] },
-      },
-    };
-    const merged = mergeForWrite(base, defaultConfig);
-    const rp = merged.review_pipelines as Record<string, unknown>;
-    expect(rp.session).toEqual({ steps: [{ tool: "anthropic-cr" }] });
-    expect(rp.unit).toEqual(defaultConfig.review_pipelines.unit);
-    expect(rp.plan).toEqual(defaultConfig.review_pipelines.plan);
+    const merged = mergeForWrite(base, cfg);
+    expect(merged.unit_review).toEqual(["/new:command"]);
+    expect(merged.plan_review).toEqual([]);
   });
 });

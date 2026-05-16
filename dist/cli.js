@@ -18145,22 +18145,7 @@ var topologySchema = external_exports.object({
   execution_mode: executionModeSchema,
   agents: external_exports.array(agentSchema)
 });
-var toolSchema = external_exports.object({
-  run: external_exports.string().min(1, "tool.run must be a non-empty string")
-});
-var toolsSchema = external_exports.record(external_exports.string().min(1), toolSchema);
-var reviewStepSchema = external_exports.object({
-  tool: external_exports.string().min(1, "review step 'tool' must be a non-empty string"),
-  op: external_exports.string().min(1).optional(),
-  note: external_exports.string().optional()
-});
-var reviewPipelineSchema = external_exports.object({
-  steps: external_exports.array(reviewStepSchema)
-});
-var reviewPipelinesSchema = external_exports.object({
-  unit: reviewPipelineSchema,
-  plan: reviewPipelineSchema
-});
+var reviewCommandSchema = external_exports.string().min(1, "review command must be a non-empty string").startsWith("/", "review command must start with '/'");
 var unitSchema = external_exports.object({
   id: external_exports.string(),
   title: external_exports.string(),
@@ -18226,23 +18211,16 @@ var defaultConfig = {
   auto_open_browser: false,
   html_output: false,
   plan_level_topology: false,
-  tools: {
-    "anthropic-cr": { run: "/code-review:code-review" },
-    codex: { run: "/codex:{op}" },
-    simplify: { run: "/simplify" }
-  },
-  review_pipelines: {
-    unit: { steps: [{ tool: "anthropic-cr" }] },
-    plan: { steps: [] }
-  }
+  unit_review: ["/code-review:code-review"],
+  plan_review: []
 };
 var configSchema = external_exports.object({
   plan_dir_root: external_exports.string().default(defaultConfig.plan_dir_root),
   auto_open_browser: external_exports.boolean().default(defaultConfig.auto_open_browser),
   html_output: external_exports.boolean().default(defaultConfig.html_output),
   plan_level_topology: external_exports.boolean().default(defaultConfig.plan_level_topology),
-  tools: toolsSchema.default(defaultConfig.tools),
-  review_pipelines: reviewPipelinesSchema.default(defaultConfig.review_pipelines)
+  unit_review: external_exports.array(reviewCommandSchema).default(defaultConfig.unit_review),
+  plan_review: external_exports.array(reviewCommandSchema).default(defaultConfig.plan_review)
 });
 function globalConfigPath() {
   const home = homedir();
@@ -19141,7 +19119,7 @@ var JS = `// planview client-side JS \u2014 embedded via include_str!()
 })();
 `;
 var PAGE_TEMPLATE = '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Topology: <%= it.task_summary %></title>\n  <style><%= it.css %></style>\n  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js"></script>\n  <% if (it.has_plan) { %>\n  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>\n  <% } %>\n</head>\n<body class="<% if (it.has_plan) { %>has-plan<% } else { %>no-plan<% } %>">\n\n  <header>\n    <h1><%= it.task_summary %></h1>\n    <div class="header-meta">\n      <span class="mode-badge">Mode: <%= it.mode_label %></span>\n      <div class="header-actions">\n        <button id="theme-toggle" type="button" title="Toggle dark mode">\n          <span class="icon-light">&#9788;</span>\n          <span class="icon-dark">&#9790;</span>\n        </button>\n        <button id="download-png" type="button" title="Download as PNG">&#8681; PNG</button>\n      </div>\n    </div>\n  </header>\n\n  <main>\n    <% if (it.has_plan) { %>\n    <aside class="plan-panel">\n      <h2>Plan</h2>\n      <div id="plan-content"></div>\n    </aside>\n    <% } %>\n\n    <section class="diagram-panel">\n      <div class="diagrams">\n        <% it.mermaid_graphs.forEach((graph, idx) => { %>\n        <div class="diagram-block">\n          <% if (it.phase_labels.length > 0) { %>\n          <h3 class="phase-label"><%= it.phase_labels[idx] %></h3>\n          <% } %>\n          <pre class="mermaid"><%= graph %></pre>\n        </div>\n        <% }); %>\n      </div>\n\n      <div class="legend">\n        <h3>Legend</h3>\n        <div class="legend-grid">\n          <div class="legend-section">\n            <h4>Model</h4>\n            <div class="legend-items">\n              <div class="legend-item">\n                <span class="swatch swatch-haiku"></span> haiku\n              </div>\n              <div class="legend-item">\n                <span class="swatch swatch-sonnet"></span> sonnet\n              </div>\n              <div class="legend-item">\n                <span class="swatch swatch-opus"></span> opus\n              </div>\n              <div class="legend-item">\n                <span class="swatch swatch-main"></span> main agent\n              </div>\n            </div>\n          </div>\n          <div class="legend-section">\n            <h4>Output</h4>\n            <div class="legend-items">\n              <div class="legend-item">\n                <span class="shape shape-rect"></span> inline\n              </div>\n              <div class="legend-item">\n                <span class="shape shape-pill"></span> file\n              </div>\n            </div>\n          </div>\n        </div>\n      </div>\n\n      <div class="overview">\n        <h3>Topology Overview</h3>\n        <pre class="overview-text"><%= it.description %></pre>\n      </div>\n    </section>\n  </main>\n\n  <% if (it.has_plan) { %>\n  <script>window.__planMarkdown = <%= it.plan_markdown_json %>;</script>\n  <% } %>\n  <script><%= it.js %></script>\n</body>\n</html>\n';
-var PLAN_TEMPLATE = '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Plan: <%= it.title %></title>\n  <style><%= it.css %></style>\n  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>\n</head>\n<body class="plan">\n  <header>\n    <h1>Plan: <%= it.title %></h1>\n    <div class="header-meta">\n      <span class="mode-badge"><%= it.unit_count %> unit<%= it.unit_count_suffix %><% if (it.topology_count > 0) { %> \xB7 <%= it.topology_count %> with topology<% } %></span>\n      <div class="header-actions">\n        <button id="theme-toggle" type="button" title="Toggle dark mode">\n          <span class="icon-light">&#9788;</span>\n          <span class="icon-dark">&#9790;</span>\n        </button>\n      </div>\n    </div>\n  </header>\n\n  <main class="plan-main">\n    <aside class="plan-toc">\n      <h2>Units</h2>\n      <ul>\n        <% it.units.forEach((unit) => { %>\n        <li><a href="#<%= unit.anchor %>"><span class="unit-prefix"><%= unit.prefix %></span> <%= unit.title %></a></li>\n        <% }); %>\n      </ul>\n    </aside>\n\n    <section class="plan-content">\n      <article class="plan-overview-card" id="overview">\n        <h2>Overview</h2>\n        <div id="overview-md" class="markdown-body"></div>\n      </article>\n\n      <% it.units.forEach((unit) => { %>\n      <article class="unit-card" id="<%= unit.anchor %>">\n        <header class="unit-header">\n          <h2>Unit <%= unit.prefix %> \u2014 <%= unit.title %></h2>\n          <div class="unit-chips">\n            <span class="chip chip-blocked-by">Blocked by: <%= unit.blocked_by_label %></span>\n            <span class="chip chip-agents"><%= unit.agents_label %></span>\n            <% if (unit.has_topology) { %>\n            <span class="chip chip-topology">topology</span>\n            <% } %>\n          </div>\n        </header>\n\n        <p class="unit-summary"><%= unit.summary %></p>\n\n        <div class="unit-body markdown-body" data-key="<%= unit.index %>"></div>\n\n        <% unit.mermaid_graphs.forEach((graph) => { %>\n        <div class="diagram-block">\n          <pre class="mermaid"><%= graph %></pre>\n        </div>\n        <% }); %>\n\n        <% if (unit.review_steps.length > 0) { %>\n        <div class="unit-review">\n          <h3>Review pipeline</h3>\n          <ul>\n            <% unit.review_steps.forEach((step) => { %>\n            <li>\n              <code><%= step.primary %></code>\n              <% if (step.note) { %>\n              <div class="review-note"><em><%= step.note %></em></div>\n              <% } %>\n            </li>\n            <% }); %>\n          </ul>\n        </div>\n        <% } %>\n\n        <div class="unit-footer"><a href="#overview">\u2191 overview</a></div>\n      </article>\n      <% }); %>\n    </section>\n  </main>\n\n  <script>\n    window.__overviewMarkdown = <%= it.overview_markdown_json %>;\n    window.__unitBodies = <%= it.unit_bodies_json %>;\n  </script>\n  <script><%= it.js %></script>\n</body>\n</html>\n';
+var PLAN_TEMPLATE = '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Plan: <%= it.title %></title>\n  <style><%= it.css %></style>\n  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>\n</head>\n<body class="plan">\n  <header>\n    <h1>Plan: <%= it.title %></h1>\n    <div class="header-meta">\n      <span class="mode-badge"><%= it.unit_count %> unit<%= it.unit_count_suffix %><% if (it.topology_count > 0) { %> \xB7 <%= it.topology_count %> with topology<% } %></span>\n      <div class="header-actions">\n        <button id="theme-toggle" type="button" title="Toggle dark mode">\n          <span class="icon-light">&#9788;</span>\n          <span class="icon-dark">&#9790;</span>\n        </button>\n      </div>\n    </div>\n  </header>\n\n  <main class="plan-main">\n    <aside class="plan-toc">\n      <h2>Units</h2>\n      <ul>\n        <% it.units.forEach((unit) => { %>\n        <li><a href="#<%= unit.anchor %>"><span class="unit-prefix"><%= unit.prefix %></span> <%= unit.title %></a></li>\n        <% }); %>\n      </ul>\n    </aside>\n\n    <section class="plan-content">\n      <article class="plan-overview-card" id="overview">\n        <h2>Overview</h2>\n        <div id="overview-md" class="markdown-body"></div>\n      </article>\n\n      <% it.units.forEach((unit) => { %>\n      <article class="unit-card" id="<%= unit.anchor %>">\n        <header class="unit-header">\n          <h2>Unit <%= unit.prefix %> \u2014 <%= unit.title %></h2>\n          <div class="unit-chips">\n            <span class="chip chip-blocked-by">Blocked by: <%= unit.blocked_by_label %></span>\n            <span class="chip chip-agents"><%= unit.agents_label %></span>\n            <% if (unit.has_topology) { %>\n            <span class="chip chip-topology">topology</span>\n            <% } %>\n          </div>\n        </header>\n\n        <p class="unit-summary"><%= unit.summary %></p>\n\n        <div class="unit-body markdown-body" data-key="<%= unit.index %>"></div>\n\n        <% unit.mermaid_graphs.forEach((graph) => { %>\n        <div class="diagram-block">\n          <pre class="mermaid"><%= graph %></pre>\n        </div>\n        <% }); %>\n\n        <% if (unit.review_commands.length > 0) { %>\n        <div class="unit-review">\n          <h3>Review pipeline</h3>\n          <ul>\n            <% unit.review_commands.forEach((cmd) => { %>\n            <li><code><%= cmd %></code></li>\n            <% }); %>\n          </ul>\n        </div>\n        <% } %>\n\n        <div class="unit-footer"><a href="#overview">\u2191 overview</a></div>\n      </article>\n      <% }); %>\n    </section>\n  </main>\n\n  <script>\n    window.__overviewMarkdown = <%= it.overview_markdown_json %>;\n    window.__unitBodies = <%= it.unit_bodies_json %>;\n  </script>\n  <script><%= it.js %></script>\n</body>\n</html>\n';
 
 // ts/mermaid.ts
 function mermaid(topology) {
@@ -19248,7 +19226,7 @@ function buildOverviewMd(plan, dirName) {
   const unitRows = plan.units.map((unit) => {
     const prefix = unitIdPrefix(unit.id) ?? unit.id;
     const blockedBy = unit.blocked_by.length === 0 ? "\u2014" : unit.blocked_by.map((b) => unitIdPrefix(b) ?? b).join(", ");
-    const reviews = overviewReviewsCell(unit.review_pipeline);
+    const reviews = overviewReviewsCell(unit.review);
     return `| ${prefix} | ${unit.title} | ${blockedBy} | ${reviews} |`;
   }).join("\n");
   return eta.render("overview.md.eta", {
@@ -19260,7 +19238,7 @@ function buildOverviewMd(plan, dirName) {
 }
 function buildProgressMd(plan, dirName) {
   const cursor = plan.units[0]?.id ?? "(no units)";
-  const planReviewBlock = renderPlanReviewBlock(plan.plan_review_pipeline);
+  const planReviewBlock = renderPlanReviewBlock(plan.plan_review);
   return eta.render("progress.md.eta", { dirName, cursor, planReviewBlock });
 }
 function buildUnitMd(unit) {
@@ -19280,7 +19258,7 @@ function buildUnitMd(unit) {
     bodyBlock += "\n";
   }
   const topologyBlock = unit.topology !== void 0 ? unitTopologyBlock(unit.topology) + "\n\n" : "";
-  const reviewItems = renderPipelineChecklist(unit.review_pipeline);
+  const reviewItems = renderPipelineChecklist(unit.review);
   return eta.render("unit.md.eta", {
     prefix,
     title: unit.title,
@@ -19293,32 +19271,25 @@ function buildUnitMd(unit) {
     reviewItems
   });
 }
-function renderPipelineChecklist(pipeline) {
-  if (pipeline === void 0 || pipeline.steps.length === 0) {
+function renderPipelineChecklist(commands) {
+  if (commands === void 0 || commands.length === 0) {
     return "- [ ] _No review steps configured._\n";
   }
-  const lines = [];
-  for (const step of pipeline.steps) {
-    lines.push(`- [ ] \`${step.primary}\``);
-    if (step.note !== void 0 && step.note.length > 0) {
-      lines.push(`  - _${step.note}_`);
-    }
-  }
-  return lines.join("\n") + "\n";
+  return commands.map((c) => `- [ ] \`${c}\``).join("\n") + "\n";
 }
-function renderPlanReviewBlock(pipeline) {
+function renderPlanReviewBlock(commands) {
   let out = "## Plan-level review\n\n";
-  if (pipeline === void 0 || pipeline.steps.length === 0) {
+  if (commands === void 0 || commands.length === 0) {
     out += "_No plan-level reviews configured. After the last unit, surface a summary and ask the user before archiving._\n";
     return out;
   }
   out += "After the last unit's review lands and is committed, run these against the cumulative plan diff:\n\n";
-  out += renderPipelineChecklist(pipeline);
+  out += renderPipelineChecklist(commands);
   return out;
 }
-function overviewReviewsCell(pipeline) {
-  if (pipeline === void 0 || pipeline.steps.length === 0) return "\u2014";
-  return pipeline.steps.map((s) => s.primary).join(" + ");
+function overviewReviewsCell(commands) {
+  if (commands === void 0 || commands.length === 0) return "\u2014";
+  return commands.join(" + ");
 }
 function unitTopologyBlock(topology) {
   return mermaid(topology).map((g) => `\`\`\`mermaid
@@ -19372,7 +19343,7 @@ function renderPlanHtml(plan, dirName) {
       agents_label: agentsLabel,
       has_topology: unit.topology !== void 0,
       mermaid_graphs: mermaidGraphs,
-      review_steps: (unit.review_pipeline?.steps ?? []).map(reviewStepCard)
+      review_commands: (unit.review ?? []).map(htmlEscape)
     };
   });
   const unitCount = plan.units.length;
@@ -19388,11 +19359,6 @@ function renderPlanHtml(plan, dirName) {
     js: JS
   };
   return eta2.renderString(PLAN_TEMPLATE, locals);
-}
-function reviewStepCard(step) {
-  const out = { primary: htmlEscape(step.primary) };
-  if (step.note !== void 0) out.note = htmlEscape(step.note);
-  return out;
 }
 function buildModeLabel(topology) {
   const top = topology.execution_mode;
@@ -19446,51 +19412,11 @@ var MaterializeError = class extends Error {
   kind;
   path;
 };
-function resolveStep(step, scope, index, tools) {
-  const tool = tools[step.tool];
-  if (tool === void 0) {
-    const known = Object.keys(tools).sort().join(", ");
-    throw new MaterializeError(
-      "invalid_config",
-      "<config>",
-      `${scope}.steps[${index}]: unknown tool '${step.tool}' (defined tools: ${known || "(none)"})`
-    );
-  }
-  const needsOp = tool.run.includes("{op}");
-  if (needsOp && step.op === void 0) {
-    throw new MaterializeError(
-      "invalid_config",
-      "<config>",
-      `${scope}.steps[${index}]: tool '${step.tool}' template requires '{op}' but the step provides none`
-    );
-  }
-  if (!needsOp && step.op !== void 0) {
-    throw new MaterializeError(
-      "invalid_config",
-      "<config>",
-      `${scope}.steps[${index}]: tool '${step.tool}' template has no '{op}' placeholder but the step provides one ('${step.op}')`
-    );
-  }
-  const op = step.op;
-  const primary = op === void 0 ? tool.run : tool.run.replaceAll("{op}", op);
-  const resolved = { primary };
-  if (step.note !== void 0) {
-    resolved.note = step.note;
-  }
-  return resolved;
-}
 function resolvePipelines(plan, config2) {
-  const tools = config2.tools;
   for (const unit of plan.units) {
-    const steps = config2.review_pipelines.unit.steps.map(
-      (step, i) => resolveStep(step, "review_pipelines.unit", i, tools)
-    );
-    unit.review_pipeline = { steps };
+    unit.review = [...config2.unit_review];
   }
-  const planSteps = config2.review_pipelines.plan.steps.map(
-    (step, i) => resolveStep(step, "review_pipelines.plan", i, tools)
-  );
-  plan.plan_review_pipeline = { steps: planSteps };
+  plan.plan_review = [...config2.plan_review];
 }
 function resolveTargetDir(plan, plansRoot, today) {
   const n = nextCounter(plansRoot, today);
