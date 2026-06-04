@@ -131,7 +131,7 @@ describe("materialize", () => {
     expect(u01).toContain("**Agents involved:** main only");
     expect(u01).toContain("**Topology:** none");
     expect(u01).toContain("## Review pipeline");
-    expect(u01).toContain("- [ ] `/code-review:code-review`");
+    expect(u01).toContain("- [ ] `/code-review`");
 
     rmSync(base, { recursive: true, force: true });
   });

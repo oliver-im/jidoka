@@ -29,7 +29,7 @@ When a user asks to resume a plan at `notes/plan/<slug>/`:
 
 After completing the cursor unit:
 
-- Run the Unit-level review pipeline from the cursor unit's md (`## Review pipeline` section — typically `/code-review:code-review`, sometimes `/codex:review` or `/simplify` depending on the user's config).
+- Run the Unit-level review pipeline from the cursor unit's md (`## Review pipeline` section — typically the built-in `/code-review`, sometimes `/simplify` depending on the user's config). These run on the unit's local working-tree diff; treat findings as candidates to triage against plan context (a flagged "unused" symbol may be an intentional forward-reference a later unit wires up — see the unit body) rather than blindly applying them.
 - Commit per the unit's commit guidance.
 - Update `progress.md`: move the unit into Done with a one-liner, advance the cursor to the next unit id.
 
@@ -37,7 +37,7 @@ If the cursor unit is blocked (an external dependency, a question for the user, 
 
 When the cursor unit was the **last** Unit in the plan:
 
-- After its Unit-level review and commit, read `progress.md`'s `## Plan-level review` section and walk that pipeline against the cumulative plan diff.
+- After its Unit-level review and commit, read `progress.md`'s `## Plan-level review` section and walk that pipeline against the cumulative (committed) plan diff. The recommended entry is `/planview:plan-review-prompt` — run it (it's agent-invocable); it reads the plan + diff and composes a ready-to-run `/codex:adversarial-review --base <branch>` command. Surface that command for the user to run, and wait. codex review itself sets `disable-model-invocation` (you **cannot** invoke it via SlashCommand) and needs `/codex:setup` + `codex login` first.
 - Surface findings to the user.
 - On approval, archive the plan dir to `done/plan/<YYMMDD-N-slug>/` per the top-level archiving convention. Don't archive before the user signs off — even if `## Plan-level review` is empty.
 

@@ -18212,7 +18212,7 @@ var defaultConfig = {
   html_output: false,
   plan_level_topology: false,
   pre_review: ["/planview:pre-plan-review"],
-  unit_review: ["/code-review:code-review"],
+  unit_review: ["/code-review"],
   plan_review: []
 };
 var configSchema = external_exports.object({

@@ -20,7 +20,7 @@ A JSONC file (JSON with `//` comments — the reader strips them before parsing)
 | `html_output` | bool | `false` | "Render overview.html alongside the markdown files? (default off — set true if you want the rendered HTML view; otherwise just the .md files)" |
 | `plan_level_topology` | bool | `false` | _(reserved for v2 — don't ask; always write `false`)_ |
 | `pre_review` | string[] | `["/planview:pre-plan-review"]` | _(don't ask; write the shipped default)_ |
-| `unit_review` | string[] | `["/code-review:code-review"]` | _(don't ask; write the shipped default)_ |
+| `unit_review` | string[] | `["/code-review"]` | _(don't ask; write the shipped default)_ |
 | `plan_review` | string[] | `[]` | _(don't ask; write the shipped default)_ |
 
 ### Template to write
@@ -52,21 +52,38 @@ Use this exact JSONC layout, substituting the three scalar answers from the ques
     "/planview:pre-plan-review"
   ],
 
-  // Slash commands to run AFTER each Unit lands. Rendered as a checklist
-  // in the Unit md. Each entry is a Claude Code plugin slash command.
-  // Example: ["/code-review:code-review", "/codex:review", "/simplify"]
+  // Slash commands to run AFTER each Unit lands, on the unit's local
+  // working-tree diff (before commit). Rendered as a checklist in the Unit md.
+  // Default "/code-review" is the BUILT-IN local-diff reviewer (correctness
+  // bugs + reuse/simplification/efficiency cleanups). It is NOT the same as
+  // "/code-review:code-review", which is the code-review *plugin* and reviews
+  // a GitHub PR — wrong tool for a pre-commit unit gate.
+  // No "--fix": unit review is plan-blind, so its findings are candidates to
+  // triage against plan context, not auto-applied. "/code-review" takes no
+  // focus argument; put any per-unit review focus in the unit body prose.
+  // Add "/simplify" for a dedicated cleanup-only pass (it does NOT hunt bugs).
+  // Example: ["/code-review", "/simplify"]
   "unit_review": [
-    "/code-review:code-review"
+    "/code-review"
   ],
 
-  // Slash commands to run AFTER the last Unit's review and commit.
-  // Rendered as "## Plan-level review" in progress.md.
-  // Example: ["/codex:adversarial-review"]
+  // Slash commands to run AFTER the last Unit's review and commit, against
+  // the cumulative (committed) plan diff. Rendered as "## Plan-level review"
+  // in progress.md. This is the net for cross-unit completeness that the
+  // per-unit gate can't see.
+  // Recommended: "/planview:plan-review-prompt" — a bundled skill the resuming
+  // agent runs that reads the plan + cumulative diff and composes a ready-to-run
+  // "/codex:adversarial-review --base <branch>" command for you to execute.
+  // codex review is OPERATOR-RUN (it sets disable-model-invocation, so the agent
+  // can't invoke it — the composer hands you the command); codex needs /codex:setup
+  // + `codex login` first. Manual alternatives: "/codex:adversarial-review --base
+  // <branch>" directly, or "/code-review <branch>" (no codex).
+  // Example: ["/planview:plan-review-prompt"]
   "plan_review": []
 }
 ```
 
-These defaults give you a sensible review pipeline out of the box: `/planview:pre-plan-review` flags structural plan issues before any unit lands, `/code-review:code-review` reviews each unit's diff, and the plan-level slot is opt-in. Customizing is a hand-edit of `~/.claude/plugins/planview/config.json` after setup: add or remove slash commands in any of the three arrays. The README's "Editing review commands" section has more examples. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
+These defaults give you a sensible review pipeline out of the box: `/planview:pre-plan-review` flags structural plan issues before any unit lands, the built-in `/code-review` reviews each unit's diff, and the plan-level slot is opt-in. Customizing is a hand-edit of `~/.claude/plugins/planview/config.json` after setup: add or remove slash commands in any of the three arrays. The README's "Editing review commands" section has more examples. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
 
 ## Process
 

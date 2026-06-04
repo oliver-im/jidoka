@@ -32,10 +32,11 @@ You do **not** save the markdown anywhere. The hook reads it directly from PreTo
 
 ### Unit splitting
 
-Each unit must satisfy two constraints:
+Each unit must satisfy these constraints:
 
 1. **Reviewable on its own.** A code-review or adversarial-review pass on the unit's diff should be meaningful without context from sibling units. If reviewing unit 03 requires understanding units 01–02 simultaneously, you've split incorrectly.
-2. **Finishable in one session including reviews.** The work, the review, the fixes, and the commit all fit in one focused session. If a unit takes three sessions, split it.
+2. **Independently testable.** Prefer a vertical slice you can exercise (build / test / run) on its own over a horizontal layer that only makes sense once a later unit wires it up. Testability is the sharp version of "reviewable on its own": if the slice can be tested, the per-unit review gate has something coherent to judge.
+3. **Finishable in one session including reviews.** The work, the review, the fixes, and the commit all fit in one focused session. If a unit takes three sessions, split it.
 
 No fixed line/time budget. Most plans land at **3–7 units**. Two-unit plans are rare (usually a single unit is enough). Ten-unit plans usually want to split into two plans with their own dirs.
 
@@ -44,6 +45,8 @@ Examples:
 - Adding a new data type + validation + tests → one unit. The three pieces are coupled and reviewed together.
 - Adding a new data type + materialization + HTML rendering + hook integration → four units. Each can be reviewed independently and lands a clean commit.
 - Bumping a version + updating a README sentence → one unit ("housekeeping"). Don't split prose-only changes that share a theme.
+
+**Mid-plan incompleteness.** The per-unit review gate (`/code-review`) sees only the unit's diff with no plan context, so it flags intentional forward-references — a helper unit 01 adds but unit 03 calls reads as "unused"; a half-handled enum reads as "non-exhaustive." Splitting into testable slices keeps this rare. When a unit genuinely must leave a forward-reference, name it in the body (e.g. "`parsePlan()` is unused until Unit 03 wires it into the hook — unused-symbol findings here are expected") so the reviewer discounts the expected finding instead of acting on it. A *long* list of such notes is a splitting smell — re-split. Cross-unit completeness is the plan-level review's job, not the unit gate's.
 
 ### Topology decision
 
@@ -74,7 +77,7 @@ If two units are genuinely independent tracks that converge later, call that out
 
 ### review_steps
 
-You don't emit review info at all. Review pipelines come from the user's config (`~/.claude/plugins/planview/config.json`); the materializer resolves them at materialize time and renders them into each Unit md and into `progress.md`'s `## Plan-level review` section. If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body so the human reviewer takes the right action when the unit lands — the body remains the per-unit escape hatch.
+You don't emit review info at all. Review pipelines come from the user's config (`~/.claude/plugins/planview/config.json`); the materializer resolves them at materialize time and renders them into each Unit md and into `progress.md`'s `## Plan-level review` section. If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body so the human reviewer takes the right action when the unit lands — the body remains the per-unit escape hatch. The built-in `/code-review` takes no focus argument, so any "pay attention to X" steer for a unit's review also lives in the body prose, not in the command.
 
 ## Hard Rules
 

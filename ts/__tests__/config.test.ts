@@ -28,7 +28,7 @@ describe("defaults", () => {
   });
 
   it("ships a unit-level pipeline matching today's behavior", () => {
-    expect(defaultConfig.unit_review).toEqual(["/code-review:code-review"]);
+    expect(defaultConfig.unit_review).toEqual(["/code-review"]);
     expect(defaultConfig.plan_review).toEqual([]);
   });
 

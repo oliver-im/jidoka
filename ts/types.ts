@@ -88,9 +88,12 @@ export const topologySchema: z.ZodType<Topology> = z.object({
   agents: z.array(agentSchema),
 });
 
-// Each review command is a Claude Code plugin slash command, e.g.
-// "/code-review:code-review". The user lists them directly in the config;
-// there is no name lookup, no `{op}` substitution, no bash escape hatch.
+// Each review command is a Claude Code slash command, e.g. the built-in
+// "/code-review" (local working-tree diff) or "/codex:adversarial-review".
+// Note "/code-review" (built-in, reviews a local diff) is NOT the same as
+// "/code-review:code-review" (the code-review plugin, which reviews a GitHub
+// PR). The user lists commands directly in the config; there is no name
+// lookup, no `{op}` substitution, no bash escape hatch.
 export const reviewCommandSchema = z
   .string()
   .min(1, "review command must be a non-empty string")

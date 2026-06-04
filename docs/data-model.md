@@ -244,19 +244,31 @@ interface Config {
 }
 ```
 
-Each entry is a Claude Code plugin slash command (must start with `/`). No name lookup, no `{op}` substitution, no bash escape hatch. A user who wants a non-slash workflow runs it manually from the unit body.
+Each entry is a Claude Code slash command (must start with `/`) — built-in (`/code-review`, `/simplify`) or plugin-namespaced (`/codex:adversarial-review`), and may carry arguments (`/codex:adversarial-review --base main`). No name lookup, no `{op}` substitution, no bash escape hatch. A user who wants a non-slash workflow runs it manually from the unit body.
 
 ### Review stages
 
 | Stage | Config key | Renders into | Default | When it runs |
 |---|---|---|---|---|
 | Pre-execution | `pre_review` | `progress.md` (`## Pre-execution review`, above Done) | `["/planview:pre-plan-review"]` | After the plan dir is materialized, before the operator starts Unit 01. Reviews the plan *as a plan* — no diff exists yet. |
-| Per-unit | `unit_review` | Each `<id>.md` (`## Review pipeline`) | `["/code-review:code-review"]` | After the unit's diff lands and before it's committed. |
-| Plan-level | `plan_review` | `progress.md` (`## Plan-level review`, below Notes) | `[]` | After the last unit's review lands and is committed. Adversarial pass against the cumulative plan diff. |
+| Per-unit | `unit_review` | Each `<id>.md` (`## Review pipeline`) | `["/code-review"]` | After the unit's diff lands and before it's committed. Local correctness gate on the unit's working-tree diff. |
+| Plan-level | `plan_review` | `progress.md` (`## Plan-level review`, below Notes) | `[]` | After the last unit's review lands and is committed. Adversarial pass against the cumulative *committed* plan diff — the completeness net for cross-unit issues. |
 
 ### Validation
 
 The materializer denies the ExitPlanMode hook (or fails the `materialize` CLI) when an entry isn't a non-empty string starting with `/`. Otherwise every entry is rendered verbatim.
+
+### Command semantics & invocation
+
+planview renders commands verbatim; it does not run them. These properties of the common review commands shape what belongs in each stage:
+
+- **Namespace trap.** Built-in `/code-review` reviews a **local working-tree diff** (correctness bugs + reuse/simplification/efficiency cleanups). `/code-review:code-review` is a *different* tool — the code-review plugin, which reviews a **GitHub PR**. Per-unit and plan-level gates operate on local diffs, so they want the built-in `/code-review`, not the PR plugin.
+- **No `--fix` on unit review.** Unit review runs mid-plan with no plan context, so it flags intentional forward-references (a function unit 01 adds but unit 03 wires up reads as "unused"). Findings are therefore *candidates* a plan-aware reviewer triages, not edits to auto-apply — `--fix` would "fix" a correct forward-reference by deleting it.
+- **No focus argument.** `/code-review` (and `/codex:review`) take no free-text focus. Per-unit review focus belongs in the **unit body prose**, where the triager reads it. `/codex:adversarial-review` is the exception — it accepts free-form focus text, useful for aiming the plan-level pass at cross-unit consistency.
+- **`/simplify` is cleanup-only.** It applies reuse/simplification/efficiency/altitude fixes and does **not** hunt bugs — a complement to `/code-review`, not a substitute.
+- **Plan-level diff is committed.** By plan-end every unit is committed, so the cumulative diff lives between the base branch and HEAD. A bare working-tree review sees nothing; pass a base ref: `/codex:adversarial-review --base <branch>` (reviews `merge-base..HEAD`) or `/code-review <branch>`.
+- **codex commands are operator-run.** `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation: true`, so a resuming agent cannot invoke them via the SlashCommand tool — they're surfaced for the human to run. They require `/codex:setup` + `codex login` (they fail loudly otherwise). If planview drives plan-level review, leave codex's own Stop-time `--enable-review-gate` off to avoid double-gating.
+- **`/planview:plan-review-prompt` is the recommended `plan_review` vehicle.** Because codex review is operator-run, the recommended plan-level entry is this bundled skill (which *is* agent-invocable): the resuming agent runs it, it reads the plan + cumulative diff and **composes** a focused, ready-to-run `/codex:adversarial-review --base <branch>` command, and the operator runs that. The agent does the aiming (cross-unit seams, deferred forward-references that should now be wired up); the human pulls the trigger. It does not perform the review itself.
 
 ### Terminology
 
