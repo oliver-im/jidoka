@@ -1,3 +1,5 @@
+> **STATUS: completed · 2026-06 · realized-by the plan-lifecycle-convention commit series (`4538948`→`09f1e2f`), merged to `main` via `--no-ff`.** Shipped the portable, agent-first `docs/` three-kind lifecycle — `ideas/`, `exec-plans/{active,completed}/`, `design-docs/{,superseded}/` — with status-as-location and the two rules (provenance stamp on archive; reference-don't-paste), the standalone tool-agnostic `CONVENTION.md`, and the opt-in `git_workflow` pure-worktree mode (the ExitPlanMode hook scaffolds `worktrees/<id>` on a `plan/<id>` branch off the trunk and renders the `## Git workflow` block into `progress.md`). First plan executed and archived under the convention it introduces.
+
 # 260607-0-plan-lifecycle-convention — Progress
 
 **Cursor:** all units done (01–07); pre-exec + plan-level reviews done (incl. codex adversarial-review, findings hardened on the plan branch). Next: **archive** `active/ → completed/` (+ provenance stamp) → `--no-ff` merge to `main` → `git worktree remove`. See `## Plan-level review` + the close-out note.
