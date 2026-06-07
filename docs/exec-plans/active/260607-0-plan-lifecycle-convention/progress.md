@@ -1,6 +1,6 @@
 # 260607-0-plan-lifecycle-convention — Progress
 
-**Cursor:** 02-rehome-design-rationale (next). Unit 01 done — see Done below.
+**Cursor:** 03-wire-exec-plans-lifecycle (next). Units 01–02 done — see Done below.
 
 ## Pre-execution review
 
@@ -20,6 +20,7 @@ This plan follows the pure-worktree discipline it introduces (hand-applied until
 ## Done
 
 - **Unit 01 — Scaffold the docs/ lifecycle skeleton** (2026-06-07). Created `docs/{ideas, exec-plans/{active,completed}, design-docs/{,superseded}}`, each with a self-documenting `index.md` (kind + drift rule + naming; no `.gitkeep`). Unit review (subagent): 1 MED + 1 LOW, both fixed — `active/index.md` no longer over-claims `git_workflow` enforcement (frames it as documented-not-enforced); `exec-plans/index.md` opener now names the drift rule. Squash-merged as one commit on the plan branch.
+- **Unit 02 — Re-home design rationale + fix doc links** (2026-06-07). `git mv`'d 9 research docs into `docs/design-docs/` (topic-named, dates dropped), with `tech-stack.md → superseded/rust-runtime.md` (reversed Rust→TS, stamped); none were still-open ideas, so `ideas/` stays empty. Fixed all cross-doc links + the 3 inbound `developer-guide.md` refs (incl. the `:378` prose reword), wrote the `design-docs/index.md` catalog (8 active + 1 superseded), trimmed two drifted `.rs` refs in `mermaid-rendering.md`, removed top-level `research/`. Unit review (subagent): no material findings. Squash-merged as one commit.
 
 ## Blockers
 
@@ -27,7 +28,7 @@ _None._
 
 ## Notes
 
-- **Post-compaction resume:** read this file first. State (2026-06-07) = bootstrap **done**, pre-execution review **done**, **Unit 01 done** (squash-merged on the plan branch). **Next action = Unit 02 — Re-home design rationale**, on a `unit/02-…` branch inside `worktrees/260607-0-plan-lifecycle-convention/`. Do NOT re-run the Bootstrap or pre-review.
+- **Post-compaction resume:** read this file first. State (2026-06-07) = bootstrap **done**, pre-execution review **done**, **Unit 01 done** (squash-merged on the plan branch). **Next action = Unit 03 — Wire the exec-plans lifecycle**, on a `unit/03-…` branch inside `worktrees/260607-0-plan-lifecycle-convention/`. Do NOT re-run the Bootstrap or pre-review.
 - **Pre-execution review dispositions (2026-06-07), all applied:** _(HIGH)_ thread `git_workflow` through `mergeForWrite` + the `setup` skill so it survives the config round-trip → folded into **Unit 06**; _(HIGH)_ this file's Bootstrap state was stale → updated above. _(MED)_ `developer-guide.md:378`'s `research/` prose collides with Unit 02's grep → **Unit 02** reworded + acceptance tightened; _(MED)_ hook worktree-root / id-order / already-in-a-worktree under-specified → **Unit 07** expanded; _(MED)_ out-of-repo global-config edits were unverifiable gates → **Units 03/07** relabel them as manual operator steps. _(LOW)_ Unit 01's `active/index.md` asserted the workflow as fact → **Unit 01** softened to "intended (see AGENTS.md)".
 - When resuming mid-plan, read this file to find the cursor unit, then read the cursor unit's md. Skip `overview.md` unless it's your first session on the plan.
 - Work one unit at a time. After finishing the cursor unit, run its review (on the `unit/NN` branch diff), squash-merge it, then update this file: move the unit into Done with a one-liner and advance the cursor.

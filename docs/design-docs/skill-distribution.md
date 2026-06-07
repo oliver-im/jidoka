@@ -225,7 +225,7 @@ The skill layer should remain thin and adapter-like:
 - skills should mostly explain how to call the binary and interpret its outputs
 - per-agent differences should live in generated skill bundles, not in the renderer itself
 
-That keeps the architecture aligned with the conclusion in [`cli-vs-mcp.md`](cli-vs-mcp.md): the portable interface is the CLI, while skills are platform-specific packaging around it.
+That keeps the architecture aligned with the conclusion in [`cli-over-mcp.md`](cli-over-mcp.md): the portable interface is the CLI, while skills are platform-specific packaging around it.
 
 ## Recommendation
 

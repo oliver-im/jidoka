@@ -375,7 +375,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 
 ### Daily counter
 
-`materialize.ts` scans `plansRoot` only for entries matching `^<today>-(\d+)-` when picking the next `N`. Sibling dirs (a `backlog/`, `research/`, archived-plan tree, etc.) are deliberately not scanned: the user's filing convention does not belong in the code. An `N` previously occupied by an entry that has since been moved out of `plansRoot` can therefore reappear; rename at move-time if it bothers you.
+`materialize.ts` scans `plansRoot` only for entries matching `^<today>-(\d+)-` when picking the next `N`. Sibling dirs (a `backlog/`, an archived-plan tree, etc.) are deliberately not scanned: the user's filing convention does not belong in the code. An `N` previously occupied by an entry that has since been moved out of `plansRoot` can therefore reappear; rename at move-time if it bothers you.
 
 ### Skills
 
@@ -504,11 +504,11 @@ PreToolUse hooks block the tool if they return a non-zero exit code. The hook mu
 
 ### Post-v1: MCP Server
 
-Deferred per [research/cli-vs-mcp.md](../research/cli-vs-mcp.md). The CLI binary (`echo JSON | planview`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
+Deferred per [design-docs/cli-over-mcp.md](design-docs/cli-over-mcp.md). The CLI binary (`echo JSON | planview`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
 
 ## Rendering Backend
 
-Mermaid via CDN — the only evaluated option with native stadium/pill and double circle shapes matching planview's visual language. The renderer architecture is swappable — `ts/mermaid.ts` can be replaced with a `ts/graphviz.ts` without changing any other pipeline stage (validate, graph, describe, html shell). Graphviz WASM (778 KB, gold-standard layout) is the strongest alternative if Mermaid limitations become blocking. See [research/diagram-rendering.md](../research/diagram-rendering.md) for the full evaluation.
+Mermaid via CDN — the only evaluated option with native stadium/pill and double circle shapes matching planview's visual language. The renderer architecture is swappable — `ts/mermaid.ts` can be replaced with a `ts/graphviz.ts` without changing any other pipeline stage (validate, graph, describe, html shell). Graphviz WASM (778 KB, gold-standard layout) is the strongest alternative if Mermaid limitations become blocking. See [design-docs/mermaid-rendering.md](design-docs/mermaid-rendering.md) for the full evaluation.
 
 ## Development Setup
 

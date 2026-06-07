@@ -81,4 +81,4 @@ The [strategic review](strategic-review.md) recommendation #2 ("MCP server from 
 
 ## Impact on tech stack
 
-MCP SDK availability was weighted as a primary criterion in the [tech stack analysis](tech-stack.md). With MCP deferred, this criterion drops to "nice to have" and the ranking simplifies to: binary size, startup time, JSON validation, string generation, compilation reliability.
+MCP SDK availability was weighted as a primary criterion in the [tech stack analysis](superseded/rust-runtime.md). With MCP deferred, this criterion drops to "nice to have" and the ranking simplifies to: binary size, startup time, JSON validation, string generation, compilation reliability.

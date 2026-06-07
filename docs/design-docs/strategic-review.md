@@ -104,6 +104,6 @@ The renderer is the portable asset. Steps toward agent-agnosticism:
 ## Recommendations
 
 1. **Proceed with implementation** — no strategic blocker found. Clear differentiation, real gap in the ecosystem.
-2. **~~Design the renderer as an MCP server from day one~~** — *Revised: defer MCP to post-v1 per [research/cli-vs-mcp.md](cli-vs-mcp.md). The CLI binary is already agent-agnostic.*
+2. **~~Design the renderer as an MCP server from day one~~** — *Revised: defer MCP to post-v1 per [cli-over-mcp.md](cli-over-mcp.md). The CLI binary is already agent-agnostic.*
 3. **Keep the skill Claude Code-specific for now** — it's the primary platform. Add Cursor/Cline adapters after the core works.
 4. **Don't over-invest in aesthetic polish** — planview's value is structural correctness, not cosmetic beauty.

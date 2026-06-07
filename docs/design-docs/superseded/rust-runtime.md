@@ -1,3 +1,5 @@
+> **STATUS: superseded** · chose Rust here (Mar 2026); the renderer was later reimplemented in TypeScript · kept as record. The verdict below ("Rust wins") no longer reflects the codebase — it documents why Rust was chosen at the time, and by extension what the TS migration traded away.
+
 # Tech Stack Analysis (March 2026)
 
 Evaluation of runtime/language options for the planview renderer, prioritizing technical merits over development velocity.
