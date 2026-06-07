@@ -13,7 +13,7 @@ Lay down the three-kind directory skeleton under `docs/`, with a self-documentin
 - Create the tree, each dir with its own `index.md` (the index doubles as the dir's docs *and* keeps an otherwise-empty dir tracked — so **no `.gitkeep`**; git just needs a real file):
   - `docs/ideas/index.md` — open-ended explorations / problem analysis; may drift (the folder name is the disclaimer); graduates to a plan or a decision, or gets pruned.
   - `docs/exec-plans/index.md` — scoped work; the `active → completed` lifecycle; status = location.
-  - `docs/exec-plans/active/index.md` — in-flight plans; under the pure-worktree workflow these live in `worktrees/<plan-id>/`, so on `main` this dir stays empty and `git worktree list` is the active index; one dir per plan (`YYMMDD-N-slug/`).
+  - `docs/exec-plans/active/index.md` — in-flight plans; one dir per plan (`YYMMDD-N-slug/`). Describe the *intended* pure-worktree workflow (plans live in `worktrees/<plan-id>/`, so on `main` this dir stays empty and `git worktree list` is the active index) as the convention documented in `exec-plans/AGENTS.md` (Unit 03) — phrase it as the documented workflow, not an already-enforced guarantee (hook enforcement lands in Unit 07).
   - `docs/exec-plans/completed/index.md` — finished plans; frozen records, provenance-stamped on archive.
   - `docs/design-docs/index.md` — settled "why" (current truth until reversed); also the catalog of decisions (filled in Unit 02).
   - `docs/design-docs/superseded/index.md` — reversed decisions, kept as record.
