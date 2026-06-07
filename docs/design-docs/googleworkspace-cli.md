@@ -24,7 +24,7 @@ The `gws` README presents the CLI itself as the primary interface for both human
 - structured JSON output
 - schema and dry-run support
 
-This reinforces the conclusion in [`cli-vs-mcp.md`](cli-vs-mcp.md): planview should treat the CLI binary as the main interface, not as a temporary shell transport to be replaced by MCP.
+This reinforces the conclusion in [`cli-over-mcp.md`](cli-over-mcp.md): planview should treat the CLI binary as the main interface, not as a temporary shell transport to be replaced by MCP.
 
 ### 2. Self-describing interfaces matter
 

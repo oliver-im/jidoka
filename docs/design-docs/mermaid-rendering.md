@@ -13,7 +13,7 @@ The renderer generates directed acyclic graphs showing agent topology:
 - **Typical scale:** 3–15 agents per topology, 1–5 nesting levels
 - **Output:** Static SVG in a self-contained HTML file, opened by `open` command
 - **No interactivity needed:** Read-only visualization, no drag/zoom/edit
-- **Generation method:** Rust renderer produces diagram text → browser renders SVG client-side
+- **Generation method:** the renderer produces diagram text → browser renders SVG client-side
 
 ## Candidates Evaluated
 
@@ -152,7 +152,7 @@ Not because it's the best rendering engine — Graphviz produces better layouts 
 
 ## D2 Assessment Revised
 
-The [developer guide](../docs/developer-guide.md) (line 430) states: "D2 is the strongest candidate for a Mermaid alternative." This assessment was made without knowing D2's browser bundle size.
+The [developer guide](../developer-guide.md) states: "D2 is the strongest candidate for a Mermaid alternative." This assessment was made without knowing D2's browser bundle size.
 
 **Now that the data is in:** D2's browser bundle is 8.2 MB — 2.8x larger than Mermaid. The TALA layout engine (D2's main differentiator for architecture diagrams) is proprietary and unavailable in the WASM build. Without TALA, D2 uses dagre — the same layout engine as Mermaid. D2 also lacks stadium and double circle shapes.
 
@@ -170,7 +170,7 @@ If Mermaid's limitations become blocking (poor layout at scale, subgraph bugs, b
 The cost of switching:
 
 - Redesign the visual language to replace stadium with rounded rectangle or add a different file-output signifier (border style, icon, label prefix)
-- Rewrite `mermaid.rs` → `graphviz.rs` (generate DOT text instead of Mermaid text)
+- Rewrite `ts/mermaid.ts` → `ts/graphviz.ts` (generate DOT text instead of Mermaid text)
 - Replace the `--mermaid` flag with `--dot` or `--graph`
 - Lose GitHub Markdown rendering of raw graph text
 - Update HTML template: replace `mermaid.initialize()` with `await Graphviz.load()` + SVG injection

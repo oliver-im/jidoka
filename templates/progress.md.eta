@@ -4,6 +4,7 @@
 
 <%= it.preReviewBlock -%>
 
+<%= it.gitWorkflowBlock -%>
 ## Done
 
 _Nothing yet._

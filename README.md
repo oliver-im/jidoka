@@ -1,6 +1,6 @@
 # planview
 
-A Claude Code plugin that materializes plan-mode output as a structured directory of markdown files (`plan/<YYMMDD-N-slug>/` with `overview.md`, `progress.md`, and per-unit `0N-*.md`). HTML rendering is opt-in via config. When a unit dispatches multiple agents, an optional per-unit topology is embedded as a Mermaid diagram.
+A Claude Code plugin that materializes plan-mode output as a structured directory of markdown files (`docs/exec-plans/active/<YYMMDD-N-slug>/` with `overview.md`, `progress.md`, and per-unit `0N-*.md`). HTML rendering is opt-in via config. When a unit dispatches multiple agents, an optional per-unit topology is embedded as a Mermaid diagram.
 
 ### The Problem
 
@@ -8,7 +8,7 @@ Plan mode gives you approval before execution, but the plan lands in a random fi
 
 ### What planview Does
 
-1. **Plan-mode dir materialization (primary):** the ExitPlanMode hook reads the plan markdown straight out of `tool_input.plan` (PreToolUse stdin), parses it, validates it, and writes `overview.md` + `progress.md` + `0N-<unit-slug>.md` files into `<plan_dir_root>/<YYMMDD-N-slug>/` (default `plan/`). `overview.html` and the browser pop are opt-in via config.
+1. **Plan-mode dir materialization (primary):** the ExitPlanMode hook reads the plan markdown straight out of `tool_input.plan` (PreToolUse stdin), parses it, validates it, and writes `overview.md` + `progress.md` + `0N-<unit-slug>.md` files into `<plan_dir_root>/<YYMMDD-N-slug>/` (default `docs/exec-plans/active/`). `overview.html` and the browser pop are opt-in via config.
 2. **Per-unit topology (optional):** when a unit body contains a ` ```topology ` fenced JSON block, it's extracted, validated, and rendered as a Mermaid diagram inside the unit md (and HTML if enabled) — showing roles, models, tools, and dependencies.
 3. **Silent on empty/missing plan:** if `tool_input.plan` is empty, the hook exits 0 without doing anything. Parse or validation failure surfaces a deny payload with the reason so the agent can fix it and retry.
 
@@ -75,10 +75,11 @@ planview reads a layered config: built-in defaults < `~/.claude/plugins/planview
 
 | Key | Default | Project-overridable? | What it does |
 |---|---|---|---|
-| `plan_dir_root` | `plan` | ✓ (relative paths only) | Where plan dirs land, resolved against the project root. |
+| `plan_dir_root` | `docs/exec-plans/active` | ✓ (relative paths only) | Where plan dirs land, resolved against the project root. |
 | `auto_open_browser` | `false` | ✓ | Open `overview.html` in the browser after materialize. |
 | `html_output` | `false` | ✓ | Render `overview.html` alongside the markdown files. |
 | `plan_level_topology` | `false` | — | Reserved for v2; currently always false. |
+| `git_workflow` | `false` | ✓ | Opt into the worktree-per-plan / branch-per-unit workflow. When on, planview renders a `## Git workflow` reminder into each `progress.md`. Shipped off (OSS opt-in); a committed `.planview.json` can turn it on for a whole repo. |
 | `pre_review` | `["/planview:pre-plan-review"]` | — | Slash commands to run **before** Unit 01, against the freshly materialized plan dir. Rendered as `## Pre-execution review` in `progress.md`. Reviews the plan *as a plan* — no diff exists yet. |
 | `unit_review` | `["/code-review"]` | — | Slash commands to run after each Unit lands, on the unit's local working-tree diff. The built-in **`/code-review`** (correctness bugs + reuse/simplification/efficiency cleanups) — **not** `/code-review:code-review`, which is the code-review *plugin* and reviews a GitHub PR. No `--fix` (findings are triaged against plan context, not auto-applied). Rendered as a checklist in the Unit md. |
 | `plan_review` | `[]` | — | Slash commands to run after the last Unit's review and commit, against the cumulative committed diff. Opt-in; the recommended form is `/codex:adversarial-review --base <branch>` (see below). Rendered as `## Plan-level review` in `progress.md`. |

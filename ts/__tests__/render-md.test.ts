@@ -153,6 +153,31 @@ describe("buildProgressMd", () => {
       md.indexOf("## Plan-level review"),
     );
   });
+
+  it("renders the git workflow block with the plan id when enabled", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      git_workflow: true,
+    };
+    const md = buildProgressMd(plan, "260607-3-foo");
+    expect(md).toContain("## Git workflow");
+    expect(md).toContain("worktrees/260607-3-foo/");
+    expect(md).toContain("plan/260607-3-foo");
+    expect(md).toContain("git merge --no-ff plan/260607-3-foo");
+  });
+
+  it("omits the git workflow block when disabled or absent", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+    };
+    expect(buildProgressMd(plan, "260607-3-foo")).not.toContain(
+      "## Git workflow",
+    );
+  });
 });
 
 describe("buildUnitMd", () => {

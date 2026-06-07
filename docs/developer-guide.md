@@ -361,10 +361,11 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 
 | Key | Type | Default | Project override? | Notes |
 |---|---|---|---|---|
-| `plan_dir_root` | string | `plan` | yes (relative paths only, no `..`) | Where plan dirs land. Project paths are resolved against `$CLAUDE_PROJECT_DIR`. |
+| `plan_dir_root` | string | `docs/exec-plans/active` | yes (relative paths only, no `..`) | Where plan dirs land. Project paths are resolved against `$CLAUDE_PROJECT_DIR`. |
 | `auto_open_browser` | bool | `false` | yes | Open `overview.html` after materialize. `PLANVIEW_NO_OPEN=1` always wins. |
 | `html_output` | bool | `false` | yes | Write `overview.html` alongside the markdown. When false, only the `.md` files are produced. |
 | `plan_level_topology` | bool | `false` | no | Reserved for v2; currently always false. |
+| `git_workflow` | bool | `false` | yes | When on, renders a `## Git workflow` block (the worktree-per-plan / branch-per-unit reminder) into `progress.md`. Shipped off — OSS opt-in; a committed `.planview.json` opts a repo in. |
 
 ### Loader behavior
 
@@ -375,7 +376,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 
 ### Daily counter
 
-`materialize.ts` scans `plansRoot` only for entries matching `^<today>-(\d+)-` when picking the next `N`. Sibling dirs (a `backlog/`, `research/`, archived-plan tree, etc.) are deliberately not scanned: the user's filing convention does not belong in the code. An `N` previously occupied by an entry that has since been moved out of `plansRoot` can therefore reappear; rename at move-time if it bothers you.
+`materialize.ts` picks the next `N` as max + 1 over entries matching `^<today>-(\d+)-`. The normal in-tree path (`resolveTargetDir`) scans `plansRoot` only; with `git_workflow` on, `setupWorktree` instead scans the main checkout's `worktrees/` **and** in-tree `active/` (so same-day worktree plans still increment). Other dirs — `ideas/`, `completed/`, a `backlog/`, an archived-plan tree — are deliberately **not** scanned: the user's filing convention does not belong in the code, and the convention's *shared-with-`ideas/`* counter is upheld by the agent at id-assignment time, not by the renderer. An `N` freed by an entry since moved out of the scanned set (e.g. a plan archived to `completed/`) can therefore reappear; rename at move-time if it bothers you.
 
 ### Skills
 
@@ -504,11 +505,11 @@ PreToolUse hooks block the tool if they return a non-zero exit code. The hook mu
 
 ### Post-v1: MCP Server
 
-Deferred per [research/cli-vs-mcp.md](../research/cli-vs-mcp.md). The CLI binary (`echo JSON | planview`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
+Deferred per [design-docs/cli-over-mcp.md](design-docs/cli-over-mcp.md). The CLI binary (`echo JSON | planview`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
 
 ## Rendering Backend
 
-Mermaid via CDN — the only evaluated option with native stadium/pill and double circle shapes matching planview's visual language. The renderer architecture is swappable — `ts/mermaid.ts` can be replaced with a `ts/graphviz.ts` without changing any other pipeline stage (validate, graph, describe, html shell). Graphviz WASM (778 KB, gold-standard layout) is the strongest alternative if Mermaid limitations become blocking. See [research/diagram-rendering.md](../research/diagram-rendering.md) for the full evaluation.
+Mermaid via CDN — the only evaluated option with native stadium/pill and double circle shapes matching planview's visual language. The renderer architecture is swappable — `ts/mermaid.ts` can be replaced with a `ts/graphviz.ts` without changing any other pipeline stage (validate, graph, describe, html shell). Graphviz WASM (778 KB, gold-standard layout) is the strongest alternative if Mermaid limitations become blocking. See [design-docs/mermaid-rendering.md](design-docs/mermaid-rendering.md) for the full evaluation.
 
 ## Development Setup
 
@@ -543,4 +544,4 @@ When the plugin is enabled in Claude Code, the hook calls the bundle directly vi
 - **Node ≥ 20 required:** TypeScript source in `ts/`, bundled to `dist/cli.js` via esbuild (`commander`, `zod`, `eta` inlined). `npm run build` rebuilds the bundle, `npm test` runs vitest, `npm run typecheck` runs `tsc --noEmit`.
 - **No LLM calls in renderer:** the renderer is deterministic I/O only.
 - **Session-scoped staging dir:** the hook stages writes in `<plansRoot>/.planview-stage-<sessionId>/` and renames on success. Concurrent hook invocations from different sessions don't collide; identical session_ids would (extremely unlikely under Claude Code).
-- **Project-scoped plan dirs:** `<project>/<plan_dir_root>/` (default `plan/`). `$CLAUDE_PROJECT_DIR` is the source of truth (PWD fallback with stderr warning when unset).
+- **Project-scoped plan dirs:** `<project>/<plan_dir_root>/` (default `docs/exec-plans/active/`). `$CLAUDE_PROJECT_DIR` is the source of truth (PWD fallback with stderr warning when unset).

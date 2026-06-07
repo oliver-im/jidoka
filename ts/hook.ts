@@ -10,8 +10,10 @@ import { z } from "zod";
 import { type Config, loadConfig } from "./config.js";
 import {
   MaterializeError,
+  cleanupWorktree,
   materializeAt,
   resolveTargetDir,
+  setupWorktree,
   todayYymmddLocal,
   writePlanHtml,
 } from "./materialize.js";
@@ -36,6 +38,9 @@ const hookInputSchema = z.object({
 
 interface HookConfig {
   today: string;
+  /** Where `/planview` was invoked from (CLAUDE_PROJECT_DIR or cwd). The
+   * git_workflow path resolves the main checkout from here. */
+  projectDir: string;
   plansRoot: string;
   autoOpenBrowser: boolean;
   htmlOutput: boolean;
@@ -56,6 +61,7 @@ function configFromEnv(): HookConfig {
     : join(projectDir, cfg.plan_dir_root);
   return {
     today: todayYymmddLocal(),
+    projectDir,
     plansRoot,
     autoOpenBrowser: cfg.auto_open_browser && !noOpen,
     htmlOutput: cfg.html_output,
@@ -117,9 +123,52 @@ export function runWithInput(input: string, config: HookConfig): void {
     return;
   }
 
-  const target = resolveTargetDir(plan, config.plansRoot, config.today);
+  // git_workflow (Unit 07): when on, land the plan in its own worktree on a
+  // fresh `plan/<id>` branch off the trunk instead of in-tree, fixing the dir
+  // name to the worktree's plan-id so the dir inside matches its worktree. A
+  // non-git / degenerate-config repo falls back to in-tree; a *git* setup
+  // failure denies rather than silently breaking the pure-worktree contract.
+  // The hook always exits 0 either way.
+  let plansRoot = config.plansRoot;
+  let forcedDirName: string | undefined;
+  let worktreeNote: string | undefined;
+  let onPublishFailure: (() => void) | undefined;
+  if (config.cfg.git_workflow) {
+    const outcome = setupWorktree(
+      plan,
+      config.projectDir,
+      config.cfg.plan_dir_root,
+      config.today,
+    );
+    if (outcome.kind === "worktree") {
+      plansRoot = outcome.plansRoot;
+      forcedDirName = outcome.planId;
+      worktreeNote = `Plan materialized at worktrees/${outcome.planId}/ — cd there to work.`;
+      onPublishFailure = () =>
+        cleanupWorktree(
+          outcome.mainRoot,
+          outcome.worktreePath,
+          `plan/${outcome.planId}`,
+        );
+    } else if (outcome.kind === "deny") {
+      emitDeny(
+        `planview: ${outcome.reason}. No files were written; active/ stays clean.`,
+      );
+      return;
+    } else {
+      process.stderr.write(
+        `planview hook: ${outcome.reason}; materializing in-tree\n`,
+      );
+    }
+  }
+
+  const target =
+    forcedDirName !== undefined
+      ? join(plansRoot, forcedDirName)
+      : resolveTargetDir(plan, plansRoot, config.today);
 
   if (existsSync(target)) {
+    onPublishFailure?.();
     emitDeny(
       `Plan dir ${target} already exists. Either remove it or pick a new slug via /planview.`,
     );
@@ -127,18 +176,25 @@ export function runWithInput(input: string, config: HookConfig): void {
   }
 
   // Stage all writes into a sibling temp dir so a mid-write failure can't
-  // leave a partial plan dir at the final target.
-  mkdirSync(config.plansRoot, { recursive: true });
-  const staging = join(config.plansRoot, `.planview-stage-${sessionId}`);
-  if (existsSync(staging)) {
-    rmSync(staging, { recursive: true, force: true });
-  }
-  const finalDirName = basename(target);
+  // leave a partial plan dir at the final target. On any failure after the
+  // worktree was created, roll the worktree back too so no orphan is left.
+  const staging = join(plansRoot, `.planview-stage-${sessionId}`);
   try {
+    mkdirSync(plansRoot, { recursive: true });
+    if (existsSync(staging)) {
+      rmSync(staging, { recursive: true, force: true });
+    }
+    const finalDirName = basename(target);
     materializeAt(plan, staging, config.cfg, finalDirName);
     if (config.htmlOutput) writePlanHtml(plan, staging, finalDirName);
+    renameSync(staging, target);
   } catch (e) {
-    rmSync(staging, { recursive: true, force: true });
+    try {
+      rmSync(staging, { recursive: true, force: true });
+    } catch {
+      /* best-effort */
+    }
+    onPublishFailure?.();
     const msg =
       e instanceof MaterializeError ? e.message : (e as Error).message;
     emitDeny(
@@ -147,17 +203,8 @@ export function runWithInput(input: string, config: HookConfig): void {
     return;
   }
 
-  try {
-    renameSync(staging, target);
-  } catch (e) {
-    rmSync(staging, { recursive: true, force: true });
-    emitDeny(
-      `planview: failed to publish plan dir ${target}: ${(e as Error).message}. No files were written.`,
-    );
-    return;
-  }
-
   process.stderr.write(`Wrote plan to ${target}\n`);
+  if (worktreeNote !== undefined) process.stderr.write(worktreeNote + "\n");
 
   if (config.autoOpenBrowser && config.htmlOutput) {
     try {

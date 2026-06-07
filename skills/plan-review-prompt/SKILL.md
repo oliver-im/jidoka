@@ -17,7 +17,7 @@ But the codex review commands set `disable-model-invocation`, so you **cannot ru
 ## Scope and tools
 
 - **Read-only inspection.** `Read`, `Grep`, `Glob`, and `Bash` for **read-only git only** (`git log`, `git diff`, `git merge-base`, `git symbolic-ref`, `git status`). No `Edit`, no `Write`, no commits, no running codex.
-- **The plan dir** lives under the user's `plan_dir_root` (commonly `notes/plan/` or `plan/`), named `YYMMDD-N-slug/`, containing `overview.md`, `progress.md`, and per-unit `0N-<slug>.md` files.
+- **The plan dir** lives under the user's `plan_dir_root` (the convention's `docs/exec-plans/active/`, sometimes a plain `plan/`), named `YYMMDD-N-slug/`, containing `overview.md`, `progress.md`, and per-unit `0N-<slug>.md` files.
 - **Target selection:**
   - If the user named a plan dir in their invocation, target it.
   - Otherwise pick the most recent: plan dirs are `YYMMDD`-prefixed, so the alphabetically last sub-dir under the plans root is newest. Use `Glob`, then sort.

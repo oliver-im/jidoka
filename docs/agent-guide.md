@@ -79,6 +79,14 @@ If two units are genuinely independent tracks that converge later, call that out
 
 You don't emit review info at all. Review pipelines come from the user's config (`~/.claude/plugins/planview/config.json`); the materializer resolves them at materialize time and renders them into each Unit md and into `progress.md`'s `## Plan-level review` section. If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body so the human reviewer takes the right action when the unit lands — the body remains the per-unit escape hatch. The built-in `/code-review` takes no focus argument, so any "pay attention to X" steer for a unit's review also lives in the body prose, not in the command.
 
+### Reference, don't paste
+
+When a unit body needs to talk about existing code, reference it by `path:symbol` (e.g. `ts/config.ts:defaultConfig`, `ts/materialize.ts:resolveTargetDir`) rather than pasting a snippet. A plan is a durable artifact that outlives the code it plans against: a pasted snippet silently goes stale as the code moves, while a `path:symbol` pointer always resolves against current truth. Quote source verbatim only when the exact wording *is* what's being changed (e.g. renaming a specific error string). This keeps materialized plans — and the `completed/` archive they become — honest about what the code actually is.
+
+### Promoting an idea to a plan
+
+planview's lifecycle convention parks open questions and proposals as `ideas/<YYMMDD-N-slug>.md` entries (see `exec-plans/AGENTS.md` for the surrounding lifecycle). When the task you're decomposing traces back to such an idea, the plan you emit *is* its promotion: an idea graduates to `exec-plans/active/` the moment it acquires units. Name the source idea in the overview's references so the plan's eventual archive stamp can record which idea it realized. An idea that never gets units stays an idea — open-ended drift is allowed there, not inside a plan.
+
 ## Hard Rules
 
 1. **NEVER** generate HTML. The renderer handles that.

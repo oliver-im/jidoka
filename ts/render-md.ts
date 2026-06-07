@@ -50,11 +50,16 @@ export function buildOverviewMd(plan: Plan, dirName: string): string {
 export function buildProgressMd(plan: Plan, dirName: string): string {
   const cursor = plan.units[0]?.id ?? "(no units)";
   const preReviewBlock = renderPreReviewBlock(plan.pre_review);
+  const gitWorkflowBlock = renderGitWorkflowBlock(
+    dirName,
+    plan.git_workflow ?? false,
+  );
   const planReviewBlock = renderPlanReviewBlock(plan.plan_review);
   return eta.render("progress.md.eta", {
     dirName,
     cursor,
     preReviewBlock,
+    gitWorkflowBlock,
     planReviewBlock,
   });
 }
@@ -118,6 +123,31 @@ function renderPreReviewBlock(commands: string[] | undefined): string {
     "Before starting the first unit, run these against the freshly materialized plan dir:\n\n";
   out += renderPipelineChecklist(commands);
   return out;
+}
+
+/**
+ * The `## Git workflow` reminder, rendered into `progress.md` only when the
+ * `git_workflow` flag is on (config or `.planview.json`). Terse on purpose —
+ * the full version lives in `docs/exec-plans/AGENTS.md` + `docs/CONVENTION.md`.
+ * Returns "" when off (no empty section), and a block ending in a blank line
+ * when on, so the template slot collapses cleanly either way.
+ */
+function renderGitWorkflowBlock(planId: string, enabled: boolean): string {
+  if (!enabled) return "";
+  return (
+    "## Git workflow\n\n" +
+    "This plan is worked in its own git worktree, one branch per unit. " +
+    "Full steps: `docs/exec-plans/AGENTS.md` + `docs/CONVENTION.md`.\n\n" +
+    `- **Worktree:** \`worktrees/${planId}/\` on branch \`plan/${planId}\` ` +
+    "(off `main`); the plan's `active/` dir lives only inside it.\n" +
+    "- **Per unit:** branch `unit/NN-slug` off the plan branch → work + review → " +
+    "`git merge --squash unit/NN-slug` into the plan branch as one " +
+    "`Unit NN: <title>` commit → `git branch -D unit/NN-slug` → advance the cursor.\n" +
+    "- **At the end:** `git mv` the plan dir `active/ → completed/` (+ provenance " +
+    `stamp), commit, then \`git checkout main && git merge --no-ff plan/${planId}\`, ` +
+    `\`git worktree remove worktrees/${planId}\`.\n` +
+    "\n"
+  );
 }
 
 function renderPlanReviewBlock(commands: string[] | undefined): string {

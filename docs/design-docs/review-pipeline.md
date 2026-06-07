@@ -1,7 +1,7 @@
 # Review-pipeline direction after the June 2026 landscape shift
 
 Decisions and rationale for how planview's review pipeline should use the current
-Claude Code / codex review tooling. Companion to `260514-0-codex-adversarial-review.md`
+Claude Code / codex review tooling. Companion to `codex-adversarial-review.md`
 (which covers codex's 1MB diff behavior). Scope: review pipeline only — `/goals`
 integration was raised but **deferred**, not decided.
 
