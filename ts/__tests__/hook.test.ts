@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -25,10 +26,39 @@ function makeTempDir(label: string): string {
 
 const testConfig = (project: string): HookConfig => ({
   today: "260505",
+  projectDir: project,
   plansRoot: join(project, "notes/plan"),
   autoOpenBrowser: false,
   htmlOutput: true,
   cfg: defaultConfig,
+});
+
+// A real git repo (one commit, so HEAD exists for `git worktree add -b`),
+// configured for git_workflow with the shipped default plan_dir_root.
+function makeGitRepo(label: string): string {
+  const repo = makeTempDir(label);
+  const git = (...args: string[]): void => {
+    execFileSync("git", ["-C", repo, ...args], { stdio: "ignore" });
+  };
+  git("init", "-q");
+  git("config", "user.email", "test@example.com");
+  git("config", "user.name", "Test");
+  git("config", "commit.gpgsign", "false");
+  writeFileSync(join(repo, "README.md"), "# fixture\n");
+  git("add", "README.md");
+  git("commit", "-q", "-m", "init");
+  return repo;
+}
+
+// HookConfig anchored at a git repo with git_workflow on. plansRoot is the
+// in-tree fallback location; the worktree path is derived from projectDir.
+const gitWorkflowConfig = (repo: string): HookConfig => ({
+  today: "260505",
+  projectDir: repo,
+  plansRoot: join(repo, defaultConfig.plan_dir_root),
+  autoOpenBrowser: false,
+  htmlOutput: false,
+  cfg: { ...defaultConfig, git_workflow: true },
 });
 
 const validPlanMd = `# Hook test plan
@@ -321,5 +351,101 @@ describe("runWithInput: bad input", () => {
       ),
     ).toThrow(/invalid session_id/);
     rmSync(project, { recursive: true, force: true });
+  });
+});
+
+describe("runWithInput: git_workflow worktree scaffolding", () => {
+  const planId0 = "260505-0-hook-test-plan";
+
+  it("flag on in a git repo: creates the worktree + plan branch and materializes inside it", () => {
+    const repo = makeGitRepo("wt-on");
+    runWithInput(stdin(`wton-${process.pid}`, validPlanMd), gitWorkflowConfig(repo));
+
+    const worktree = join(repo, "worktrees", planId0);
+    expect(existsSync(worktree)).toBe(true);
+    expect(
+      existsSync(join(worktree, "docs/exec-plans/active", planId0, "overview.md")),
+    ).toBe(true);
+
+    // The plan branch exists...
+    const branches = execFileSync(
+      "git",
+      ["-C", repo, "branch", "--list", `plan/${planId0}`],
+      { encoding: "utf8" },
+    );
+    expect(branches).toContain(`plan/${planId0}`);
+    // ...and the cd pointer is surfaced (the hook can't cd the agent itself).
+    expect(stderrChunks.join("")).toContain(
+      `worktrees/${planId0}/ — cd there to work`,
+    );
+    // Nothing landed at the in-tree fallback location.
+    expect(existsSync(join(repo, "docs/exec-plans/active", planId0))).toBe(false);
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  it("flag on but not a git repo: falls back to in-tree materialize, no worktree, exit 0", () => {
+    const project = makeTempDir("wt-nogit");
+    runWithInput(
+      stdin(`wtnogit-${process.pid}`, validPlanMd),
+      gitWorkflowConfig(project),
+    );
+
+    expect(existsSync(join(project, "worktrees"))).toBe(false);
+    expect(
+      existsSync(join(project, "docs/exec-plans/active", planId0, "overview.md")),
+    ).toBe(true);
+    expect(stderrChunks.join("")).toContain("isn't a git worktree");
+    // No deny payload — a fallback is not a failure.
+    expect(stdoutChunks.join("")).toBe("");
+    rmSync(project, { recursive: true, force: true });
+  });
+
+  it("flag off in a git repo: materializes in-tree, never touches worktrees/", () => {
+    const repo = makeGitRepo("wt-off");
+    const cfg: HookConfig = {
+      ...gitWorkflowConfig(repo),
+      cfg: { ...defaultConfig, git_workflow: false },
+    };
+    runWithInput(stdin(`wtoff-${process.pid}`, validPlanMd), cfg);
+
+    expect(existsSync(join(repo, "worktrees"))).toBe(false);
+    expect(
+      existsSync(join(repo, "docs/exec-plans/active", planId0, "overview.md")),
+    ).toBe(true);
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  it("invoked from inside an existing worktree: anchors at the main checkout, no nesting", () => {
+    const repo = makeGitRepo("wt-nested");
+    // A pre-existing worktree for another same-day plan.
+    const existing = join(repo, "worktrees", "260505-0-existing");
+    execFileSync(
+      "git",
+      ["-C", repo, "worktree", "add", existing, "-b", "plan/260505-0-existing"],
+      { stdio: "ignore" },
+    );
+
+    // Invoke the hook as if /planview ran from *inside* that worktree.
+    const cfg: HookConfig = {
+      today: "260505",
+      projectDir: existing,
+      plansRoot: join(existing, defaultConfig.plan_dir_root),
+      autoOpenBrowser: false,
+      htmlOutput: false,
+      cfg: { ...defaultConfig, git_workflow: true },
+    };
+    runWithInput(stdin(`wtnest-${process.pid}`, validPlanMd), cfg);
+
+    // No worktree nested under the inner worktree...
+    expect(existsSync(join(existing, "worktrees"))).toBe(false);
+    // ...and the new one lands at the main root with the counter advanced
+    // past the existing same-day plan (0 → 1).
+    const planId1 = "260505-1-hook-test-plan";
+    expect(
+      existsSync(
+        join(repo, "worktrees", planId1, "docs/exec-plans/active", planId1, "overview.md"),
+      ),
+    ).toBe(true);
+    rmSync(repo, { recursive: true, force: true });
   });
 });

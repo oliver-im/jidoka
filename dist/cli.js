@@ -3465,7 +3465,7 @@ var require_commander = __commonJS({
 
 // ts/cli.ts
 import { readFileSync as readFileSync4 } from "node:fs";
-import { isAbsolute as isAbsolute4, join as join7 } from "node:path";
+import { isAbsolute as isAbsolute5, join as join7 } from "node:path";
 
 // node_modules/commander/esm.mjs
 var import_index = __toESM(require_commander(), 1);
@@ -19436,9 +19436,10 @@ import {
   renameSync as renameSync2,
   rmSync
 } from "node:fs";
-import { basename as basename2, isAbsolute as isAbsolute3, join as join6 } from "node:path";
+import { basename as basename2, isAbsolute as isAbsolute4, join as join6 } from "node:path";
 
 // ts/materialize.ts
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -19447,7 +19448,7 @@ import {
   statSync,
   writeFileSync
 } from "node:fs";
-import { basename, join as join4 } from "node:path";
+import { basename, isAbsolute as isAbsolute3, join as join4 } from "node:path";
 var MaterializeError = class extends Error {
   constructor(kind, path2, message) {
     super(message);
@@ -19471,10 +19472,15 @@ function resolveTargetDir(plan, plansRoot, today) {
   return join4(plansRoot, `${today}-${n}-${plan.slug}`);
 }
 function nextCounter(plansRoot, today) {
+  return nextCounterAcross([plansRoot], today);
+}
+function nextCounterAcross(dirs, today) {
   let maxN;
-  considerDir(plansRoot, today, (n) => {
-    maxN = maxN === void 0 ? n : Math.max(maxN, n);
-  });
+  for (const dir of dirs) {
+    considerDir(dir, today, (n) => {
+      maxN = maxN === void 0 ? n : Math.max(maxN, n);
+    });
+  }
   return maxN === void 0 ? 0 : maxN + 1;
 }
 function considerDir(dir, today, onMatch) {
@@ -19544,6 +19550,82 @@ function todayYymmddLocal() {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yy}${mm}${dd}`;
+}
+function setupWorktree(plan, fromDir, planDirRoot, today) {
+  if (isAbsolute3(planDirRoot)) {
+    process.stderr.write(
+      "planview hook: git_workflow needs a relative plan_dir_root; materializing in-tree\n"
+    );
+    return void 0;
+  }
+  const mainRoot = mainWorktreeRoot(fromDir);
+  if (mainRoot === void 0) {
+    process.stderr.write(
+      "planview hook: git_workflow is on but this isn't a git worktree; materializing in-tree\n"
+    );
+    return void 0;
+  }
+  let planId;
+  try {
+    const n = nextCounterAcross(
+      [join4(mainRoot, "worktrees"), join4(mainRoot, planDirRoot)],
+      today
+    );
+    planId = `${today}-${n}-${plan.slug}`;
+  } catch (e) {
+    process.stderr.write(
+      `planview hook: git_workflow counter scan failed (${e.message}); materializing in-tree
+`
+    );
+    return void 0;
+  }
+  const worktreePath = join4(mainRoot, "worktrees", planId);
+  if (existsSync(worktreePath)) {
+    process.stderr.write(
+      `planview hook: ${worktreePath} already exists; materializing in-tree
+`
+    );
+    return void 0;
+  }
+  try {
+    execFileSync(
+      "git",
+      ["-C", mainRoot, "worktree", "add", worktreePath, "-b", `plan/${planId}`],
+      { stdio: ["ignore", "ignore", "pipe"] }
+    );
+  } catch (e) {
+    process.stderr.write(
+      `planview hook: git worktree add failed (${gitErr(e)}); materializing in-tree
+`
+    );
+    return void 0;
+  }
+  return { plansRoot: join4(worktreePath, planDirRoot), planId, worktreePath };
+}
+function mainWorktreeRoot(fromDir) {
+  let out;
+  try {
+    out = execFileSync(
+      "git",
+      ["-C", fromDir, "worktree", "list", "--porcelain"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
+    );
+  } catch {
+    return void 0;
+  }
+  for (const line of out.split("\n")) {
+    if (line.startsWith("worktree ")) {
+      const path2 = line.slice("worktree ".length).trim();
+      return path2.length > 0 ? path2 : void 0;
+    }
+  }
+  return void 0;
+}
+function gitErr(e) {
+  const err = e;
+  const stderr = err.stderr ? err.stderr.toString().trim() : "";
+  if (stderr.length > 0) return stderr.split("\n")[0] ?? stderr;
+  return err.message ?? "unknown git error";
 }
 
 // ts/output.ts
@@ -20060,9 +20142,10 @@ function configFromEnv() {
   }
   const cfg = loadConfig(projectDir);
   const noOpen = process.env["PLANVIEW_NO_OPEN"] !== void 0;
-  const plansRoot = isAbsolute3(cfg.plan_dir_root) ? cfg.plan_dir_root : join6(projectDir, cfg.plan_dir_root);
+  const plansRoot = isAbsolute4(cfg.plan_dir_root) ? cfg.plan_dir_root : join6(projectDir, cfg.plan_dir_root);
   return {
     today: todayYymmddLocal(),
+    projectDir,
     plansRoot,
     autoOpenBrowser: cfg.auto_open_browser && !noOpen,
     htmlOutput: cfg.html_output,
@@ -20111,15 +20194,31 @@ function runWithInput(input, config2) {
     emitDeny(summary);
     return;
   }
-  const target = resolveTargetDir(plan, config2.plansRoot, config2.today);
+  let plansRoot = config2.plansRoot;
+  let forcedDirName;
+  let worktreeNote;
+  if (config2.cfg.git_workflow) {
+    const wt = setupWorktree(
+      plan,
+      config2.projectDir,
+      config2.cfg.plan_dir_root,
+      config2.today
+    );
+    if (wt !== void 0) {
+      plansRoot = wt.plansRoot;
+      forcedDirName = wt.planId;
+      worktreeNote = `Plan materialized at worktrees/${wt.planId}/ \u2014 cd there to work.`;
+    }
+  }
+  const target = forcedDirName !== void 0 ? join6(plansRoot, forcedDirName) : resolveTargetDir(plan, plansRoot, config2.today);
   if (existsSync2(target)) {
     emitDeny(
       `Plan dir ${target} already exists. Either remove it or pick a new slug via /planview.`
     );
     return;
   }
-  mkdirSync2(config2.plansRoot, { recursive: true });
-  const staging = join6(config2.plansRoot, `.planview-stage-${sessionId}`);
+  mkdirSync2(plansRoot, { recursive: true });
+  const staging = join6(plansRoot, `.planview-stage-${sessionId}`);
   if (existsSync2(staging)) {
     rmSync(staging, { recursive: true, force: true });
   }
@@ -20146,6 +20245,7 @@ function runWithInput(input, config2) {
   }
   process.stderr.write(`Wrote plan to ${target}
 `);
+  if (worktreeNote !== void 0) process.stderr.write(worktreeNote + "\n");
   if (config2.autoOpenBrowser && config2.htmlOutput) {
     try {
       openBrowser(join6(target, "overview.html"));
@@ -20307,7 +20407,7 @@ function runMaterialize(file2, opts) {
   }
   const projectDir = process.env["CLAUDE_PROJECT_DIR"] ?? process.cwd();
   const cfg = loadConfig(projectDir);
-  const plansRoot = opts.plansRoot ?? (isAbsolute4(cfg.plan_dir_root) ? cfg.plan_dir_root : join7(projectDir, cfg.plan_dir_root));
+  const plansRoot = opts.plansRoot ?? (isAbsolute5(cfg.plan_dir_root) ? cfg.plan_dir_root : join7(projectDir, cfg.plan_dir_root));
   const today = opts.today ?? todayYymmddLocal();
   let target;
   try {

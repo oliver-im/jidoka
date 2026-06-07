@@ -12,6 +12,7 @@ import {
   MaterializeError,
   materializeAt,
   resolveTargetDir,
+  setupWorktree,
   todayYymmddLocal,
   writePlanHtml,
 } from "./materialize.js";
@@ -36,6 +37,9 @@ const hookInputSchema = z.object({
 
 interface HookConfig {
   today: string;
+  /** Where `/planview` was invoked from (CLAUDE_PROJECT_DIR or cwd). The
+   * git_workflow path resolves the main checkout from here. */
+  projectDir: string;
   plansRoot: string;
   autoOpenBrowser: boolean;
   htmlOutput: boolean;
@@ -56,6 +60,7 @@ function configFromEnv(): HookConfig {
     : join(projectDir, cfg.plan_dir_root);
   return {
     today: todayYymmddLocal(),
+    projectDir,
     plansRoot,
     autoOpenBrowser: cfg.auto_open_browser && !noOpen,
     htmlOutput: cfg.html_output,
@@ -117,7 +122,32 @@ export function runWithInput(input: string, config: HookConfig): void {
     return;
   }
 
-  const target = resolveTargetDir(plan, config.plansRoot, config.today);
+  // git_workflow (Unit 07): when on, land the plan in its own worktree on a
+  // fresh `plan/<id>` branch instead of in-tree, and fix the dir name to the
+  // worktree's plan-id so the dir inside matches its worktree. Any failure
+  // falls back to in-tree (setupWorktree logs the reason) — the hook must
+  // still exit 0.
+  let plansRoot = config.plansRoot;
+  let forcedDirName: string | undefined;
+  let worktreeNote: string | undefined;
+  if (config.cfg.git_workflow) {
+    const wt = setupWorktree(
+      plan,
+      config.projectDir,
+      config.cfg.plan_dir_root,
+      config.today,
+    );
+    if (wt !== undefined) {
+      plansRoot = wt.plansRoot;
+      forcedDirName = wt.planId;
+      worktreeNote = `Plan materialized at worktrees/${wt.planId}/ — cd there to work.`;
+    }
+  }
+
+  const target =
+    forcedDirName !== undefined
+      ? join(plansRoot, forcedDirName)
+      : resolveTargetDir(plan, plansRoot, config.today);
 
   if (existsSync(target)) {
     emitDeny(
@@ -128,8 +158,8 @@ export function runWithInput(input: string, config: HookConfig): void {
 
   // Stage all writes into a sibling temp dir so a mid-write failure can't
   // leave a partial plan dir at the final target.
-  mkdirSync(config.plansRoot, { recursive: true });
-  const staging = join(config.plansRoot, `.planview-stage-${sessionId}`);
+  mkdirSync(plansRoot, { recursive: true });
+  const staging = join(plansRoot, `.planview-stage-${sessionId}`);
   if (existsSync(staging)) {
     rmSync(staging, { recursive: true, force: true });
   }
@@ -158,6 +188,7 @@ export function runWithInput(input: string, config: HookConfig): void {
   }
 
   process.stderr.write(`Wrote plan to ${target}\n`);
+  if (worktreeNote !== undefined) process.stderr.write(worktreeNote + "\n");
 
   if (config.autoOpenBrowser && config.htmlOutput) {
     try {

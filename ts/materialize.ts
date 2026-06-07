@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -6,7 +7,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, isAbsolute, join } from "node:path";
 import type { Config } from "./config.js";
 import { renderPlanHtml } from "./html.js";
 import { buildOverviewMd, buildProgressMd, buildUnitMd } from "./render-md.js";
@@ -57,10 +58,18 @@ export function resolveTargetDir(
 }
 
 function nextCounter(plansRoot: string, today: string): number {
+  return nextCounterAcross([plansRoot], today);
+}
+
+/** Daily counter one greater than the highest `^<today>-(\d+)-` entry across
+ * any of `dirs` (missing dirs are skipped). */
+function nextCounterAcross(dirs: string[], today: string): number {
   let maxN: number | undefined;
-  considerDir(plansRoot, today, (n) => {
-    maxN = maxN === undefined ? n : Math.max(maxN, n);
-  });
+  for (const dir of dirs) {
+    considerDir(dir, today, (n) => {
+      maxN = maxN === undefined ? n : Math.max(maxN, n);
+    });
+  }
   return maxN === undefined ? 0 : maxN + 1;
 }
 
@@ -180,4 +189,126 @@ export function isDir(path: string): boolean {
   } catch {
     return false;
   }
+}
+
+export interface WorktreeSetup {
+  /** Effective plansRoot to materialize into (inside the new worktree). */
+  plansRoot: string;
+  /** The derived plan-id (`<today>-N-slug`); also the worktree + branch name. */
+  planId: string;
+  /** Absolute path to the created worktree. */
+  worktreePath: string;
+}
+
+/**
+ * `git_workflow` scaffolding (Unit 07). Anchors at the *main* checkout — even
+ * when `/planview` is invoked from inside another plan's worktree — derives
+ * the plan-id, then creates `<main>/worktrees/<plan-id>` on a fresh
+ * `plan/<plan-id>` branch (off the main checkout's HEAD) and returns the
+ * plansRoot inside it, so the hook materializes there instead of in-tree.
+ *
+ * Returns undefined — logging why to stderr — on every failure mode (not a
+ * git repo, an absolute `plan_dir_root`, an existing worktree/branch for this
+ * id, or any git error). The hook then falls back to the normal in-tree
+ * materialize and still exits 0. Never throws: a non-zero hook would block
+ * ExitPlanMode permanently.
+ */
+export function setupWorktree(
+  plan: Plan,
+  fromDir: string,
+  planDirRoot: string,
+  today: string,
+): WorktreeSetup | undefined {
+  if (isAbsolute(planDirRoot)) {
+    process.stderr.write(
+      "planview hook: git_workflow needs a relative plan_dir_root; materializing in-tree\n",
+    );
+    return undefined;
+  }
+  const mainRoot = mainWorktreeRoot(fromDir);
+  if (mainRoot === undefined) {
+    process.stderr.write(
+      "planview hook: git_workflow is on but this isn't a git worktree; materializing in-tree\n",
+    );
+    return undefined;
+  }
+
+  let planId: string;
+  try {
+    // The daily counter scans the main checkout's active-plan index — the
+    // `worktrees/` dir (where in-flight worktree-mode plans live) plus its
+    // in-tree `active/` (normally empty in this mode, but covers a same-day
+    // mode switch). Mirrors resolveTargetDir's deliberate not-scanning of
+    // archived/sibling dirs, so a stale N can reappear after a move.
+    const n = nextCounterAcross(
+      [join(mainRoot, "worktrees"), join(mainRoot, planDirRoot)],
+      today,
+    );
+    planId = `${today}-${n}-${plan.slug}`;
+  } catch (e) {
+    process.stderr.write(
+      `planview hook: git_workflow counter scan failed (${(e as Error).message}); materializing in-tree\n`,
+    );
+    return undefined;
+  }
+
+  const worktreePath = join(mainRoot, "worktrees", planId);
+  if (existsSync(worktreePath)) {
+    process.stderr.write(
+      `planview hook: ${worktreePath} already exists; materializing in-tree\n`,
+    );
+    return undefined;
+  }
+
+  try {
+    // No explicit start-point: fork from the main checkout's HEAD (normally
+    // the trunk). Avoids hardcoding `main`, which would break repos whose
+    // default branch is named otherwise.
+    execFileSync(
+      "git",
+      ["-C", mainRoot, "worktree", "add", worktreePath, "-b", `plan/${planId}`],
+      { stdio: ["ignore", "ignore", "pipe"] },
+    );
+  } catch (e) {
+    process.stderr.write(
+      `planview hook: git worktree add failed (${gitErr(e)}); materializing in-tree\n`,
+    );
+    return undefined;
+  }
+
+  return { plansRoot: join(worktreePath, planDirRoot), planId, worktreePath };
+}
+
+/**
+ * Resolves the main checkout's working-tree root from any dir inside the repo
+ * (including a linked worktree): `git worktree list --porcelain` always lists
+ * the main worktree first. Returns undefined when `fromDir` isn't in a git
+ * repo or git is unavailable.
+ */
+function mainWorktreeRoot(fromDir: string): string | undefined {
+  let out: string;
+  try {
+    out = execFileSync(
+      "git",
+      ["-C", fromDir, "worktree", "list", "--porcelain"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+  } catch {
+    return undefined;
+  }
+  for (const line of out.split("\n")) {
+    if (line.startsWith("worktree ")) {
+      const path = line.slice("worktree ".length).trim();
+      return path.length > 0 ? path : undefined;
+    }
+  }
+  return undefined;
+}
+
+/** First stderr line from a failed execFileSync git call, else its message. */
+function gitErr(e: unknown): string {
+  const err = e as { stderr?: Buffer | string; message?: string };
+  const stderr = err.stderr ? err.stderr.toString().trim() : "";
+  if (stderr.length > 0) return stderr.split("\n")[0] ?? stderr;
+  return err.message ?? "unknown git error";
 }
