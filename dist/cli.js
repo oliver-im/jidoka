@@ -19553,17 +19553,17 @@ function todayYymmddLocal() {
 }
 function setupWorktree(plan, fromDir, planDirRoot, today) {
   if (isAbsolute3(planDirRoot)) {
-    process.stderr.write(
-      "planview hook: git_workflow needs a relative plan_dir_root; materializing in-tree\n"
-    );
-    return void 0;
+    return {
+      kind: "fallback",
+      reason: "git_workflow needs a relative plan_dir_root"
+    };
   }
   const mainRoot = mainWorktreeRoot(fromDir);
   if (mainRoot === void 0) {
-    process.stderr.write(
-      "planview hook: git_workflow is on but this isn't a git worktree; materializing in-tree\n"
-    );
-    return void 0;
+    return {
+      kind: "fallback",
+      reason: "git_workflow is on but this isn't a git worktree"
+    };
   }
   let planId;
   try {
@@ -19573,34 +19573,94 @@ function setupWorktree(plan, fromDir, planDirRoot, today) {
     );
     planId = `${today}-${n}-${plan.slug}`;
   } catch (e) {
-    process.stderr.write(
-      `planview hook: git_workflow counter scan failed (${e.message}); materializing in-tree
-`
-    );
-    return void 0;
+    return {
+      kind: "deny",
+      reason: `git_workflow: couldn't scan the daily counter (${e.message})`
+    };
   }
   const worktreePath = join4(mainRoot, "worktrees", planId);
   if (existsSync(worktreePath)) {
-    process.stderr.write(
-      `planview hook: ${worktreePath} already exists; materializing in-tree
-`
-    );
-    return void 0;
+    return {
+      kind: "deny",
+      reason: `git_workflow: ${worktreePath} already exists \u2014 remove it or pick a new slug, then retry`
+    };
   }
+  const base = resolveDefaultBranch(mainRoot);
+  const addArgs = [
+    "-C",
+    mainRoot,
+    "worktree",
+    "add",
+    worktreePath,
+    "-b",
+    `plan/${planId}`
+  ];
+  if (base !== void 0) {
+    addArgs.push(base);
+  } else {
+    process.stderr.write(
+      "planview hook: couldn't resolve a default branch; forking plan/<id> from the main checkout's current HEAD\n"
+    );
+  }
+  try {
+    execFileSync("git", addArgs, { stdio: ["ignore", "ignore", "pipe"] });
+  } catch (e) {
+    return {
+      kind: "deny",
+      reason: `git_workflow: git worktree add failed (${gitErr(e)}) \u2014 resolve it and retry`
+    };
+  }
+  return {
+    kind: "worktree",
+    plansRoot: join4(worktreePath, planDirRoot),
+    planId,
+    worktreePath,
+    mainRoot
+  };
+}
+function cleanupWorktree(mainRoot, worktreePath, branch) {
   try {
     execFileSync(
       "git",
-      ["-C", mainRoot, "worktree", "add", worktreePath, "-b", `plan/${planId}`],
-      { stdio: ["ignore", "ignore", "pipe"] }
+      ["-C", mainRoot, "worktree", "remove", "--force", worktreePath],
+      { stdio: ["ignore", "ignore", "ignore"] }
     );
-  } catch (e) {
-    process.stderr.write(
-      `planview hook: git worktree add failed (${gitErr(e)}); materializing in-tree
-`
-    );
-    return void 0;
+  } catch {
   }
-  return { plansRoot: join4(worktreePath, planDirRoot), planId, worktreePath };
+  try {
+    execFileSync("git", ["-C", mainRoot, "branch", "-D", branch], {
+      stdio: ["ignore", "ignore", "ignore"]
+    });
+  } catch {
+  }
+}
+function resolveDefaultBranch(mainRoot) {
+  try {
+    const sym = execFileSync(
+      "git",
+      ["-C", mainRoot, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
+    ).trim();
+    const name = sym.startsWith("origin/") ? sym.slice("origin/".length) : sym;
+    if (name.length > 0 && branchExists(mainRoot, name)) return name;
+  } catch {
+  }
+  for (const cand of ["main", "master", "trunk"]) {
+    if (branchExists(mainRoot, cand)) return cand;
+  }
+  return void 0;
+}
+function branchExists(mainRoot, name) {
+  try {
+    execFileSync(
+      "git",
+      ["-C", mainRoot, "rev-parse", "--verify", "--quiet", `refs/heads/${name}`],
+      { stdio: ["ignore", "ignore", "ignore"] }
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 function mainWorktreeRoot(fromDir) {
   let out;
@@ -19624,7 +19684,11 @@ function mainWorktreeRoot(fromDir) {
 function gitErr(e) {
   const err = e;
   const stderr = err.stderr ? err.stderr.toString().trim() : "";
-  if (stderr.length > 0) return stderr.split("\n")[0] ?? stderr;
+  if (stderr.length > 0) {
+    const lines = stderr.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+    const fatal = lines.find((l) => /^(fatal|error):/i.test(l));
+    return fatal ?? lines[lines.length - 1] ?? stderr;
+  }
   return err.message ?? "unknown git error";
 }
 
@@ -20197,49 +20261,62 @@ function runWithInput(input, config2) {
   let plansRoot = config2.plansRoot;
   let forcedDirName;
   let worktreeNote;
+  let onPublishFailure;
   if (config2.cfg.git_workflow) {
-    const wt = setupWorktree(
+    const outcome = setupWorktree(
       plan,
       config2.projectDir,
       config2.cfg.plan_dir_root,
       config2.today
     );
-    if (wt !== void 0) {
-      plansRoot = wt.plansRoot;
-      forcedDirName = wt.planId;
-      worktreeNote = `Plan materialized at worktrees/${wt.planId}/ \u2014 cd there to work.`;
+    if (outcome.kind === "worktree") {
+      plansRoot = outcome.plansRoot;
+      forcedDirName = outcome.planId;
+      worktreeNote = `Plan materialized at worktrees/${outcome.planId}/ \u2014 cd there to work.`;
+      onPublishFailure = () => cleanupWorktree(
+        outcome.mainRoot,
+        outcome.worktreePath,
+        `plan/${outcome.planId}`
+      );
+    } else if (outcome.kind === "deny") {
+      emitDeny(
+        `planview: ${outcome.reason}. No files were written; active/ stays clean.`
+      );
+      return;
+    } else {
+      process.stderr.write(
+        `planview hook: ${outcome.reason}; materializing in-tree
+`
+      );
     }
   }
   const target = forcedDirName !== void 0 ? join6(plansRoot, forcedDirName) : resolveTargetDir(plan, plansRoot, config2.today);
   if (existsSync2(target)) {
+    onPublishFailure?.();
     emitDeny(
       `Plan dir ${target} already exists. Either remove it or pick a new slug via /planview.`
     );
     return;
   }
-  mkdirSync2(plansRoot, { recursive: true });
   const staging = join6(plansRoot, `.planview-stage-${sessionId}`);
-  if (existsSync2(staging)) {
-    rmSync(staging, { recursive: true, force: true });
-  }
-  const finalDirName = basename2(target);
   try {
+    mkdirSync2(plansRoot, { recursive: true });
+    if (existsSync2(staging)) {
+      rmSync(staging, { recursive: true, force: true });
+    }
+    const finalDirName = basename2(target);
     materializeAt(plan, staging, config2.cfg, finalDirName);
     if (config2.htmlOutput) writePlanHtml(plan, staging, finalDirName);
+    renameSync2(staging, target);
   } catch (e) {
-    rmSync(staging, { recursive: true, force: true });
+    try {
+      rmSync(staging, { recursive: true, force: true });
+    } catch {
+    }
+    onPublishFailure?.();
     const msg = e instanceof MaterializeError ? e.message : e.message;
     emitDeny(
       `planview: failed to materialize plan: ${msg}. No files were written.`
-    );
-    return;
-  }
-  try {
-    renameSync2(staging, target);
-  } catch (e) {
-    rmSync(staging, { recursive: true, force: true });
-    emitDeny(
-      `planview: failed to publish plan dir ${target}: ${e.message}. No files were written.`
     );
     return;
   }

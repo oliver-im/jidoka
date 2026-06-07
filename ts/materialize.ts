@@ -191,46 +191,62 @@ export function isDir(path: string): boolean {
   }
 }
 
-export interface WorktreeSetup {
-  /** Effective plansRoot to materialize into (inside the new worktree). */
-  plansRoot: string;
-  /** The derived plan-id (`<today>-N-slug`); also the worktree + branch name. */
-  planId: string;
-  /** Absolute path to the created worktree. */
-  worktreePath: string;
-}
+/**
+ * Outcome of `setupWorktree`. `kind` tells the hook how to proceed while still
+ * exiting 0:
+ * - `worktree` — materialize into the new worktree (the happy path).
+ * - `fallback` — the repo can't use worktrees (not a git repo, or a degenerate
+ *   absolute `plan_dir_root`); materialize in-tree as normal.
+ * - `deny` — a *git* setup failure in a repo that opted into pure-worktree
+ *   (branch/path collision, git error). Emit a deny rather than silently
+ *   writing the plan in-tree and breaking the "`active/` on main stays empty"
+ *   contract.
+ */
+export type WorktreeOutcome =
+  | {
+      kind: "worktree";
+      /** Effective plansRoot to materialize into (inside the new worktree). */
+      plansRoot: string;
+      /** The derived plan-id (`<today>-N-slug`); also the worktree + branch name. */
+      planId: string;
+      /** Absolute path to the created worktree. */
+      worktreePath: string;
+      /** Main checkout root — needed to clean the worktree up on later failure. */
+      mainRoot: string;
+    }
+  | { kind: "fallback"; reason: string }
+  | { kind: "deny"; reason: string };
 
 /**
  * `git_workflow` scaffolding (Unit 07). Anchors at the *main* checkout — even
  * when `/planview` is invoked from inside another plan's worktree — derives
  * the plan-id, then creates `<main>/worktrees/<plan-id>` on a fresh
- * `plan/<plan-id>` branch (off the main checkout's HEAD) and returns the
+ * `plan/<plan-id>` branch (off the resolved default branch) and returns the
  * plansRoot inside it, so the hook materializes there instead of in-tree.
  *
- * Returns undefined — logging why to stderr — on every failure mode (not a
- * git repo, an absolute `plan_dir_root`, an existing worktree/branch for this
- * id, or any git error). The hook then falls back to the normal in-tree
- * materialize and still exits 0. Never throws: a non-zero hook would block
- * ExitPlanMode permanently.
+ * Never throws (a non-zero hook would block ExitPlanMode permanently). Returns
+ * a discriminated `WorktreeOutcome`: `fallback` for non-git / degenerate-config
+ * cases (materialize in-tree), `deny` for a git setup failure in a real repo
+ * (don't silently violate the pure-worktree contract).
  */
 export function setupWorktree(
   plan: Plan,
   fromDir: string,
   planDirRoot: string,
   today: string,
-): WorktreeSetup | undefined {
+): WorktreeOutcome {
   if (isAbsolute(planDirRoot)) {
-    process.stderr.write(
-      "planview hook: git_workflow needs a relative plan_dir_root; materializing in-tree\n",
-    );
-    return undefined;
+    return {
+      kind: "fallback",
+      reason: "git_workflow needs a relative plan_dir_root",
+    };
   }
   const mainRoot = mainWorktreeRoot(fromDir);
   if (mainRoot === undefined) {
-    process.stderr.write(
-      "planview hook: git_workflow is on but this isn't a git worktree; materializing in-tree\n",
-    );
-    return undefined;
+    return {
+      kind: "fallback",
+      reason: "git_workflow is on but this isn't a git worktree",
+    };
   }
 
   let planId: string;
@@ -246,37 +262,124 @@ export function setupWorktree(
     );
     planId = `${today}-${n}-${plan.slug}`;
   } catch (e) {
-    process.stderr.write(
-      `planview hook: git_workflow counter scan failed (${(e as Error).message}); materializing in-tree\n`,
-    );
-    return undefined;
+    return {
+      kind: "deny",
+      reason: `git_workflow: couldn't scan the daily counter (${(e as Error).message})`,
+    };
   }
 
   const worktreePath = join(mainRoot, "worktrees", planId);
   if (existsSync(worktreePath)) {
-    process.stderr.write(
-      `planview hook: ${worktreePath} already exists; materializing in-tree\n`,
-    );
-    return undefined;
+    return {
+      kind: "deny",
+      reason: `git_workflow: ${worktreePath} already exists — remove it or pick a new slug, then retry`,
+    };
   }
 
+  // Fork the plan branch from the resolved default branch, NOT the main
+  // checkout's current HEAD: the hook may fire while that checkout sits on a
+  // feature branch, and the docs promise `plan/<id>` is off the trunk (the
+  // later `--no-ff` merge would otherwise drag unrelated commits into main).
+  const base = resolveDefaultBranch(mainRoot);
+  const addArgs = [
+    "-C",
+    mainRoot,
+    "worktree",
+    "add",
+    worktreePath,
+    "-b",
+    `plan/${planId}`,
+  ];
+  if (base !== undefined) {
+    addArgs.push(base);
+  } else {
+    process.stderr.write(
+      "planview hook: couldn't resolve a default branch; forking plan/<id> from the main checkout's current HEAD\n",
+    );
+  }
   try {
-    // No explicit start-point: fork from the main checkout's HEAD (normally
-    // the trunk). Avoids hardcoding `main`, which would break repos whose
-    // default branch is named otherwise.
+    execFileSync("git", addArgs, { stdio: ["ignore", "ignore", "pipe"] });
+  } catch (e) {
+    return {
+      kind: "deny",
+      reason: `git_workflow: git worktree add failed (${gitErr(e)}) — resolve it and retry`,
+    };
+  }
+
+  return {
+    kind: "worktree",
+    plansRoot: join(worktreePath, planDirRoot),
+    planId,
+    worktreePath,
+    mainRoot,
+  };
+}
+
+/**
+ * Best-effort removal of a worktree and its plan branch, used to roll back a
+ * worktree created by `setupWorktree` when the subsequent materialize fails —
+ * so a partial failure leaves no orphan for the next run's counter to skip
+ * over. Never throws.
+ */
+export function cleanupWorktree(
+  mainRoot: string,
+  worktreePath: string,
+  branch: string,
+): void {
+  try {
     execFileSync(
       "git",
-      ["-C", mainRoot, "worktree", "add", worktreePath, "-b", `plan/${planId}`],
-      { stdio: ["ignore", "ignore", "pipe"] },
+      ["-C", mainRoot, "worktree", "remove", "--force", worktreePath],
+      { stdio: ["ignore", "ignore", "ignore"] },
     );
-  } catch (e) {
-    process.stderr.write(
-      `planview hook: git worktree add failed (${gitErr(e)}); materializing in-tree\n`,
-    );
-    return undefined;
+  } catch {
+    /* best-effort */
   }
+  try {
+    execFileSync("git", ["-C", mainRoot, "branch", "-D", branch], {
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+  } catch {
+    /* best-effort */
+  }
+}
 
-  return { plansRoot: join(worktreePath, planDirRoot), planId, worktreePath };
+/**
+ * The repo's default branch to fork plan branches from. Prefers the remote's
+ * advertised default (`origin/HEAD`), else the first of `main`/`master`/`trunk`
+ * that exists locally. Returns undefined if none resolves (caller forks from
+ * HEAD as a last resort). Returned names are verified to exist as local
+ * branches so they're always valid `git worktree add` start-points.
+ */
+function resolveDefaultBranch(mainRoot: string): string | undefined {
+  try {
+    const sym = execFileSync(
+      "git",
+      ["-C", mainRoot, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    ).trim();
+    const name = sym.startsWith("origin/") ? sym.slice("origin/".length) : sym;
+    if (name.length > 0 && branchExists(mainRoot, name)) return name;
+  } catch {
+    /* no origin/HEAD; fall through to the well-known names */
+  }
+  for (const cand of ["main", "master", "trunk"]) {
+    if (branchExists(mainRoot, cand)) return cand;
+  }
+  return undefined;
+}
+
+function branchExists(mainRoot: string, name: string): boolean {
+  try {
+    execFileSync(
+      "git",
+      ["-C", mainRoot, "rev-parse", "--verify", "--quiet", `refs/heads/${name}`],
+      { stdio: ["ignore", "ignore", "ignore"] },
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -305,10 +408,21 @@ function mainWorktreeRoot(fromDir: string): string | undefined {
   return undefined;
 }
 
-/** First stderr line from a failed execFileSync git call, else its message. */
+/**
+ * The most useful line from a failed execFileSync git call: the `fatal:`/
+ * `error:` line if there is one (git emits progress like "Preparing worktree"
+ * to stderr first), else the last non-empty line, else the error's message.
+ */
 function gitErr(e: unknown): string {
   const err = e as { stderr?: Buffer | string; message?: string };
   const stderr = err.stderr ? err.stderr.toString().trim() : "";
-  if (stderr.length > 0) return stderr.split("\n")[0] ?? stderr;
+  if (stderr.length > 0) {
+    const lines = stderr
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+    const fatal = lines.find((l) => /^(fatal|error):/i.test(l));
+    return fatal ?? lines[lines.length - 1] ?? stderr;
+  }
   return err.message ?? "unknown git error";
 }

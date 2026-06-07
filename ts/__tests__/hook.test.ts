@@ -10,7 +10,16 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defaultConfig } from "../config.js";
+import * as materializeModule from "../materialize.js";
 import { __testing, type HookConfig } from "../hook.js";
+
+// Route hook.ts's named import of materializeAt through a mocked (but
+// actual-backed) module so `vi.spyOn(materializeModule, "materializeAt")`
+// reliably intercepts the hook's call regardless of Vitest's ESM-transform
+// internals. Spreading the original keeps every other export real.
+vi.mock("../materialize.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof materializeModule>()),
+}));
 
 const { runWithInput, isValidSessionId } = __testing;
 
@@ -47,6 +56,7 @@ function makeGitRepo(label: string): string {
   writeFileSync(join(repo, "README.md"), "# fixture\n");
   git("add", "README.md");
   git("commit", "-q", "-m", "init");
+  git("branch", "-M", "main"); // deterministic trunk regardless of init default
   return repo;
 }
 
@@ -446,6 +456,111 @@ describe("runWithInput: git_workflow worktree scaffolding", () => {
         join(repo, "worktrees", planId1, "docs/exec-plans/active", planId1, "overview.md"),
       ),
     ).toBe(true);
+    rmSync(repo, { recursive: true, force: true });
+  });
+});
+
+describe("runWithInput: git_workflow hardening (codex review fixes)", () => {
+  const planId0 = "260505-0-hook-test-plan";
+  const head = (repo: string, ref: string): string =>
+    execFileSync("git", ["-C", repo, "rev-parse", ref], {
+      encoding: "utf8",
+    }).trim();
+
+  it("forks plan/<id> from the default branch even when the checkout is on a feature branch", () => {
+    const repo = makeGitRepo("wt-base");
+    const mainTip = head(repo, "main");
+    // Move the main checkout onto a feature branch with an extra commit, so its
+    // HEAD is no longer the trunk.
+    execFileSync("git", ["-C", repo, "checkout", "-q", "-b", "feature"], {
+      stdio: "ignore",
+    });
+    writeFileSync(join(repo, "f.txt"), "x\n");
+    execFileSync("git", ["-C", repo, "add", "f.txt"], { stdio: "ignore" });
+    execFileSync("git", ["-C", repo, "commit", "-q", "-m", "feature"], {
+      stdio: "ignore",
+    });
+    const featureTip = head(repo, "feature");
+    expect(featureTip).not.toBe(mainTip);
+
+    runWithInput(
+      stdin(`wtbase-${process.pid}`, validPlanMd),
+      gitWorkflowConfig(repo),
+    );
+
+    // The plan branch must be based on main's tip, NOT the feature HEAD the
+    // checkout happened to be on (else --no-ff would drag feature into main).
+    expect(head(repo, `plan/${planId0}`)).toBe(mainTip);
+    expect(head(repo, `plan/${planId0}`)).not.toBe(featureTip);
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  it("denies (no silent in-tree fallback) when the plan branch already exists", () => {
+    const repo = makeGitRepo("wt-deny");
+    execFileSync("git", ["-C", repo, "branch", `plan/${planId0}`], {
+      stdio: "ignore",
+    });
+    runWithInput(
+      stdin(`wtdeny-${process.pid}`, validPlanMd),
+      gitWorkflowConfig(repo),
+    );
+
+    const out = stdoutChunks.join("");
+    expect(out).toContain("deny");
+    expect(out).toContain("git worktree add failed");
+    // The pure-worktree contract holds: nothing silently written in-tree, and
+    // no orphan worktree.
+    expect(existsSync(join(repo, "docs/exec-plans/active", planId0))).toBe(false);
+    expect(existsSync(join(repo, "worktrees", planId0))).toBe(false);
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  it("cleanupWorktree removes the worktree and its plan branch", () => {
+    const repo = makeGitRepo("wt-cleanup");
+    const id = "260505-9-cleanup-me";
+    const wt = join(repo, "worktrees", id);
+    execFileSync(
+      "git",
+      ["-C", repo, "worktree", "add", wt, "-b", `plan/${id}`, "main"],
+      { stdio: "ignore" },
+    );
+    expect(existsSync(wt)).toBe(true);
+
+    materializeModule.cleanupWorktree(repo, wt, `plan/${id}`);
+
+    expect(existsSync(wt)).toBe(false);
+    expect(
+      execFileSync("git", ["-C", repo, "branch", "--list", `plan/${id}`], {
+        encoding: "utf8",
+      }).trim(),
+    ).toBe("");
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  it("rolls back the worktree + branch when materialize fails after setup", () => {
+    const repo = makeGitRepo("wt-orphan");
+    const spy = vi
+      .spyOn(materializeModule, "materializeAt")
+      .mockImplementation(() => {
+        throw new Error("disk full");
+      });
+    try {
+      runWithInput(
+        stdin(`wtorphan-${process.pid}`, validPlanMd),
+        gitWorkflowConfig(repo),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+    // The failure surfaced as a deny...
+    expect(stdoutChunks.join("")).toContain("deny");
+    // ...and left no orphan worktree or plan branch for the next run to skip.
+    expect(existsSync(join(repo, "worktrees", planId0))).toBe(false);
+    expect(
+      execFileSync("git", ["-C", repo, "branch", "--list", `plan/${planId0}`], {
+        encoding: "utf8",
+      }).trim(),
+    ).toBe("");
     rmSync(repo, { recursive: true, force: true });
   });
 });
