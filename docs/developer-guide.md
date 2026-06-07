@@ -376,7 +376,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 
 ### Daily counter
 
-`materialize.ts` scans `plansRoot` only for entries matching `^<today>-(\d+)-` when picking the next `N`. Sibling dirs (a `backlog/`, an archived-plan tree, etc.) are deliberately not scanned: the user's filing convention does not belong in the code. An `N` previously occupied by an entry that has since been moved out of `plansRoot` can therefore reappear; rename at move-time if it bothers you.
+`materialize.ts` picks the next `N` as max + 1 over entries matching `^<today>-(\d+)-`. The normal in-tree path (`resolveTargetDir`) scans `plansRoot` only; with `git_workflow` on, `setupWorktree` instead scans the main checkout's `worktrees/` **and** in-tree `active/` (so same-day worktree plans still increment). Other dirs — `ideas/`, `completed/`, a `backlog/`, an archived-plan tree — are deliberately **not** scanned: the user's filing convention does not belong in the code, and the convention's *shared-with-`ideas/`* counter is upheld by the agent at id-assignment time, not by the renderer. An `N` freed by an entry since moved out of the scanned set (e.g. a plan archived to `completed/`) can therefore reappear; rename at move-time if it bothers you.
 
 ### Skills
 

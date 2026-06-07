@@ -44,6 +44,6 @@ _None._
 
 ## Plan-level review
 
-After the last unit's review lands and is committed, run these against the cumulative plan diff:
+Run against the cumulative plan diff (`main..plan/260607-0-plan-lifecycle-convention`) after the last unit landed:
 
-- [ ] `/planview:plan-review-prompt`
+- [x] `/planview:plan-review-prompt` — ran 2026-06-08. Composed the operator-run `/codex:adversarial-review --base main` command (surfaced to the user) **and** ran an independent plan-level adversarial subagent over the cumulative diff for cross-unit diligence before the merge. Verdict: **cross-unit integration substantially clean — no HIGH findings.** Verified end-to-end: the `git_workflow` flag threads 06→07 with no silent-drop and the hook consumes it; the pure-worktree workflow agrees across `exec-plans/AGENTS.md` + the rendered block + `setupWorktree` + `CONVENTION.md`; no dangling `notes/`/`research/`/default-`plan/` paths; forward-refs resolve (CONVENTION.md pointers, seeded `260514` completed plan faithful + stamped); 322 tests green. **3 doc-consistency findings (1 MED · 2 LOW), all fixed in this close-out before the merge:** _(MED)_ the shared daily-counter was described as scanning `completed/`+`ideas/` but no code scans those → reworded `CONVENTION.md` + `exec-plans/AGENTS.md` (scan live entries only; archived ids can recur) and made `developer-guide.md` code-accurate incl. the worktree-mode scan; _(LOW)_ the "reference by `path:symbol`" heuristic cited a non-existent `hook.ts:resolvePlansRoot` → `ts/materialize.ts:resolveTargetDir` in `agent-guide.md` + `skills/planview/SKILL.md`; _(LOW)_ folded into the same `developer-guide.md` reword.

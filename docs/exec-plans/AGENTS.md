@@ -13,7 +13,7 @@ docs/exec-plans/
   completed/<YYMMDD-N-slug>/    # finished — frozen, provenance-stamped on archive
 ```
 
-- `YYMMDD` — date the plan was bootstrapped (local time). `N` — daily counter, **shared with `../ideas/`** (scan both `active/`, `completed/`, and `ideas/` for `^<today>-(\d+)-` → max+1). `slug` — kebab-case, ≤ 60 chars. Unit ids are `^[0-9]{2}-[a-z0-9-]+$`; the unit filename is exactly `<id>.md`.
+- `YYMMDD` — date the plan was bootstrapped (local time). `N` — daily counter, **shared with `../ideas/`** (scan the live entries — `ideas/`, `active/`, and any in-flight `worktrees/<id>` — for `^<today>-(\d+)-` → max+1; `completed/` isn't rescanned, so an archived id can recur). `slug` — kebab-case, ≤ 60 chars. Unit ids are `^[0-9]{2}-[a-z0-9-]+$`; the unit filename is exactly `<id>.md`.
 - New plans are produced by `/planview` and materialized by the ExitPlanMode hook — nothing here is hand-edited except `progress.md` as work proceeds (and plan refinement right after materialization).
 
 ## Git workflow (pure-worktree)

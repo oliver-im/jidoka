@@ -159,7 +159,7 @@ You don't emit review info at all. Review pipelines come from the user's config 
 
 ### Reference, don't paste
 
-In unit bodies, point at code by `path:symbol` (e.g. `ts/config.ts:defaultConfig`, `hook.ts:resolvePlansRoot`) instead of pasting source snippets. A plan outlives the code it describes: a pasted snippet silently drifts out of date, while a `path:symbol` reference stays a pointer the reader resolves against current truth. Quote a line verbatim only when its exact wording *is* the subject of the change.
+In unit bodies, point at code by `path:symbol` (e.g. `ts/config.ts:defaultConfig`, `ts/materialize.ts:resolveTargetDir`) instead of pasting source snippets. A plan outlives the code it describes: a pasted snippet silently drifts out of date, while a `path:symbol` reference stays a pointer the reader resolves against current truth. Quote a line verbatim only when its exact wording *is* the subject of the change.
 
 ### Promoting an idea to a plan
 

@@ -76,7 +76,7 @@ Add a sentence of context if the code has since moved past the record — the re
 
 - **Temporal kinds** (`ideas/`, `exec-plans/`) use `YYMMDD-N-slug`:
   - `YYMMDD` — the date the entry was started (local time, two-digit year).
-  - `N` — a per-day counter **shared across `ideas/` and `exec-plans/`** (so an idea can keep its id when it becomes a plan). To pick the next `N`, scan both kinds — `ideas/`, `active/`, and `completed/` — for `^<today>-(\d+)-` and take max + 1.
+  - `N` — a per-day counter **shared across `ideas/` and `exec-plans/`** (so an idea can keep its id when it becomes a plan). To pick the next `N`, scan the day's existing `^<today>-(\d+)-` entries across the live kinds (`ideas/` and `active/` plans) and take max + 1. Frozen records (`completed/`, superseded) aren't rescanned, so a long-archived id can recur — the date + slug still disambiguate.
   - `slug` — kebab-case, ≤ 60 chars, `^[a-z0-9-]+$`.
   - A plan is a **directory**; its units are files `NN-unit-slug.md` with a plan-local counter from `01`.
 - **`design-docs/`** are **topic-named** (`cli-over-mcp.md`, not a date) — a decision is referenced by its subject, and its date lives inside the doc. Location (top level vs `superseded/`) carries the status.
