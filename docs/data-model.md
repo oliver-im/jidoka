@@ -62,6 +62,9 @@ interface Plan {
   // Materializer-attached at materialize time from `config.plan_review`;
   // never present on parsed input.
   plan_review?: string[];
+  // Materializer-attached at materialize time from `config.git_workflow`;
+  // gates the `## Git workflow` block in progress.md. Never on parsed input.
+  git_workflow?: boolean;
 }
 
 interface Unit {

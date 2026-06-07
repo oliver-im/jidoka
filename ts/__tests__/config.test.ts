@@ -25,6 +25,7 @@ describe("defaults", () => {
     expect(defaultConfig.auto_open_browser).toBe(false);
     expect(defaultConfig.html_output).toBe(false);
     expect(defaultConfig.plan_level_topology).toBe(false);
+    expect(defaultConfig.git_workflow).toBe(false);
   });
 
   it("ships a unit-level pipeline matching today's behavior", () => {
@@ -53,7 +54,7 @@ describe("loadFromPaths", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("project override accepts plan_dir_root, auto_open_browser, html_output", () => {
+  it("project override accepts plan_dir_root, auto_open_browser, html_output, git_workflow", () => {
     const dir = makeTempDir("proj");
     const path = join(dir, ".planview.json");
     writeFileSync(
@@ -62,12 +63,14 @@ describe("loadFromPaths", () => {
         plan_dir_root: "docs/plans",
         auto_open_browser: true,
         html_output: true,
+        git_workflow: true,
       }),
     );
     const cfg = loadFromPaths(undefined, path);
     expect(cfg.plan_dir_root).toBe("docs/plans");
     expect(cfg.auto_open_browser).toBe(true);
     expect(cfg.html_output).toBe(true);
+    expect(cfg.git_workflow).toBe(true);
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -99,6 +102,15 @@ describe("loadFromPaths", () => {
     const cfg = loadFromPaths(undefined, path);
     expect(cfg.auto_open_browser).toBe(false);
     expect(cfg.html_output).toBe(false);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("project override rejects non-boolean git_workflow", () => {
+    const dir = makeTempDir("gwbad");
+    const path = join(dir, ".planview.json");
+    writeFileSync(path, JSON.stringify({ git_workflow: "yes" }));
+    const cfg = loadFromPaths(undefined, path);
+    expect(cfg.git_workflow).toBe(false);
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -268,6 +280,17 @@ describe("mergeForWrite", () => {
     expect(merged.unit_review).toEqual(defaultConfig.unit_review);
     expect(merged.plan_review).toEqual(defaultConfig.plan_review);
     expect(merged.pre_review).toEqual(defaultConfig.pre_review);
+    expect(merged.git_workflow).toBe(false);
+  });
+
+  it("writes git_workflow from cfg, overwriting a stale base value", () => {
+    // Guards the round-trip: mergeForWrite must emit git_workflow explicitly,
+    // or a setup rewrite would silently drop a user's git_workflow: true.
+    const base = { git_workflow: false, experimental: "keep" };
+    const cfg = { ...defaultConfig, git_workflow: true };
+    const merged = mergeForWrite(base, cfg);
+    expect(merged.git_workflow).toBe(true);
+    expect(merged.experimental).toBe("keep");
   });
 
   it("overwrites stale unit_review / plan_review / pre_review from base", () => {

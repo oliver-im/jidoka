@@ -124,6 +124,7 @@ describe("materialize", () => {
     expect(progress).toContain("- [ ] `/planview:pre-plan-review`");
     expect(progress).toContain("## Plan-level review");
     expect(progress).toContain("_No plan-level reviews configured.");
+    expect(progress).not.toContain("## Git workflow");
 
     const u01 = readFileSync(join(target, "01-prep.md"), "utf8");
     expect(u01.startsWith("# Unit 01 — Title for 01-prep")).toBe(true);
@@ -133,6 +134,20 @@ describe("materialize", () => {
     expect(u01).toContain("## Review pipeline");
     expect(u01).toContain("- [ ] `/code-review`");
 
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  it("renders the ## Git workflow block into progress.md when enabled", () => {
+    const base = makeTempDir("gitwf");
+    const plansRoot = join(base, "plan");
+    mkdirSync(plansRoot, { recursive: true });
+    const cfg = { ...defaultConfig, git_workflow: true };
+    const target = materialize(samplePlan(), plansRoot, "260505", cfg);
+    const progress = readFileSync(join(target, "progress.md"), "utf8");
+    expect(progress).toContain("## Git workflow");
+    expect(progress).toContain("worktrees/260505-0-pivot-renderer/");
+    expect(progress).toContain("plan/260505-0-pivot-renderer");
+    expect(progress).toContain("git merge --no-ff plan/260505-0-pivot-renderer");
     rmSync(base, { recursive: true, force: true });
   });
 

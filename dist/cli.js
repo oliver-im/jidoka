@@ -18211,6 +18211,7 @@ var defaultConfig = {
   auto_open_browser: false,
   html_output: false,
   plan_level_topology: false,
+  git_workflow: false,
   pre_review: ["/planview:pre-plan-review"],
   unit_review: ["/code-review"],
   plan_review: []
@@ -18220,6 +18221,7 @@ var configSchema = external_exports.object({
   auto_open_browser: external_exports.boolean().default(defaultConfig.auto_open_browser),
   html_output: external_exports.boolean().default(defaultConfig.html_output),
   plan_level_topology: external_exports.boolean().default(defaultConfig.plan_level_topology),
+  git_workflow: external_exports.boolean().default(defaultConfig.git_workflow),
   pre_review: external_exports.array(reviewCommandSchema).default(defaultConfig.pre_review),
   unit_review: external_exports.array(reviewCommandSchema).default(defaultConfig.unit_review),
   plan_review: external_exports.array(reviewCommandSchema).default(defaultConfig.plan_review)
@@ -18281,7 +18283,8 @@ function readJson(path2) {
 var PROJECT_OVERRIDE_KEYS = [
   "plan_dir_root",
   "auto_open_browser",
-  "html_output"
+  "html_output",
+  "git_workflow"
 ];
 function applyProjectOverrides(cfg, value, path2) {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -18324,6 +18327,14 @@ function applyProjectOverrides(cfg, value, path2) {
         continue;
       }
       cfg.html_output = val;
+    } else if (key === "git_workflow") {
+      if (typeof val !== "boolean") {
+        process.stderr.write(
+          "planview: project override 'git_workflow' must be a boolean; ignoring\n"
+        );
+        continue;
+      }
+      cfg.git_workflow = val;
     } else {
       process.stderr.write(
         `planview: project override key '${key}' is not allowed (allowed: ${PROJECT_OVERRIDE_KEYS.join(", ")}); ignoring
@@ -19241,11 +19252,16 @@ function buildOverviewMd(plan, dirName) {
 function buildProgressMd(plan, dirName) {
   const cursor = plan.units[0]?.id ?? "(no units)";
   const preReviewBlock = renderPreReviewBlock(plan.pre_review);
+  const gitWorkflowBlock = renderGitWorkflowBlock(
+    dirName,
+    plan.git_workflow ?? false
+  );
   const planReviewBlock = renderPlanReviewBlock(plan.plan_review);
   return eta.render("progress.md.eta", {
     dirName,
     cursor,
     preReviewBlock,
+    gitWorkflowBlock,
     planReviewBlock
   });
 }
@@ -19294,6 +19310,18 @@ function renderPreReviewBlock(commands) {
   out += "Before starting the first unit, run these against the freshly materialized plan dir:\n\n";
   out += renderPipelineChecklist(commands);
   return out;
+}
+function renderGitWorkflowBlock(planId, enabled) {
+  if (!enabled) return "";
+  return `## Git workflow
+
+This plan is worked in its own git worktree, one branch per unit. Full steps: \`docs/exec-plans/AGENTS.md\` + \`docs/CONVENTION.md\`.
+
+- **Worktree:** \`worktrees/${planId}/\` on branch \`plan/${planId}\` (off \`main\`); the plan's \`active/\` dir lives only inside it.
+- **Per unit:** branch \`unit/NN-slug\` off the plan branch \u2192 work + review \u2192 \`git merge --squash unit/NN-slug\` into the plan branch as one \`Unit NN: <title>\` commit \u2192 \`git branch -D unit/NN-slug\` \u2192 advance the cursor.
+- **At the end:** \`git mv\` the plan dir \`active/ \u2192 completed/\` (+ provenance stamp), commit, then \`git checkout main && git merge --no-ff plan/${planId}\`, \`git worktree remove worktrees/${planId}\`.
+
+`;
 }
 function renderPlanReviewBlock(commands) {
   let out = "## Plan-level review\n\n";
@@ -19436,6 +19464,7 @@ function resolvePipelines(plan, config2) {
   }
   plan.pre_review = [...config2.pre_review];
   plan.plan_review = [...config2.plan_review];
+  plan.git_workflow = config2.git_workflow;
 }
 function resolveTargetDir(plan, plansRoot, today) {
   const n = nextCounter(plansRoot, today);

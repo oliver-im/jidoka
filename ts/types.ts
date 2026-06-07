@@ -137,6 +137,9 @@ export interface Plan {
   // Materializer-attached: a copy of config.plan_review. Never present on
   // parsed input; set by `resolvePipelines` after schema validation.
   plan_review?: string[];
+  // Materializer-attached: a copy of config.git_workflow. Never present on
+  // parsed input; set by `resolvePipelines` after schema validation.
+  git_workflow?: boolean;
 }
 
 export const planSchema: z.ZodType<Plan> = z.object({

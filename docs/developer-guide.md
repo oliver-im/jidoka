@@ -365,6 +365,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 | `auto_open_browser` | bool | `false` | yes | Open `overview.html` after materialize. `PLANVIEW_NO_OPEN=1` always wins. |
 | `html_output` | bool | `false` | yes | Write `overview.html` alongside the markdown. When false, only the `.md` files are produced. |
 | `plan_level_topology` | bool | `false` | no | Reserved for v2; currently always false. |
+| `git_workflow` | bool | `false` | yes | When on, renders a `## Git workflow` block (the worktree-per-plan / branch-per-unit reminder) into `progress.md`. Shipped off — OSS opt-in; a committed `.planview.json` opts a repo in. |
 
 ### Loader behavior
 

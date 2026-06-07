@@ -24,10 +24,11 @@ export class MaterializeError extends Error {
 }
 
 /**
- * Copies the config's review slash-command arrays onto the in-memory plan:
- * `pre_review` (plan-level pre-execution), `plan_review` (plan-level
- * post-execution), and per-unit `unit_review`. Each entry is rendered
- * verbatim — no tool lookup, no substitution.
+ * Copies config onto the in-memory plan at materialize time: the review
+ * slash-command arrays — `pre_review` (plan-level pre-execution),
+ * `plan_review` (plan-level post-execution), and per-unit `unit_review`,
+ * each rendered verbatim with no tool lookup or substitution — plus the
+ * `git_workflow` flag that gates the `## Git workflow` block in progress.md.
  */
 export function resolvePipelines(plan: Plan, config: Config): void {
   for (const unit of plan.units) {
@@ -35,6 +36,7 @@ export function resolvePipelines(plan: Plan, config: Config): void {
   }
   plan.pre_review = [...config.pre_review];
   plan.plan_review = [...config.plan_review];
+  plan.git_workflow = config.git_workflow;
 }
 
 /**
