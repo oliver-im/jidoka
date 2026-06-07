@@ -361,7 +361,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 
 | Key | Type | Default | Project override? | Notes |
 |---|---|---|---|---|
-| `plan_dir_root` | string | `plan` | yes (relative paths only, no `..`) | Where plan dirs land. Project paths are resolved against `$CLAUDE_PROJECT_DIR`. |
+| `plan_dir_root` | string | `docs/exec-plans/active` | yes (relative paths only, no `..`) | Where plan dirs land. Project paths are resolved against `$CLAUDE_PROJECT_DIR`. |
 | `auto_open_browser` | bool | `false` | yes | Open `overview.html` after materialize. `PLANVIEW_NO_OPEN=1` always wins. |
 | `html_output` | bool | `false` | yes | Write `overview.html` alongside the markdown. When false, only the `.md` files are produced. |
 | `plan_level_topology` | bool | `false` | no | Reserved for v2; currently always false. |
@@ -543,4 +543,4 @@ When the plugin is enabled in Claude Code, the hook calls the bundle directly vi
 - **Node ≥ 20 required:** TypeScript source in `ts/`, bundled to `dist/cli.js` via esbuild (`commander`, `zod`, `eta` inlined). `npm run build` rebuilds the bundle, `npm test` runs vitest, `npm run typecheck` runs `tsc --noEmit`.
 - **No LLM calls in renderer:** the renderer is deterministic I/O only.
 - **Session-scoped staging dir:** the hook stages writes in `<plansRoot>/.planview-stage-<sessionId>/` and renames on success. Concurrent hook invocations from different sessions don't collide; identical session_ids would (extremely unlikely under Claude Code).
-- **Project-scoped plan dirs:** `<project>/<plan_dir_root>/` (default `plan/`). `$CLAUDE_PROJECT_DIR` is the source of truth (PWD fallback with stderr warning when unset).
+- **Project-scoped plan dirs:** `<project>/<plan_dir_root>/` (default `docs/exec-plans/active/`). `$CLAUDE_PROJECT_DIR` is the source of truth (PWD fallback with stderr warning when unset).

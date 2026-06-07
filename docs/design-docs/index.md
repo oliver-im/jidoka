@@ -18,6 +18,7 @@ Active decisions:
 - **[skill-distribution.md](skill-distribution.md)** — One canonical skill source distributed to Claude Code / Codex / Cursor without symlinks. Verdict: copy/sync-based installs + a three-layer local-test strategy.
 - **[review-pipeline.md](review-pipeline.md)** — How planview's review pipeline uses current Claude Code / codex tooling (built-in `/code-review` per unit; `/planview:plan-review-prompt` composer for plan-level). `/goal` deferred.
 - **[codex-adversarial-review.md](codex-adversarial-review.md)** — codex's 1MB-diff behavior. Verdict: always invoke `/codex:adversarial-review` so it self-collects the diff. Companion to review-pipeline.
+- **[default-plan-dir-root.md](default-plan-dir-root.md)** — Why planview's shipped default `plan_dir_root` is the convention's `docs/exec-plans/active/`, not a neutral `plan/`. Verdict: ship the lifecycle batteries-included; opting out is one `.planview.json` / setup answer away.
 
 Superseded:
 

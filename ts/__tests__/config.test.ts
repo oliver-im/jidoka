@@ -21,7 +21,7 @@ function makeTempDir(label: string): string {
 
 describe("defaults", () => {
   it("match spec", () => {
-    expect(defaultConfig.plan_dir_root).toBe("plan");
+    expect(defaultConfig.plan_dir_root).toBe("docs/exec-plans/active");
     expect(defaultConfig.auto_open_browser).toBe(false);
     expect(defaultConfig.html_output).toBe(false);
     expect(defaultConfig.plan_level_topology).toBe(false);
@@ -107,7 +107,7 @@ describe("loadFromPaths", () => {
     const path = join(dir, ".planview.json");
     writeFileSync(path, JSON.stringify({ plan_dir_root: "/etc/foo" }));
     const cfg = loadFromPaths(undefined, path);
-    expect(cfg.plan_dir_root).toBe("plan");
+    expect(cfg.plan_dir_root).toBe("docs/exec-plans/active");
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -116,7 +116,7 @@ describe("loadFromPaths", () => {
     const path = join(dir, ".planview.json");
     writeFileSync(path, JSON.stringify({ plan_dir_root: "../escape" }));
     const cfg = loadFromPaths(undefined, path);
-    expect(cfg.plan_dir_root).toBe("plan");
+    expect(cfg.plan_dir_root).toBe("docs/exec-plans/active");
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -264,7 +264,7 @@ describe("mergeForWrite", () => {
 
   it("starts from empty when base undefined", () => {
     const merged = mergeForWrite(undefined, defaultConfig);
-    expect(merged.plan_dir_root).toBe("plan");
+    expect(merged.plan_dir_root).toBe("docs/exec-plans/active");
     expect(merged.unit_review).toEqual(defaultConfig.unit_review);
     expect(merged.plan_review).toEqual(defaultConfig.plan_review);
     expect(merged.pre_review).toEqual(defaultConfig.pre_review);

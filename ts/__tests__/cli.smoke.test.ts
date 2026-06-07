@@ -239,7 +239,7 @@ describe("hook", () => {
       });
       expect(r.status).toBe(0);
       expect(r.stdout).toBe("");
-      expect(existsSync(join(tmp, "plan"))).toBe(false);
+      expect(existsSync(join(tmp, "docs/exec-plans/active"))).toBe(false);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
@@ -261,8 +261,8 @@ describe("hook", () => {
       expect(r.status).toBe(0);
       expect(r.stdout).toBe("");
       expect(r.stderr).toMatch(/Wrote plan to /);
-      // Default plan_dir_root is `plan`; counter starts at 0.
-      const planDir = join(tmp, "plan");
+      // Default plan_dir_root is `docs/exec-plans/active`; counter starts at 0.
+      const planDir = join(tmp, "docs/exec-plans/active");
       expect(existsSync(planDir)).toBe(true);
     } finally {
       rmSync(tmp, { recursive: true, force: true });

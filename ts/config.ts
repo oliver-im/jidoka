@@ -16,7 +16,7 @@ export interface Config {
 }
 
 export const defaultConfig: Config = {
-  plan_dir_root: "plan",
+  plan_dir_root: "docs/exec-plans/active",
   auto_open_browser: false,
   html_output: false,
   plan_level_topology: false,

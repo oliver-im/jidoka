@@ -274,7 +274,7 @@ planview renders commands verbatim; it does not run them. These properties of th
 
 | Term | Meaning |
 |---|---|
-| Plan | The top-level shape: a list of units with sequential ids and dependencies. Materialized to `<plan_dir_root>/<YYMMDD-N-slug>/` (default `plan/`). |
+| Plan | The top-level shape: a list of units with sequential ids and dependencies. Materialized to `<plan_dir_root>/<YYMMDD-N-slug>/` (default `docs/exec-plans/active/`). |
 | Unit | One step in a plan. Reviewable on its own. Materialized to `<id>.md`. |
 | Topology | Per-unit (optional) multi-agent dispatch shape. Rendered as a Mermaid block inside the unit's md and HTML card. |
 | Phase | A wave of work derived from `blocked_by` dependencies inside a topology. In subagents mode, the main agent dispatches each phase explicitly. |

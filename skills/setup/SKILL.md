@@ -15,7 +15,7 @@ A JSONC file (JSON with `//` comments — the reader strips them before parsing)
 
 | Key | Type | Default | Question to ask |
 |---|---|---|---|
-| `plan_dir_root` | string | `plan` | "Where should planview write plan dirs? (project-relative; defaults to `plan/`. Common alternatives: `plans/`, `notes/plan/`, `docs/plans/`.)" |
+| `plan_dir_root` | string | `docs/exec-plans/active` | "Where should planview write plan dirs? (project-relative; defaults to `docs/exec-plans/active/` — the lifecycle convention's active slot. Simpler conventionless alternative: `plan/`.)" |
 | `auto_open_browser` | bool | `false` | "Auto-open overview.html in the browser after a successful materialize? (default off — most users view the markdown in their editor; set true if you want a browser pop)" |
 | `html_output` | bool | `false` | "Render overview.html alongside the markdown files? (default off — set true if you want the rendered HTML view; otherwise just the .md files)" |
 | `plan_level_topology` | bool | `false` | _(reserved for v2 — don't ask; always write `false`)_ |
@@ -29,9 +29,10 @@ Use this exact JSONC layout, substituting the three scalar answers from the ques
 
 ```jsonc
 {
-  // Where planview writes plan dirs (project-relative).
-  // Common alternatives: "plans", "notes/plan", "docs/plans".
-  "plan_dir_root": "plan",
+  // Where planview writes plan dirs (project-relative). Defaults to the
+  // lifecycle convention's active slot; "plan" is the simpler conventionless
+  // alternative.
+  "plan_dir_root": "docs/exec-plans/active",
 
   // Open overview.html in the browser after a successful materialize.
   // Most users view the markdown in their editor; set true for a browser pop.

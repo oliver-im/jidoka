@@ -1,6 +1,6 @@
 ---
 name: planview
-description: Decompose a multi-step task into reviewable units and emit a plan markdown that the ExitPlanMode hook materializes as a directory under <plan_dir_root>/ (default `plan/`). Use in plan mode before ExitPlanMode. When the plan crystallizes, structure it as explicit units (## Unit 01: <title>, ## Unit 02: <title>, …) so each unit is reviewable on its own and finishable in one session.
+description: Decompose a multi-step task into reviewable units and emit a plan markdown that the ExitPlanMode hook materializes as a directory under <plan_dir_root>/ (default `docs/exec-plans/active/`). Use in plan mode before ExitPlanMode. When the plan crystallizes, structure it as explicit units (## Unit 01: <title>, ## Unit 02: <title>, …) so each unit is reviewable on its own and finishable in one session.
 allowed-tools: Read, Grep, Glob, Bash
 user-invocable: false
 ---
@@ -156,6 +156,14 @@ If two units genuinely run in parallel (independent tracks that converge later),
 ### review_steps
 
 You don't emit review info at all. Review pipelines come from the user's config at `~/.claude/plugins/planview/config.json`; the materializer resolves them and renders the result into each Unit md (`## Review pipeline`) and `progress.md` (`## Plan-level review`). If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body — the body is the per-unit escape hatch when the configured pipeline doesn't fit.
+
+### Reference, don't paste
+
+In unit bodies, point at code by `path:symbol` (e.g. `ts/config.ts:defaultConfig`, `hook.ts:resolvePlansRoot`) instead of pasting source snippets. A plan outlives the code it describes: a pasted snippet silently drifts out of date, while a `path:symbol` reference stays a pointer the reader resolves against current truth. Quote a line verbatim only when its exact wording *is* the subject of the change.
+
+### Promoting an idea to a plan
+
+When the task traces back to an `ideas/<YYMMDD-N-slug>.md` entry (an open question parked under the lifecycle convention), emitting a plan *is* that idea's promotion: it graduates to `exec-plans/active/` the moment it acquires units. Name the source idea in the overview's references so the plan's eventual archive can record what it realized. An idea with no units stays an idea.
 
 ## Contract
 
