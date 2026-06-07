@@ -1,6 +1,6 @@
 # 260607-0-plan-lifecycle-convention — Progress
 
-**Cursor:** 01-scaffold-docs-skeleton (next — bootstrap + pre-execution review done; see below).
+**Cursor:** 02-rehome-design-rationale (next). Unit 01 done — see Done below.
 
 ## Pre-execution review
 
@@ -19,7 +19,7 @@ This plan follows the pure-worktree discipline it introduces (hand-applied until
 
 ## Done
 
-_Nothing yet._
+- **Unit 01 — Scaffold the docs/ lifecycle skeleton** (2026-06-07). Created `docs/{ideas, exec-plans/{active,completed}, design-docs/{,superseded}}`, each with a self-documenting `index.md` (kind + drift rule + naming; no `.gitkeep`). Unit review (subagent): 1 MED + 1 LOW, both fixed — `active/index.md` no longer over-claims `git_workflow` enforcement (frames it as documented-not-enforced); `exec-plans/index.md` opener now names the drift rule. Squash-merged as one commit on the plan branch.
 
 ## Blockers
 
@@ -27,7 +27,7 @@ _None._
 
 ## Notes
 
-- **Post-compaction resume:** read this file first. State (2026-06-07) = bootstrap **done** (worktree live, plan committed at `4538948`) and pre-execution review **done** (verdict: revise; fixes folded in). **Next action = Unit 01**, on a `unit/01-…` branch inside `worktrees/260607-0-plan-lifecycle-convention/`. Do NOT re-run the Bootstrap or the pre-review.
+- **Post-compaction resume:** read this file first. State (2026-06-07) = bootstrap **done**, pre-execution review **done**, **Unit 01 done** (squash-merged on the plan branch). **Next action = Unit 02 — Re-home design rationale**, on a `unit/02-…` branch inside `worktrees/260607-0-plan-lifecycle-convention/`. Do NOT re-run the Bootstrap or pre-review.
 - **Pre-execution review dispositions (2026-06-07), all applied:** _(HIGH)_ thread `git_workflow` through `mergeForWrite` + the `setup` skill so it survives the config round-trip → folded into **Unit 06**; _(HIGH)_ this file's Bootstrap state was stale → updated above. _(MED)_ `developer-guide.md:378`'s `research/` prose collides with Unit 02's grep → **Unit 02** reworded + acceptance tightened; _(MED)_ hook worktree-root / id-order / already-in-a-worktree under-specified → **Unit 07** expanded; _(MED)_ out-of-repo global-config edits were unverifiable gates → **Units 03/07** relabel them as manual operator steps. _(LOW)_ Unit 01's `active/index.md` asserted the workflow as fact → **Unit 01** softened to "intended (see AGENTS.md)".
 - When resuming mid-plan, read this file to find the cursor unit, then read the cursor unit's md. Skip `overview.md` unless it's your first session on the plan.
 - Work one unit at a time. After finishing the cursor unit, run its review (on the `unit/NN` branch diff), squash-merge it, then update this file: move the unit into Done with a one-liner and advance the cursor.
