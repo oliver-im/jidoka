@@ -13,7 +13,7 @@ The contract between them: ExitPlanMode carries the plan markdown in `tool_input
 
 ## Repository State
 
-`npm run build` produces `dist/cli.js` (bundled, committed); `npm test` runs the suite via vitest. The ExitPlanMode hook is declared in `hooks/hooks.json` (the plugin-native hook location) and invokes `node "$CLAUDE_PLUGIN_ROOT/dist/cli.js" hook`. Active plans live under `notes/plan/`; see `notes/AGENTS.md` (top-level layout) and `notes/plan/AGENTS.md` (per-plan resume protocol) for the plan convention. Reference docs:
+`npm run build` produces `dist/cli.js` (bundled, committed); `npm test` runs the suite via vitest. The ExitPlanMode hook is declared in `hooks/hooks.json` (the plugin-native hook location) and invokes `node "$CLAUDE_PLUGIN_ROOT/dist/cli.js" hook`. Active plans live in worktrees under `docs/exec-plans/active/`; see `docs/exec-plans/AGENTS.md` (resume protocol + git workflow) and `docs/CONVENTION.md` (the portable lifecycle). Reference docs:
 
 - `docs/data-model.md` — JSON schema, field semantics, execution modes (shared by both audiences)
 - `docs/agent-guide.md` — skill config, heuristics, hard rules (for LLM agents)

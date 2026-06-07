@@ -1,6 +1,6 @@
 {
   "name": "planview",
-  "description": "Materialize multi-unit plans (with optional per-unit topology) under notes/plan/<YYMMDD-N-slug>/ on ExitPlanMode. The /planview slash command produces a Plan; the ExitPlanMode hook writes the dir and opens overview.html in the browser.",
+  "description": "Materialize multi-unit plans (with optional per-unit topology) as a <YYMMDD-N-slug>/ dir under your configured plan_dir_root on ExitPlanMode. The /planview slash command produces a Plan; the ExitPlanMode hook writes the dir and opens overview.html in the browser.",
   "version": "0.3.0",
   "author": {
     "name": "Oliver Im"
