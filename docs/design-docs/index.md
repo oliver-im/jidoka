@@ -19,6 +19,7 @@ Active decisions:
 - **[review-pipeline.md](review-pipeline.md)** — How planview's review pipeline uses current Claude Code / codex tooling (built-in `/code-review` per unit; `/planview:plan-review-prompt` composer for plan-level). `/goal` deferred.
 - **[codex-adversarial-review.md](codex-adversarial-review.md)** — codex's 1MB-diff behavior. Verdict: always invoke `/codex:adversarial-review` so it self-collects the diff. Companion to review-pipeline.
 - **[default-plan-dir-root.md](default-plan-dir-root.md)** — Why planview's shipped default `plan_dir_root` is the convention's `docs/exec-plans/active/`, not a neutral `plan/`. Verdict: ship the lifecycle batteries-included; opting out is one `.planview.json` / setup answer away.
+- **[convention-carrier.md](convention-carrier.md)** — How `CONVENTION.md` travels to other repos: planview bundles it (copy-to-adopt), no separate `plan-lifecycle` repo yet. Verdict: co-locate doc + driver until copies start to diverge.
 
 Superseded:
 
