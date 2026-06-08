@@ -221,7 +221,9 @@ describe("loadFromPaths", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("falls back to defaults when a review entry isn't a slash command", () => {
+  it("falls back to defaults when a review entry is a bare non-slash string", () => {
+    // A bare string that is neither a "/" slash command nor a { run, mode }
+    // template object is rejected by the union, so the whole config falls back.
     const dir = makeTempDir("bad-review");
     const path = join(dir, "config.json");
     writeFileSync(path, JSON.stringify({ unit_review: ["not-a-slash"] }));
@@ -310,6 +312,40 @@ describe("mergeForWrite", () => {
     expect(merged.unit_review).toEqual(["/new:command"]);
     expect(merged.plan_review).toEqual([]);
     expect(merged.pre_review).toEqual(["/new:pre-command"]);
+  });
+
+  it("round-trips hand-written object-form review steps (load → mergeForWrite)", () => {
+    const dir = makeTempDir("roundtrip-template");
+    const path = join(dir, "config.json");
+    // A user hand-edits the global config to add a { run, mode } template
+    // alongside a slash command, plus a bare template (no mode).
+    writeFileSync(
+      path,
+      `{
+        "unit_review": [
+          { "run": "codex exec review {focus}", "mode": "exec" },
+          "/code-review"
+        ],
+        "plan_review": [
+          { "run": "git diff {diff_range} | codex exec \\"{focus}\\"" }
+        ]
+      }`,
+    );
+    // Load validates the union and defaults the bare template's mode to print.
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.unit_review).toEqual([
+      { run: "codex exec review {focus}", mode: "exec" },
+      "/code-review",
+    ]);
+    expect(cfg.plan_review).toEqual([
+      { run: 'git diff {diff_range} | codex exec "{focus}"', mode: "print" },
+    ]);
+    // A setup rewrite must carry the object form back out — not flatten it to a
+    // label, drop the mode, or lose the slash/template mix.
+    const merged = mergeForWrite({ unit_review: ["/stale"] }, cfg);
+    expect(merged.unit_review).toEqual(cfg.unit_review);
+    expect(merged.plan_review).toEqual(cfg.plan_review);
+    rmSync(dir, { recursive: true, force: true });
   });
 });
 
