@@ -263,7 +263,7 @@ Object form (not a prefix-tagged string) because a bash template can legitimatel
 
 | Stage | Config key | Renders into | Default | When it runs |
 |---|---|---|---|---|
-| Pre-execution | `pre_review` | `progress.md` (`## Pre-execution review`, above Done) | `["/planview:pre-plan-review"]` | On the first session, before Unit 01 — the resuming agent auto-runs it against the freshly materialized plan dir, surfaces findings, then stops. Reviews the plan *as a plan* — no diff exists yet. |
+| Pre-execution | `pre_review` | `progress.md` (`## Pre-execution review`, above Done) | `["/planview:pre-plan-review"]` | On the first session, before Unit 01 — the resuming agent works through it against the freshly materialized plan dir, then stops: it auto-runs the agent-invocable steps (the default `/planview:pre-plan-review`, or an `exec` template) and surfaces any `print` template / operator-run slash command for the human. Reviews the plan *as a plan* — no diff exists yet. |
 | Per-unit | `unit_review` | Each `<id>.md` (`## Review pipeline`) | `["/code-review"]` | After the unit's diff lands and before it's committed. Local correctness gate on the unit's working-tree diff. |
 | Plan-level | `plan_review` | `progress.md` (`## Plan-level review`, below Notes) | `[]` | After the last unit's review lands and is committed. Adversarial pass against the cumulative *committed* plan diff — the completeness net for cross-unit issues. |
 
@@ -297,5 +297,5 @@ planview renders commands verbatim; it does not run them. These properties of th
 | Phase | A wave of work derived from `blocked_by` dependencies inside a topology. In subagents mode, the main agent dispatches each phase explicitly. |
 | Step (topology) | Numbered items in the topology overview. The dependency-derived order within a phase. Parallel agents share a step with letter suffixes (2a, 2b). |
 | Review step | An entry in `pre_review`, `unit_review`, or `plan_review`: a Claude Code slash command **or** a `{ run, mode }` bash template. Rendered verbatim as a checkbox in the materialized plan (templates carry a `print`/`exec` mode badge). |
-| Pre-execution review | The `progress.md` section rendered from `pre_review`, between the cursor line and Done. The resuming agent auto-runs it on the first session and stops before Unit 01; reviews the plan as a plan. |
+| Pre-execution review | The `progress.md` section rendered from `pre_review`, between the cursor line and Done. On the first session the resuming agent auto-runs the agent-invocable steps and surfaces any `print`/operator-run step, then stops before Unit 01; reviews the plan as a plan. |
 | Plan-level review | The `progress.md` section rendered from `plan_review`. Surfaces after every Unit is reviewed and committed; the resume protocol stops here and asks the user before archiving. |
