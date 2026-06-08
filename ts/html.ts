@@ -2,6 +2,7 @@ import { Eta } from "eta";
 import { CSS, JS, PAGE_TEMPLATE, PLAN_TEMPLATE } from "./assets.generated.js";
 import { mermaid } from "./mermaid.js";
 import { buildOverviewMd, unitIdPrefix } from "./render-md.js";
+import { reviewStepLabel } from "./types.js";
 import type { Agent, ExecutionMode, Plan, Topology } from "./types.js";
 
 const eta = new Eta({ autoEscape: false });
@@ -92,7 +93,7 @@ export function renderPlanHtml(plan: Plan, dirName: string): string {
       agents_label: agentsLabel,
       has_topology: unit.topology !== undefined,
       mermaid_graphs: mermaidGraphs,
-      review_commands: (unit.review ?? []).map(htmlEscape),
+      review_commands: (unit.review ?? []).map(reviewStepLabel).map(htmlEscape),
     };
   });
 

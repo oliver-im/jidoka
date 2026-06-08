@@ -88,16 +88,53 @@ export const topologySchema: z.ZodType<Topology> = z.object({
   agents: z.array(agentSchema),
 });
 
-// Each review command is a Claude Code slash command, e.g. the built-in
-// "/code-review" (local working-tree diff) or "/codex:adversarial-review".
-// Note "/code-review" (built-in, reviews a local diff) is NOT the same as
-// "/code-review:code-review" (the code-review plugin, which reviews a GitHub
-// PR). The user lists commands directly in the config; there is no name
-// lookup, no `{op}` substitution, no bash escape hatch.
-export const reviewCommandSchema = z
-  .string()
-  .min(1, "review command must be a non-empty string")
-  .startsWith("/", "review command must start with '/'");
+// A review step is EITHER a slash command (e.g. the built-in "/code-review" —
+// local working-tree diff — or "/codex:adversarial-review") OR a tool-agnostic
+// bash *template* object `{ run, mode }` (e.g. { run: "codex exec ...", mode:
+// "exec" }), so the pipeline isn't tied to slash commands or any one tool.
+//
+// Object form (not a prefix-tagged string) because a bash template can
+// legitimately start with "/" (absolute paths), so prefix-tagging would be
+// ambiguous; an object is unambiguous and extensible.
+//
+// `mode` is a TEMPLATE-ONLY field — "print" (default): surface the command for
+// the operator to run; "exec": the resuming agent runs it via the Bash tool.
+// For slash-command steps, operator-vs-agent is governed by the target skill's
+// `disable-model-invocation`, not by a mode.
+//
+// Note "/code-review" (built-in, local diff) is NOT "/code-review:code-review"
+// (the code-review plugin, which reviews a GitHub PR).
+//
+// Template placeholders ({plan_dir}, {base}, {diff_range}, {focus}) are
+// stage-scoped and substituted in the resume/agent layer, never here — the
+// renderer only records the step verbatim. `pre_review` runs before any unit
+// (no diff), so only {plan_dir} is meaningful there.
+export const reviewStepModeSchema = z.enum(["print", "exec"]);
+export type ReviewStepMode = z.infer<typeof reviewStepModeSchema>;
+
+export const reviewTemplateStepSchema = z.strictObject({
+  run: z.string().min(1, "review template 'run' must be a non-empty string"),
+  mode: reviewStepModeSchema.default("print"),
+});
+export type ReviewTemplateStep = z.infer<typeof reviewTemplateStepSchema>;
+
+export const reviewStepSchema = z.union([
+  z
+    .string()
+    .min(1, "review command must be a non-empty string")
+    .startsWith("/", "review command must start with '/'"),
+  reviewTemplateStepSchema,
+]);
+export type ReviewStep = z.infer<typeof reviewStepSchema>;
+
+// Display label the renderer records for a step: a slash command is its own
+// label; a template labels as its `run` text. Unit 03 layers mode-aware
+// rendering (the print/exec badge + the pre_review auto-run framing) on top of
+// this; until then both forms render as a plain label, so existing
+// slash-command behavior is unchanged.
+export function reviewStepLabel(step: ReviewStep): string {
+  return typeof step === "string" ? step : step.run;
+}
 
 export interface Unit {
   id: string;
@@ -109,7 +146,7 @@ export interface Unit {
   topology?: Topology;
   // Materializer-attached: a copy of config.unit_review. Never present on
   // parsed input; set by `resolvePipelines` after schema validation.
-  review?: string[];
+  review?: ReviewStep[];
 }
 
 export const unitSchema: z.ZodType<Unit> = z.object({
@@ -133,10 +170,10 @@ export interface Plan {
   units: Unit[];
   // Materializer-attached: a copy of config.pre_review. Never present on
   // parsed input; set by `resolvePipelines` after schema validation.
-  pre_review?: string[];
+  pre_review?: ReviewStep[];
   // Materializer-attached: a copy of config.plan_review. Never present on
   // parsed input; set by `resolvePipelines` after schema validation.
-  plan_review?: string[];
+  plan_review?: ReviewStep[];
   // Materializer-attached: a copy of config.git_workflow. Never present on
   // parsed input; set by `resolvePipelines` after schema validation.
   git_workflow?: boolean;

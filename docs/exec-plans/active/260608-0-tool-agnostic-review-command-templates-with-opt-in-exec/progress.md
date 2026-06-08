@@ -1,6 +1,6 @@
 # 260608-0-tool-agnostic-review-command-templates-with-opt-in-exec — Progress
 
-**Cursor:** 02-generalize-reviewcommandschema-schema-config (not started).
+**Cursor:** 03-record-render-the-template-form-and-its-mode (not started).
 
 ## Pre-execution review
 
@@ -19,6 +19,7 @@ This plan is worked in its own git worktree, one branch per unit. Full steps: `d
 ## Done
 
 - **01 — Pin the design in review-pipeline.md** — appended the superseding decision block to `docs/design-docs/review-pipeline.md` (supersedes #6, refines #5; the 4 decisions + two-mechanism invocation model + stage-scoped placeholders + boundaries), and marked #5/#6 with superseded/refined pointers. Design-only, no code. Unit review `/code-review`: (none).
+- **02 — Generalize reviewCommandSchema (schema + config)** — `reviewStepSchema` is now a union of slash-command string OR `{ run, mode }` template (`mode` defaults `print`; `strictObject` rejects unknown keys); added `ReviewStep`/`ReviewStepMode` types + `reviewStepLabel` helper. `Config`/`Unit`/`Plan` review fields → `ReviewStep[]`; render-md.ts + html.ts bridged via `.map(reviewStepLabel)` (proper mode rendering deferred to Unit 03 — noted forward-ref). Project-override security boundary still excludes review arrays (existing test at config.test.ts:232). +12 schema/label/loader tests. `npm run typecheck`/`test` (339 pass)/`build` green; `dist/cli.js` rebuilt. Unit review `/code-review` (medium, independent agent): `[]`.
 
 ## Blockers
 

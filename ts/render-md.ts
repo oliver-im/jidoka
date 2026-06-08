@@ -2,6 +2,7 @@ import { Eta } from "eta";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { mermaid } from "./mermaid.js";
+import { reviewStepLabel } from "./types.js";
 import type { Plan, Topology, Unit } from "./types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -34,7 +35,7 @@ export function buildOverviewMd(plan: Plan, dirName: string): string {
         unit.blocked_by.length === 0
           ? "—"
           : unit.blocked_by.map((b) => unitIdPrefix(b) ?? b).join(", ");
-      const reviews = overviewReviewsCell(unit.review);
+      const reviews = overviewReviewsCell(unit.review?.map(reviewStepLabel));
       return `| ${prefix} | ${unit.title} | ${blockedBy} | ${reviews} |`;
     })
     .join("\n");
@@ -49,12 +50,12 @@ export function buildOverviewMd(plan: Plan, dirName: string): string {
 
 export function buildProgressMd(plan: Plan, dirName: string): string {
   const cursor = plan.units[0]?.id ?? "(no units)";
-  const preReviewBlock = renderPreReviewBlock(plan.pre_review);
+  const preReviewBlock = renderPreReviewBlock(plan.pre_review?.map(reviewStepLabel));
   const gitWorkflowBlock = renderGitWorkflowBlock(
     dirName,
     plan.git_workflow ?? false,
   );
-  const planReviewBlock = renderPlanReviewBlock(plan.plan_review);
+  const planReviewBlock = renderPlanReviewBlock(plan.plan_review?.map(reviewStepLabel));
   return eta.render("progress.md.eta", {
     dirName,
     cursor,
@@ -90,7 +91,7 @@ export function buildUnitMd(unit: Unit): string {
   const topologyBlock =
     unit.topology !== undefined ? unitTopologyBlock(unit.topology) + "\n\n" : "";
 
-  const reviewItems = renderPipelineChecklist(unit.review);
+  const reviewItems = renderPipelineChecklist(unit.review?.map(reviewStepLabel));
 
   return eta.render("unit.md.eta", {
     prefix,
