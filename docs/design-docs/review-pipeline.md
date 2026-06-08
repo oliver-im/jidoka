@@ -56,6 +56,8 @@ body-as-escape-hatch model. `/simplify` is now **cleanup-only** (no bug hunting)
 complement to `/code-review`, not a substitute.
 
 ### 5. plan_review: keep default `[]`, document `/codex:adversarial-review --base <branch>`
+> **Refined (2026-06)** — see *Generalize review steps to tool-agnostic templates* at the end of this doc: `plan_review` becomes a tool-agnostic command template (codex is one vehicle, not the only one), and planview authors its own plan-review prompt rather than relying on codex's.
+
 Plan-level review is the **completeness net** for cross-unit issues the unit gate can't
 see. By plan-end the cumulative diff is **committed**, so it lives between the base branch
 and HEAD — a bare working-tree review sees nothing. The recommended vehicle is the
@@ -68,6 +70,8 @@ Default stays `[]` (opt-in), not a codex command, because codex has prerequisite
 non-empty default would fail loudly for users without codex.
 
 ### 6. codex plan_review is operator-run — and we do NOT fork codex to change that
+> **Superseded (2026-06)** — see *Generalize review steps to tool-agnostic templates* at the end of this doc: review steps gain an opt-in `exec` mode (the agent runs via the Bash tool — legitimate, since `disable-model-invocation` blocks only the SlashCommand route, not Bash), and `pre-plan-review` flips to agent-invocable + auto-run-then-stop. Still **not** forking codex: the agent bypasses the plugin via a generic `codex exec` template (escape hatch (a) below), and `print`/operator-run stays the default for the expensive codex review.
+
 `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation: true`, so a
 resuming agent **cannot** invoke them via the SlashCommand tool. The resume protocol must
 **surface the command and stop** for the human to run it (consistent with planview's
@@ -163,3 +167,63 @@ Historical materialized plans under `plan/**` and `notes/plan/2605*/` left untou
 - Community: openai/codex-plugin-cc issues #269, #211, #238, #232; PRs #227, #156, #157;
   anthropics/claude-code#26251; HN "Code Review for Claude Code" (item 47313787);
   sendbird/cc-plugin-codex.
+
+## Generalize review steps to tool-agnostic templates (2026-06 update — supersedes #6, refines #5)
+
+Prompted by dogfooding the pipeline: the review *vehicle* shouldn't be hardwired to slash
+commands (or to the codex plugin in particular), and the operator-vs-agent choice should be
+explicit config rather than a property baked into each skill's frontmatter.
+
+**1. Generalize the schema (`reviewCommandSchema`).** A review step is **either** a slash
+command (`/…`, unchanged) **or** a bash *template* — `{ run: string, mode?: "print" | "exec" }`.
+Templates make the pipeline tool-agnostic: `codex exec …`, `agent -p --mode ask …`
+(cursor-agent), `gemini …`, anything. Object form over string-prefix tagging because a bash
+template can legitimately start with `/` (absolute paths), so a prefix is ambiguous; an
+object is unambiguous and extensible. Placeholders: `{plan_dir}`, `{base}`, `{diff_range}`
+(= `merge-base..HEAD`), `{focus}`.
+
+**2. planview authors its own plan-level review prompt — it does not vendor codex's.**
+codex's `adversarial-review.md` is diff/code-shaped and generic (mandatory file +
+`line_start`/`line_end`; its attack surface is runtime failure, not plan structure), it
+drifts when upstream changes, and copying it redistributes someone else's prompt. planview
+already owns `pre-plan-review`'s prompt; it owns a plan-level one the same way — aimed at the
+cumulative committed diff, cross-unit seams, and deferred forward-references. With a
+`codex exec` template, **codex supplies the model, planview supplies the prompt.**
+
+**3. Operator-vs-agent (`print`/`exec`) axis spans all three stages.** `print` (default) —
+surface the ready-to-run command and stop for the operator. `exec` (opt-in) — the resuming
+agent runs the step via the **Bash** tool. The Bash route is legitimate exactly where the
+SlashCommand route is blocked: `disable-model-invocation` blocks only `SlashCommand`, not
+Bash. The default is **not** flipped — expensive/external review (codex) stays `print` +
+operator-run, so the human checkpoint is preserved.
+
+**4. `pre-plan-review` becomes agent-invocable + auto-run-then-stop.** Drop its
+`disable-model-invocation`. On first session the resume agent auto-runs the `pre_review`
+step, surfaces findings, and **stops before Unit 01** — surface, don't auto-revise
+(auto-*invoke* ≠ auto-*apply*; the human still reads the findings and decides). Rationale:
+pre-plan-review is cheap, read-only, and produces *findings* (not a command, not edits), so
+none of codex's cost/guardrail reasons apply; the same "cheap, no external call, we want the
+agent to do it" logic that already made the `plan-review-prompt` composer agent-invocable
+applies at least as strongly. This **reverses #6's "operator-run is the norm" framing for
+cheap local reviews** while leaving expensive/external review operator-run.
+
+**Two-mechanism invocation model** (so implementers don't conflate them): `mode: print|exec`
+is a **template-only** field. For **slash-command** steps, operator-vs-agent is governed by
+the target skill's `disable-model-invocation` (agent-invocable when absent). "Spans all three
+stages" is realized by both mechanisms together, not by `mode` alone. Placeholders are
+**stage-scoped**: `pre_review` runs before any unit so it has no diff — only `{plan_dir}` is
+valid there; `{base}`/`{diff_range}`/`{focus}` apply to `unit_review`/`plan_review`.
+
+**Boundaries (load-bearing).** (a) The renderer still only *records* commands; the exit-0
+ExitPlanMode hook never runs shell — all execution stays in the resume/agent layer. (b)
+Review steps stay **global-config-only** (the project-override allow-list excludes the review
+arrays), so a cloned repo's `.planview.json` can't make the agent run arbitrary shell — the
+security boundary that makes `exec` safe.
+
+**Still not forking codex** (the #6 dispositive argument holds): `exec` bypasses the codex
+*plugin* by calling a generic `codex exec` template via Bash — escape hatch (a) that #6
+itself named — not by patching the plugin's `disable-model-invocation`. planview stays
+installable alongside the stock official codex plugin, and `print`/operator-run remains the
+default for the heavyweight codex review.
+
+Realized by plan `260608-0-tool-agnostic-review-command-templates-with-opt-in-exec`.

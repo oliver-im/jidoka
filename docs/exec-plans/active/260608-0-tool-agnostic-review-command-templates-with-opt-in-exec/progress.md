@@ -1,6 +1,6 @@
 # 260608-0-tool-agnostic-review-command-templates-with-opt-in-exec — Progress
 
-**Cursor:** 01-pin-the-design-in-review-pipeline-md (not started).
+**Cursor:** 02-generalize-reviewcommandschema-schema-config (not started).
 
 ## Pre-execution review
 
@@ -18,7 +18,7 @@ This plan is worked in its own git worktree, one branch per unit. Full steps: `d
 
 ## Done
 
-_Nothing yet._
+- **01 — Pin the design in review-pipeline.md** — appended the superseding decision block to `docs/design-docs/review-pipeline.md` (supersedes #6, refines #5; the 4 decisions + two-mechanism invocation model + stage-scoped placeholders + boundaries), and marked #5/#6 with superseded/refined pointers. Design-only, no code. Unit review `/code-review`: (none).
 
 ## Blockers
 
