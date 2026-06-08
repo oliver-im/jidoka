@@ -80,9 +80,11 @@ planview reads a layered config: built-in defaults < `~/.claude/plugins/planview
 | `html_output` | `false` | ✓ | Render `overview.html` alongside the markdown files. |
 | `plan_level_topology` | `false` | — | Reserved for v2; currently always false. |
 | `git_workflow` | `false` | ✓ | Opt into the worktree-per-plan / branch-per-unit workflow. When on, planview renders a `## Git workflow` reminder into each `progress.md`. Shipped off (OSS opt-in); a committed `.planview.json` can turn it on for a whole repo. |
-| `pre_review` | `["/planview:pre-plan-review"]` | — | Slash commands to run **before** Unit 01, against the freshly materialized plan dir. Rendered as `## Pre-execution review` in `progress.md`. Reviews the plan *as a plan* — no diff exists yet. |
-| `unit_review` | `["/code-review"]` | — | Slash commands to run after each Unit lands, on the unit's local working-tree diff. The built-in **`/code-review`** (correctness bugs + reuse/simplification/efficiency cleanups) — **not** `/code-review:code-review`, which is the code-review *plugin* and reviews a GitHub PR. No `--fix` (findings are triaged against plan context, not auto-applied). Rendered as a checklist in the Unit md. |
-| `plan_review` | `[]` | — | Slash commands to run after the last Unit's review and commit, against the cumulative committed diff. Opt-in; the recommended form is `/codex:adversarial-review --base <branch>` (see below). Rendered as `## Plan-level review` in `progress.md`. |
+| `pre_review` | `["/planview:pre-plan-review"]` | — | Review steps to run **before** Unit 01, against the freshly materialized plan dir. The resuming agent auto-runs them on the first session, then stops. Rendered as `## Pre-execution review` in `progress.md`. Reviews the plan *as a plan* — no diff exists yet. |
+| `unit_review` | `["/code-review"]` | — | Review steps to run after each Unit lands, on the unit's local working-tree diff. The built-in **`/code-review`** (correctness bugs + reuse/simplification/efficiency cleanups) — **not** `/code-review:code-review`, which is the code-review *plugin* and reviews a GitHub PR. No `--fix` (findings are triaged against plan context, not auto-applied). Rendered as a checklist in the Unit md. |
+| `plan_review` | `[]` | — | Review steps to run after the last Unit's review and commit, against the cumulative committed diff. Opt-in; the recommended vehicle is the `/planview:plan-review-prompt` composer driving a `codex exec` template or `/codex:adversarial-review` (see below). Rendered as `## Plan-level review` in `progress.md`. |
+
+Each entry in the three review arrays is a **review step**: a slash command (`/code-review`, `/codex:adversarial-review`) **or** a `{ run, mode }` bash template for any tool — `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }`. `mode` is `print` (default — surface the command for you to run) or `exec` (the resuming agent runs it via Bash). Templates may use the placeholders `{plan_dir}`/`{base}`/`{diff_range}`/`{focus}`. Review steps are **global-config-only** (not settable in a per-repo `.planview.json`) — the security boundary that makes `exec` safe.
 
 Defaults assume "files-on-disk is the value, the browser is opt-in" — most users view plan dirs in their editor (Obsidian, VS Code, iA Writer). Flip `auto_open_browser=true` and/or `html_output=true` if you want the rendered HTML view too.
 
@@ -92,39 +94,45 @@ Tell Claude Code "**set up planview**" to invoke the `planview:setup` skill — 
 
 ### Editing review commands
 
-After first-time setup, hand-edit `~/.claude/plugins/planview/config.json` directly — `pre_review`, `unit_review`, and `plan_review` are just lists of slash commands. Schema reference: [`docs/data-model.md`](docs/data-model.md#review-commands).
+After first-time setup, hand-edit `~/.claude/plugins/planview/config.json` directly — `pre_review`, `unit_review`, and `plan_review` are lists of review steps (slash commands or `{ run, mode }` templates). Schema reference: [`docs/data-model.md`](docs/data-model.md#review-commands).
 
 The three stages, in execution order on a fresh plan:
 
-1. **Pre-execution** (`pre_review`) — runs after the plan dir materializes, before Unit 01 starts. Reviews the plan *as a plan* (no diff yet). Default `["/planview:pre-plan-review"]` — the bundled adversarial planning reviewer.
+1. **Pre-execution** (`pre_review`) — the resuming agent auto-runs it on the first session, surfaces findings, then stops before Unit 01 (surface, don't auto-revise). Reviews the plan *as a plan* (no diff yet). Default `["/planview:pre-plan-review"]` — the bundled, agent-invocable adversarial planning reviewer.
 2. **Per-unit** (`unit_review`) — runs after each unit's diff lands, before committing. Default `["/code-review"]` — the built-in local-diff reviewer (bugs + cleanups). It's a *local correctness gate*: findings are candidates to triage against plan context (so no `--fix`, which would blindly "fix" intentional mid-plan forward-references). `/code-review` takes no focus argument — put per-unit review focus in the unit body prose. Add `/simplify` for a dedicated cleanup-only pass (it does **not** hunt bugs).
-3. **Plan-level** (`plan_review`) — runs after the last unit is reviewed and committed, against the cumulative committed diff. The *completeness net* for cross-unit issues the per-unit gate can't see. Default `[]` (opt-in). Recommended: **`/planview:plan-review-prompt`** — a bundled skill the resuming agent runs that reads the plan + cumulative diff and **composes a focused, ready-to-run `/codex:adversarial-review --base <branch>` command** for you to execute. The composer earns its keep because the agent that just executed the plan has the sharpest context for aiming a hostile review (cross-unit seams, deferred forward-references that should now be wired up) — and codex review is **operator-run** (it sets `disable-model-invocation`, so the agent can't invoke it; it hands you the command). codex needs `/codex:setup` + `codex login` first. Manual alternatives if you skip the composer: `/codex:adversarial-review --base <branch>` directly, or `/code-review <branch>` (no codex).
+3. **Plan-level** (`plan_review`) — runs after the last unit is reviewed and committed, against the cumulative committed diff. The *completeness net* for cross-unit issues the per-unit gate can't see. Default `[]` (opt-in). The resuming agent runs the bundled **`/planview:plan-review-prompt`** composer — it reads the plan + cumulative diff, aims a hostile cross-unit focus (seams, deferred forward-references that should now be wired up), and **drives whatever vehicle you configure**, tool-agnostically. Configure `plan_review` as either a `{ run, mode }` template (e.g. `codex exec` — planview injects its **own** plan-level review prompt, codex just supplies the model; `print` hands you the command, `exec` runs it via Bash) or the slash form `/codex:adversarial-review` (operator-run — it sets `disable-model-invocation`, so the composer hands you the command). The composer earns its keep because the agent that just executed the plan has the sharpest context for the aiming. codex needs `/codex:setup` + `codex login` first.
 
 The file is parsed as **JSONC** — `//` and `/* */` comments are stripped before parsing. The setup skill writes an annotated template by default, so the in-file comments are the primary "what does this key do" reference; the README is for examples and schema depth.
 
 The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe: a malformed config surfaces a deny payload the next time you exit plan mode, with the parse / schema error inline.
 
-Example — keeping the pre-execution default, running the built-in `/code-review` plus a `/simplify` cleanup pass after each unit, and the `plan-review-prompt` composer at plan-close (which preps the hostile codex pass):
+Example A — slash commands throughout: the pre-execution default, `/code-review` + a `/simplify` cleanup pass after each unit, and codex's adversarial review at plan-close. codex is **operator-run** (`disable-model-invocation`), so the `/planview:plan-review-prompt` composer aims it and hands you the ready-to-run command:
 
 ```jsonc
 {
-  "pre_review": [
-    "/planview:pre-plan-review"
-  ],
-  "unit_review": [
-    "/code-review",
-    "/simplify"
-  ],
+  "pre_review": ["/planview:pre-plan-review"],
+  "unit_review": ["/code-review", "/simplify"],
+  "plan_review": ["/codex:adversarial-review"]
+}
+```
+
+Example B — drive plan-level review **fully agent-run** with a tool-agnostic `codex exec` template in `exec` mode. The composer fills `{focus}` with planview's own plan-level review prompt + the cross-unit targets, runs it via Bash, and relays the findings — no operator step:
+
+```jsonc
+{
+  "pre_review": ["/planview:pre-plan-review"],
+  "unit_review": ["/code-review"],
   "plan_review": [
-    "/planview:plan-review-prompt"
+    { "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "exec" }
   ]
 }
 ```
 
-Each entry is a Claude Code slash command rendered verbatim into a Unit md checkbox (`unit_review`) or into `progress.md` (`pre_review` and `plan_review`). Two things to keep in mind:
+Each entry is a review step — a slash command or a `{ run, mode }` template — rendered verbatim into a Unit md checkbox (`unit_review`) or into `progress.md` (`pre_review` and `plan_review`); templates also show a `print`/`exec` mode badge. Things to keep in mind:
 
 - **Namespace trap:** the built-in `/code-review` reviews a **local diff**; `/code-review:code-review` is a *separate plugin* that reviews a **GitHub PR**. For pre-commit unit gates you want the built-in.
-- **codex review is operator-run:** `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation`, so a resuming agent can't invoke them. That's why the recommended `plan_review` is the `/planview:plan-review-prompt` composer (which the agent *can* run) — it hands you a ready codex command to run yourself. codex needs `/codex:setup` + `codex login` first. Don't also enable codex's own `--enable-review-gate` (Stop hook) if planview already drives plan-level review, or you double-gate.
+- **print vs exec:** a template's `mode` decides who runs it — `print` (default) surfaces the command for you; `exec` has the resuming agent run it via Bash. For a slash command, the target skill's `disable-model-invocation` decides (codex's review commands set it → operator-run). The `exec`/Bash route is legitimate because that flag blocks only the SlashCommand tool, not Bash.
+- **codex review is operator-run (as a slash command):** `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation`, so a resuming agent can't invoke them via SlashCommand — the `/planview:plan-review-prompt` composer hands you a ready command. To have the agent drive codex instead, configure it as a `{ run: "… codex exec …", mode: "exec" }` template (Bash, not SlashCommand). codex needs `/codex:setup` + `codex login` first. Don't also enable codex's own `--enable-review-gate` (Stop hook) if planview already drives plan-level review, or you double-gate.
 
 ## Documentation
 

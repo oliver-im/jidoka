@@ -57,11 +57,11 @@ interface Plan {
   slug: string;                    // kebab-case, ≤ 60 chars, ^[a-z0-9-]+$
   units: Unit[];                   // 1-N units, sequential by default
   // Materializer-attached at materialize time from `config.pre_review`;
-  // never present on parsed input.
-  pre_review?: string[];
+  // never present on parsed input. `ReviewStep` defined under Review commands.
+  pre_review?: ReviewStep[];
   // Materializer-attached at materialize time from `config.plan_review`;
   // never present on parsed input.
-  plan_review?: string[];
+  plan_review?: ReviewStep[];
   // Materializer-attached at materialize time from `config.git_workflow`;
   // gates the `## Git workflow` block in progress.md. Never on parsed input.
   git_workflow?: boolean;
@@ -77,7 +77,7 @@ interface Unit {
   topology?: Topology;             // optional multi-agent dispatch shape
   // Materializer-attached at materialize time from `config.unit_review`;
   // never present on parsed input.
-  review?: string[];
+  review?: ReviewStep[];
 }
 ```
 
@@ -103,7 +103,7 @@ interface Unit {
 }
 ```
 
-Review pipelines aren't part of the wire format — the parser doesn't accept them and the skill doesn't produce them. They come from the user's config (`~/.claude/plugins/planview/config.json`) and are attached to the in-memory plan at materialize time. See [Review pipelines](#review-pipelines) below.
+Review pipelines aren't part of the wire format — the parser doesn't accept them and the skill doesn't produce them. They come from the user's config (`~/.claude/plugins/planview/config.json`) and are attached to the in-memory plan at materialize time. See [Review commands](#review-commands) below.
 
 ### Plan Field Semantics
 
@@ -119,7 +119,7 @@ Review pipelines aren't part of the wire format — the parser doesn't accept th
 | `agents_involved` | `string[]?` | Optional labels for the unit metadata block. Omit for "main only". |
 | `body_markdown` | `string` | The full body of the unit, embedded verbatim into `<id>.md` and re-rendered client-side for the HTML card. Typically `## Tasks`, `## Acceptance`, etc. |
 | `topology` | `Topology?` | Optional. When set, validated with the standard topology rules and rendered as a per-unit Mermaid block. |
-| `review` | `string[]?` | Materializer-attached. A copy of `unit_review` from the user's config — each entry is a slash command rendered verbatim as a Unit-md checkbox and an HTML list item. |
+| `review` | `ReviewStep[]?` | Materializer-attached. A copy of `unit_review` from the user's config — each entry is a slash command or a `{ run, mode }` template, rendered verbatim as a Unit-md checkbox (templates show their `run` + a `print`/`exec` mode badge) and an HTML list item. |
 
 ## Topology Data Model (per-unit, optional)
 
@@ -239,27 +239,39 @@ Review commands come from the user's config at `~/.claude/plugins/planview/confi
 ### Config shape
 
 ```typescript
+type ReviewStepMode = "print" | "exec";
+type ReviewStep =
+  | string                                   // a slash command, e.g. "/code-review"
+  | { run: string; mode?: ReviewStepMode };  // a bash template; mode defaults "print"
+
 interface Config {
   // ...other scalar keys...
-  pre_review: string[];    // runs after materialize, before Unit 01
-  unit_review: string[];   // runs after each Unit lands
-  plan_review: string[];   // runs after the last Unit's review
+  pre_review: ReviewStep[];    // runs after materialize, before Unit 01
+  unit_review: ReviewStep[];   // runs after each Unit lands
+  plan_review: ReviewStep[];   // runs after the last Unit's review
 }
 ```
 
-Each entry is a Claude Code slash command (must start with `/`) — built-in (`/code-review`, `/simplify`) or plugin-namespaced (`/codex:adversarial-review`), and may carry arguments (`/codex:adversarial-review --base main`). No name lookup, no `{op}` substitution, no bash escape hatch. A user who wants a non-slash workflow runs it manually from the unit body.
+Each entry is a **review step** in one of two forms:
+
+- a **slash command** string (must start with `/`) — built-in (`/code-review`, `/simplify`) or plugin-namespaced (`/codex:adversarial-review`), optionally with arguments (`/codex:adversarial-review --base main`).
+- a **`{ run, mode }` bash template** — a tool-agnostic command so the pipeline isn't tied to slash commands or any one tool (`codex exec`, cursor-agent's `agent -p`, `gemini`, …). `run` may contain the placeholders `{plan_dir}`, `{base}`, `{diff_range}`, `{focus}` (see *Command semantics & invocation*); `mode` is `"print"` (default) or `"exec"`.
+
+Object form (not a prefix-tagged string) because a bash template can legitimately start with `/` (absolute paths), so a prefix would be ambiguous; an object is unambiguous and extensible.
 
 ### Review stages
 
 | Stage | Config key | Renders into | Default | When it runs |
 |---|---|---|---|---|
-| Pre-execution | `pre_review` | `progress.md` (`## Pre-execution review`, above Done) | `["/planview:pre-plan-review"]` | After the plan dir is materialized, before the operator starts Unit 01. Reviews the plan *as a plan* — no diff exists yet. |
+| Pre-execution | `pre_review` | `progress.md` (`## Pre-execution review`, above Done) | `["/planview:pre-plan-review"]` | On the first session, before Unit 01 — the resuming agent auto-runs it against the freshly materialized plan dir, surfaces findings, then stops. Reviews the plan *as a plan* — no diff exists yet. |
 | Per-unit | `unit_review` | Each `<id>.md` (`## Review pipeline`) | `["/code-review"]` | After the unit's diff lands and before it's committed. Local correctness gate on the unit's working-tree diff. |
 | Plan-level | `plan_review` | `progress.md` (`## Plan-level review`, below Notes) | `[]` | After the last unit's review lands and is committed. Adversarial pass against the cumulative *committed* plan diff — the completeness net for cross-unit issues. |
 
 ### Validation
 
-The materializer denies the ExitPlanMode hook (or fails the `materialize` CLI) when an entry isn't a non-empty string starting with `/`. Otherwise every entry is rendered verbatim.
+The materializer denies the ExitPlanMode hook (or fails the `materialize` CLI) when an entry is neither a non-empty string starting with `/` nor a `{ run, mode }` template (`run` a non-empty string; `mode` one of `print`/`exec`, defaulting to `print`; no unknown keys). Otherwise every entry is rendered verbatim — the renderer never substitutes placeholders or runs anything.
+
+Review steps are **global-config-only**: the per-repo `.planview.json` override allow-list excludes `pre_review`/`unit_review`/`plan_review`, so a cloned repo's committed config can never make a resuming agent run arbitrary shell. This is the security boundary that makes `exec` (below) safe.
 
 ### Command semantics & invocation
 
@@ -270,8 +282,10 @@ planview renders commands verbatim; it does not run them. These properties of th
 - **No focus argument.** `/code-review` (and `/codex:review`) take no free-text focus. Per-unit review focus belongs in the **unit body prose**, where the triager reads it. `/codex:adversarial-review` is the exception — it accepts free-form focus text, useful for aiming the plan-level pass at cross-unit consistency.
 - **`/simplify` is cleanup-only.** It applies reuse/simplification/efficiency/altitude fixes and does **not** hunt bugs — a complement to `/code-review`, not a substitute.
 - **Plan-level diff is committed.** By plan-end every unit is committed, so the cumulative diff lives between the base branch and HEAD. A bare working-tree review sees nothing; pass a base ref: `/codex:adversarial-review --base <branch>` (reviews `merge-base..HEAD`) or `/code-review <branch>`.
-- **codex commands are operator-run.** `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation: true`, so a resuming agent cannot invoke them via the SlashCommand tool — they're surfaced for the human to run. They require `/codex:setup` + `codex login` (they fail loudly otherwise). If planview drives plan-level review, leave codex's own Stop-time `--enable-review-gate` off to avoid double-gating.
-- **`/planview:plan-review-prompt` is the recommended `plan_review` vehicle.** Because codex review is operator-run, the recommended plan-level entry is this bundled skill (which *is* agent-invocable): the resuming agent runs it, it reads the plan + cumulative diff and **composes** a focused, ready-to-run `/codex:adversarial-review --base <branch>` command, and the operator runs that. The agent does the aiming (cross-unit seams, deferred forward-references that should now be wired up); the human pulls the trigger. It does not perform the review itself.
+- **Two-mechanism invocation (operator-run vs agent-run spans all three stages).** Whether a resuming agent runs a step or hands it to the operator is decided two ways. For a **template**, the step's own `mode`: `print` (default) surfaces the ready-to-run command and stops for the operator; `exec` has the agent run it via the **Bash** tool and relay the findings. For a **slash command**, the target skill's `disable-model-invocation` — codex's review commands set it, so they're operator-run (the agent can't invoke them via the SlashCommand tool). The `exec`/Bash route is legitimate precisely because `disable-model-invocation` blocks only `SlashCommand`, not Bash. The default is **print**/operator-run, preserving the human checkpoint for expensive/external review; opt a step into `exec` deliberately.
+- **Placeholders are stage-scoped, substituted by the resume/agent layer (never the renderer).** A template `run` may reference `{plan_dir}` (the materialized plan dir), `{base}` (the branch the plan forked from), `{diff_range}` (`merge-base(<base>,HEAD)..HEAD`), and `{focus}` (a composed review focus). The renderer records them verbatim — there's no diff at materialize time. The resuming agent substitutes them before running; the `/planview:plan-review-prompt` composer fills `{focus}` (and the rest) for plan-level review. `pre_review` runs before any unit, so only `{plan_dir}` is meaningful there.
+- **codex commands are operator-run.** `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation: true`, so a resuming agent cannot invoke them via the SlashCommand tool — they're surfaced for the human to run. They require `/codex:setup` + `codex login` (they fail loudly otherwise). If planview drives plan-level review, leave codex's own Stop-time `--enable-review-gate` off to avoid double-gating. (Running codex as a `{ run: "… codex exec …", mode }` **template** is the agent-run alternative — Bash, not SlashCommand — when you want the agent to drive it.)
+- **`/planview:plan-review-prompt` drives the configured `plan_review` vehicle (tool-agnostic).** The resuming agent runs this bundled composer (it is agent-invocable); it reads the plan + cumulative diff, composes a cross-unit focus (seams, deferred forward-references that should now be wired up), and drives whatever `plan_review` configures: a `{ run, mode }` template for a generic tool — into which planview injects its **own** plan-level review prompt, then `print` (surface the command) or `exec` (run via Bash) — or a slash command like `/codex:adversarial-review`, into which it composes the focus for the operator. codex is one vehicle, not hardcoded; the agent does the aiming, the configured mode decides who runs it.
 
 ### Terminology
 
@@ -282,6 +296,6 @@ planview renders commands verbatim; it does not run them. These properties of th
 | Topology | Per-unit (optional) multi-agent dispatch shape. Rendered as a Mermaid block inside the unit's md and HTML card. |
 | Phase | A wave of work derived from `blocked_by` dependencies inside a topology. In subagents mode, the main agent dispatches each phase explicitly. |
 | Step (topology) | Numbered items in the topology overview. The dependency-derived order within a phase. Parallel agents share a step with letter suffixes (2a, 2b). |
-| Review command | A Claude Code plugin slash command listed in `pre_review`, `unit_review`, or `plan_review`. Rendered verbatim as a checkbox in the materialized plan. |
-| Pre-execution review | The `progress.md` section rendered from `pre_review`, between the cursor line and Done. Runs on the first session before Unit 01 starts; reviews the plan as a plan. |
+| Review step | An entry in `pre_review`, `unit_review`, or `plan_review`: a Claude Code slash command **or** a `{ run, mode }` bash template. Rendered verbatim as a checkbox in the materialized plan (templates carry a `print`/`exec` mode badge). |
+| Pre-execution review | The `progress.md` section rendered from `pre_review`, between the cursor line and Done. The resuming agent auto-runs it on the first session and stops before Unit 01; reviews the plan as a plan. |
 | Plan-level review | The `progress.md` section rendered from `plan_review`. Surfaces after every Unit is reviewed and committed; the resume protocol stops here and asks the user before archiving. |
