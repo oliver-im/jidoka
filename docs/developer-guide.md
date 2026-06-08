@@ -366,6 +366,9 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 | `html_output` | bool | `false` | yes | Write `overview.html` alongside the markdown. When false, only the `.md` files are produced. |
 | `plan_level_topology` | bool | `false` | no | Reserved for v2; currently always false. |
 | `git_workflow` | bool | `false` | yes | When on, renders a `## Git workflow` block (the worktree-per-plan / branch-per-unit reminder) into `progress.md`. Shipped off — OSS opt-in; a committed `.planview.json` opts a repo in. |
+| `pre_review` | `ReviewStep[]` | `["/planview:pre-plan-review"]` | **no** | Pre-execution review steps. Each is a slash command or a `{ run, mode }` template (`ReviewStep`; see [data-model.md](data-model.md#review-commands)). Project-override **excluded** — global-config-only, the boundary that makes `exec` safe (a cloned repo's `.planview.json` can't inject shell). |
+| `unit_review` | `ReviewStep[]` | `["/code-review"]` | **no** | Per-unit review steps, same `ReviewStep` shape and global-only boundary. |
+| `plan_review` | `ReviewStep[]` | `[]` | **no** | Plan-level review steps (opt-in), same `ReviewStep` shape and global-only boundary. |
 
 ### Loader behavior
 
@@ -382,7 +385,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 
 One skill fronts the config UX (runs outside the planning fork so `AskUserQuestion` works):
 
-- `planview:setup` — first-run Q&A walkthrough that writes the global file. Triggered by phrases like "set up planview". Handles only the scalar knobs; `unit_review` and `plan_review` are hand-edited in the JSON afterward (see README → Editing review commands). The hook re-validates on next plan-mode use, so no separate validator is needed.
+- `planview:setup` — first-run Q&A walkthrough that writes the global file. Triggered by phrases like "set up planview". Handles only the scalar knobs; the review steps (`pre_review`, `unit_review`, `plan_review` — each a slash command or `{ run, mode }` template) are written at their defaults and hand-edited in the JSON afterward (see README → Editing review commands). The hook re-validates on next plan-mode use, so no separate validator is needed.
 
 ## Plugin Manifest
 

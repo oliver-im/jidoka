@@ -134,10 +134,132 @@ describe("buildProgressMd", () => {
     };
     const md = buildProgressMd(plan, "260505-0-x");
     expect(md).toContain("## Pre-execution review");
-    expect(md).toContain(
-      "Before starting the first unit, run these",
-    );
+    expect(md).toContain("before starting Unit 01");
+    expect(md).toContain("does not roll straight into Unit 01");
     expect(md).toContain("- [ ] `/planview:pre-plan-review`");
+  });
+
+  // codex plan-level review [HIGH]: a print-mode pre_review template must not be
+  // framed as agent-run — the section must route by mode, not say "the agent runs
+  // the step(s) below" (which would auto-run a print step, bypassing the human gate).
+  it("routes a print-mode pre_review step to surface-and-stop, not agent-run", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      pre_review: [{ run: "codex exec {plan_dir}", mode: "print" }],
+    };
+    const md = buildProgressMd(plan, "260505-0-x");
+    expect(md).toContain("Follow each step's routing");
+    expect(md).toContain("surface the command and stop");
+    expect(md).toContain("- [ ] `codex exec {plan_dir}` — **print**");
+    // Must NOT unconditionally claim the agent runs every step.
+    expect(md).not.toContain("runs the step(s) below");
+  });
+
+  // codex plan-level review [MED]: the plan-level block must point at the composer
+  // (which injects planview's own prompt), not tell the agent to run the vehicle
+  // template directly (which would skip the prompt injection).
+  it("frames plan-level review as the composer driving the vehicle, not direct execution", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      plan_review: [{ run: "codex exec {diff_range}", mode: "print" }],
+    };
+    const md = buildProgressMd(plan, "260505-0-x");
+    expect(md).toContain("## Plan-level review");
+    expect(md).toContain("/planview:plan-review-prompt");
+    expect(md).toContain("injects planview's own plan-level");
+    expect(md).toContain("don't run the vehicle(s) below directly");
+    // The vehicle still renders as a checklist entry the composer will drive.
+    expect(md).toContain("- [ ] `codex exec {diff_range}` — **print**");
+  });
+
+  it("renders template review steps with a print/exec mode badge", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      pre_review: [{ run: "echo plan {plan_dir}", mode: "print" }],
+      plan_review: [{ run: "codex exec --base {base} {diff_range}", mode: "exec" }],
+    };
+    const md = buildProgressMd(plan, "260505-0-x");
+    // print template: run text verbatim (placeholder intact) + print badge.
+    expect(md).toContain("- [ ] `echo plan {plan_dir}` — **print**");
+    expect(md).toContain("surface this command and stop for the operator");
+    // exec template: run text verbatim + exec badge.
+    expect(md).toContain(
+      "- [ ] `codex exec --base {base} {diff_range}` — **exec**",
+    );
+    expect(md).toContain("the resuming agent runs this via the Bash tool");
+    // a templated step with placeholders carries the substitution note.
+    expect(md).toContain("the **resuming agent** substitutes their placeholders");
+  });
+
+  it("renders a unit template review step with its mode badge", () => {
+    const u: Unit = {
+      ...minimalUnit("01-x"),
+      review: [{ run: "agent -p --mode ask {focus}", mode: "exec" }],
+    };
+    const md = buildUnitMd(u);
+    expect(md).toContain(
+      "- [ ] `agent -p --mode ask {focus}` — **exec**",
+    );
+  });
+
+  it("omits the substitution note for a template with no placeholders (exec)", () => {
+    const u: Unit = {
+      ...minimalUnit("01-x"),
+      review: [{ run: "codex exec review", mode: "exec" }],
+    };
+    const md = buildUnitMd(u);
+    expect(md).toContain("- [ ] `codex exec review` — **exec**");
+    expect(md).not.toContain("substitutes their placeholders");
+  });
+
+  it("omits the substitution note for a template with no placeholders (print)", () => {
+    const u: Unit = {
+      ...minimalUnit("01-x"),
+      review: [{ run: "codex exec review", mode: "print" }],
+    };
+    const md = buildUnitMd(u);
+    expect(md).toContain("- [ ] `codex exec review` — **print**");
+    expect(md).not.toContain("substitutes their placeholders");
+  });
+
+  it("does not mistake literal command braces for a pending placeholder", () => {
+    const u: Unit = {
+      ...minimalUnit("01-x"),
+      review: [{ run: "git log | awk '{print $1}'", mode: "exec" }],
+    };
+    const md = buildUnitMd(u);
+    // `{print $1}` is not one of the known stage-scoped placeholders.
+    expect(md).not.toContain("substitutes their placeholders");
+  });
+
+  it("keeps the code span well-formed when a template run contains a backtick", () => {
+    const u: Unit = {
+      ...minimalUnit("01-x"),
+      review: [{ run: "codex exec --base `git mb`", mode: "exec" }],
+    };
+    const md = buildUnitMd(u);
+    // GFM escapes a literal backtick by widening the fence to `` and padding.
+    expect(md).toContain("`` codex exec --base `git mb` ``");
+  });
+
+  it("escapes a pipe in a template run so the overview table stays 4-column", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [
+        { ...minimalUnit("01-x"), review: [{ run: "cmd | grep x", mode: "exec" }] },
+      ],
+    };
+    const md = buildOverviewMd(plan, "260505-0-x");
+    expect(md).toContain("cmd \\| grep x");
+    // No raw unescaped pipe from the run leaks into the cell.
+    expect(md).not.toContain("| cmd | grep x |");
   });
 
   it("orders Pre-execution review before Plan-level review", () => {

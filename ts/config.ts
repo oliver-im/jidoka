@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import stripJsonComments from "strip-json-comments";
 import { z } from "zod";
-import { reviewCommandSchema } from "./types.js";
+import { reviewStepSchema, type ReviewStep } from "./types.js";
 
 export interface Config {
   plan_dir_root: string;
@@ -11,9 +11,11 @@ export interface Config {
   html_output: boolean;
   plan_level_topology: boolean;
   git_workflow: boolean;
-  pre_review: string[];
-  unit_review: string[];
-  plan_review: string[];
+  // Review steps per stage. Each entry is a slash command (e.g. "/code-review")
+  // or a tool-agnostic bash template `{ run, mode }` — see `reviewStepSchema`.
+  pre_review: ReviewStep[];
+  unit_review: ReviewStep[];
+  plan_review: ReviewStep[];
 }
 
 export const defaultConfig: Config = {
@@ -33,9 +35,9 @@ const configSchema = z.object({
   html_output: z.boolean().default(defaultConfig.html_output),
   plan_level_topology: z.boolean().default(defaultConfig.plan_level_topology),
   git_workflow: z.boolean().default(defaultConfig.git_workflow),
-  pre_review: z.array(reviewCommandSchema).default(defaultConfig.pre_review),
-  unit_review: z.array(reviewCommandSchema).default(defaultConfig.unit_review),
-  plan_review: z.array(reviewCommandSchema).default(defaultConfig.plan_review),
+  pre_review: z.array(reviewStepSchema).default(defaultConfig.pre_review),
+  unit_review: z.array(reviewStepSchema).default(defaultConfig.unit_review),
+  plan_review: z.array(reviewStepSchema).default(defaultConfig.plan_review),
 });
 
 export function globalConfigPath(): string | undefined {

@@ -8,6 +8,7 @@ import {
   mergeForWrite,
   validateProjectPlanDirRoot,
 } from "../config.js";
+import { reviewStepLabel, reviewStepSchema } from "../types.js";
 
 let counter = 0;
 function makeTempDir(label: string): string {
@@ -220,7 +221,9 @@ describe("loadFromPaths", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("falls back to defaults when a review entry isn't a slash command", () => {
+  it("falls back to defaults when a review entry is a bare non-slash string", () => {
+    // A bare string that is neither a "/" slash command nor a { run, mode }
+    // template object is rejected by the union, so the whole config falls back.
     const dir = makeTempDir("bad-review");
     const path = join(dir, "config.json");
     writeFileSync(path, JSON.stringify({ unit_review: ["not-a-slash"] }));
@@ -309,5 +312,150 @@ describe("mergeForWrite", () => {
     expect(merged.unit_review).toEqual(["/new:command"]);
     expect(merged.plan_review).toEqual([]);
     expect(merged.pre_review).toEqual(["/new:pre-command"]);
+  });
+
+  it("round-trips hand-written object-form review steps (load → mergeForWrite)", () => {
+    const dir = makeTempDir("roundtrip-template");
+    const path = join(dir, "config.json");
+    // A user hand-edits the global config to add a { run, mode } template
+    // alongside a slash command, plus a bare template (no mode).
+    writeFileSync(
+      path,
+      `{
+        "unit_review": [
+          { "run": "codex exec review {focus}", "mode": "exec" },
+          "/code-review"
+        ],
+        "plan_review": [
+          { "run": "git diff {diff_range} | codex exec \\"{focus}\\"" }
+        ]
+      }`,
+    );
+    // Load validates the union and defaults the bare template's mode to print.
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.unit_review).toEqual([
+      { run: "codex exec review {focus}", mode: "exec" },
+      "/code-review",
+    ]);
+    expect(cfg.plan_review).toEqual([
+      { run: 'git diff {diff_range} | codex exec "{focus}"', mode: "print" },
+    ]);
+    // A setup rewrite must carry the object form back out — not flatten it to a
+    // label, drop the mode, or lose the slash/template mix.
+    const merged = mergeForWrite({ unit_review: ["/stale"] }, cfg);
+    expect(merged.unit_review).toEqual(cfg.unit_review);
+    expect(merged.plan_review).toEqual(cfg.plan_review);
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("reviewStepSchema", () => {
+  it("accepts a slash command unchanged", () => {
+    const r = reviewStepSchema.safeParse("/code-review");
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data).toBe("/code-review");
+  });
+
+  it("accepts a template object and defaults mode to print", () => {
+    const r = reviewStepSchema.safeParse({ run: "codex exec {plan_dir}" });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data).toEqual({ run: "codex exec {plan_dir}", mode: "print" });
+    }
+  });
+
+  it("accepts an explicit exec mode", () => {
+    const r = reviewStepSchema.safeParse({ run: "codex exec x", mode: "exec" });
+    expect(r.success).toBe(true);
+    if (r.success && typeof r.data !== "string") {
+      expect(r.data.mode).toBe("exec");
+    }
+  });
+
+  it("rejects a bare (non-slash) string", () => {
+    expect(reviewStepSchema.safeParse("not-a-slash").success).toBe(false);
+  });
+
+  it("rejects an empty template run", () => {
+    expect(reviewStepSchema.safeParse({ run: "" }).success).toBe(false);
+  });
+
+  it("rejects an unknown mode", () => {
+    expect(reviewStepSchema.safeParse({ run: "x", mode: "auto" }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects unknown keys on a template (strict)", () => {
+    expect(
+      reviewStepSchema.safeParse({ run: "x", focus: "races" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("reviewStepLabel", () => {
+  it("labels a slash command as itself", () => {
+    expect(reviewStepLabel("/code-review")).toBe("/code-review");
+  });
+  it("labels a template as its run text", () => {
+    expect(reviewStepLabel({ run: "codex exec x", mode: "exec" })).toBe(
+      "codex exec x",
+    );
+  });
+});
+
+describe("loadFromPaths — template review steps", () => {
+  it("loads a template step with explicit mode", () => {
+    const dir = makeTempDir("tmpl");
+    const path = join(dir, "config.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        plan_review: [{ run: "codex exec {diff_range}", mode: "exec" }],
+      }),
+    );
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.plan_review).toEqual([
+      { run: "codex exec {diff_range}", mode: "exec" },
+    ]);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("defaults a template step's mode to print", () => {
+    const dir = makeTempDir("tmpl-default");
+    const path = join(dir, "config.json");
+    writeFileSync(path, JSON.stringify({ plan_review: [{ run: "codex exec x" }] }));
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.plan_review).toEqual([{ run: "codex exec x", mode: "print" }]);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("accepts a mix of slash commands and templates in one stage", () => {
+    const dir = makeTempDir("mixed");
+    const path = join(dir, "config.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        pre_review: [
+          "/planview:pre-plan-review",
+          { run: "agent -p --mode ask {plan_dir}", mode: "exec" },
+        ],
+      }),
+    );
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.pre_review).toEqual([
+      "/planview:pre-plan-review",
+      { run: "agent -p --mode ask {plan_dir}", mode: "exec" },
+    ]);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("falls back to defaults on a malformed template (empty run)", () => {
+    const dir = makeTempDir("bad-tmpl");
+    const path = join(dir, "config.json");
+    writeFileSync(path, JSON.stringify({ unit_review: [{ run: "", mode: "exec" }] }));
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg).toEqual(defaultConfig);
+    rmSync(dir, { recursive: true, force: true });
   });
 });

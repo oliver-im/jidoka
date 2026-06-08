@@ -279,6 +279,20 @@ describe("renderPlanHtml", () => {
     expect(html).toContain("<h3>Review pipeline</h3>");
   });
 
+  it("renders a template-form review step as its run text in HTML", () => {
+    const plan = loadPlan("valid_plan_sequential.json");
+    plan.units[0]!.review = [
+      { run: "codex exec {diff_range}", mode: "exec" },
+      "/code-review",
+    ];
+    const html = renderPlanHtml(plan, "260505-0-sequential-refactor");
+    // The HTML card shows the template's `run` text (via reviewStepLabel),
+    // not a serialized object, alongside the slash command.
+    expect(html).toContain("<code>codex exec {diff_range}</code>");
+    expect(html).toContain("<code>/code-review</code>");
+    expect(html).not.toContain("[object Object]");
+  });
+
   it("escapes dangerous unit titles", () => {
     const plan = loadPlan("valid_plan_minimal.json");
     plan.units[0]!.title = "<script>alert(1)</script>";

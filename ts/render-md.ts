@@ -2,7 +2,8 @@ import { Eta } from "eta";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { mermaid } from "./mermaid.js";
-import type { Plan, Topology, Unit } from "./types.js";
+import { REVIEW_PLACEHOLDERS, reviewStepLabel } from "./types.js";
+import type { Plan, ReviewStep, Topology, Unit } from "./types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const templatesDir = join(here, "..", "templates");
@@ -105,23 +106,81 @@ export function buildUnitMd(unit: Unit): string {
   });
 }
 
-function renderPipelineChecklist(commands: string[] | undefined): string {
-  if (commands === undefined || commands.length === 0) {
-    return "- [ ] _No review steps configured._\n";
-  }
-  return commands.map((c) => `- [ ] \`${c}\``).join("\n") + "\n";
+/**
+ * GFM-safe inline code span for arbitrary content. Bash templates can contain
+ * the very delimiter — a backtick (command substitution) — which would close
+ * the span early and garble the command a resuming agent must run. Per the GFM
+ * rule, delimit with one more backtick than the longest internal run and pad
+ * with a space when the content touches a backtick at either edge. Content with
+ * no backtick (every slash command, most templates) renders as plain
+ * `` `x` ``, byte-identical to before.
+ */
+function mdInlineCode(s: string): string {
+  const runs = s.match(/`+/g);
+  const longest = runs ? Math.max(...runs.map((r) => r.length)) : 0;
+  const fence = "`".repeat(longest + 1);
+  const pad = longest > 0 ? " " : "";
+  return `${fence}${pad}${s}${pad}${fence}`;
 }
 
-function renderPreReviewBlock(commands: string[] | undefined): string {
+/**
+ * One checklist line per review step. A slash command renders as a bare
+ * backticked command (its operator-vs-agent routing is governed by the target
+ * skill's `disable-model-invocation`, not a mode). A `{ run, mode }` template
+ * renders its `run` *verbatim* — placeholders left intact — plus an
+ * unambiguous mode badge so a resuming agent knows whether to surface the
+ * command (`print`) or run it itself via the Bash tool (`exec`).
+ */
+function renderStepItem(step: ReviewStep): string {
+  if (typeof step === "string") return `- [ ] ${mdInlineCode(step)}`;
+  const badge =
+    step.mode === "exec"
+      ? "**exec**: the resuming agent runs this via the Bash tool, then surfaces the findings"
+      : "**print**: surface this command and stop for the operator to run";
+  return `- [ ] ${mdInlineCode(step.run)} — ${badge}`;
+}
+
+// A template `run` mentioning one of the known stage-scoped placeholders is
+// recorded verbatim — the renderer never substitutes (no diff or base exists at
+// materialize time); the resuming agent fills it per the resume protocol. We
+// match the exact placeholder vocabulary, not a generic `{…}` pattern, so a
+// command with literal braces (e.g. `awk '{print}'`, `jq '{a}'`) doesn't
+// spuriously claim a pending substitution.
+function hasPlaceholderTemplate(steps: ReviewStep[]): boolean {
+  return steps.some(
+    (s) =>
+      typeof s !== "string" &&
+      REVIEW_PLACEHOLDERS.some((p) => s.run.includes(p)),
+  );
+}
+
+function renderPipelineChecklist(steps: ReviewStep[] | undefined): string {
+  if (steps === undefined || steps.length === 0) {
+    return "- [ ] _No review steps configured._\n";
+  }
+  let out = steps.map(renderStepItem).join("\n") + "\n";
+  if (hasPlaceholderTemplate(steps)) {
+    out +=
+      "\n_Template steps are recorded verbatim; the **resuming agent** substitutes their placeholders " +
+      "per the resume protocol before running — the renderer never substitutes._\n";
+  }
+  return out;
+}
+
+function renderPreReviewBlock(steps: ReviewStep[] | undefined): string {
   let out = "## Pre-execution review\n\n";
-  if (commands === undefined || commands.length === 0) {
+  if (steps === undefined || steps.length === 0) {
     out +=
       "_No pre-execution review configured. Proceed to the cursor unit._\n";
     return out;
   }
   out +=
-    "Before starting the first unit, run these against the freshly materialized plan dir:\n\n";
-  out += renderPipelineChecklist(commands);
+    "On the first session, before starting Unit 01, the **resuming agent** works through the step(s) " +
+    "below against the freshly materialized plan dir, then **stops** to wait for your go-ahead — it does " +
+    "not roll straight into Unit 01. Follow each step's routing: **auto-run** the agent-invocable ones " +
+    "(the default `/planview:pre-plan-review`, or an `exec` template) and surface their findings; for a " +
+    "`print` template or an operator-run slash command, **surface the command and stop** for you to run it:\n\n";
+  out += renderPipelineChecklist(steps);
   return out;
 }
 
@@ -150,22 +209,34 @@ function renderGitWorkflowBlock(planId: string, enabled: boolean): string {
   );
 }
 
-function renderPlanReviewBlock(commands: string[] | undefined): string {
+function renderPlanReviewBlock(steps: ReviewStep[] | undefined): string {
   let out = "## Plan-level review\n\n";
-  if (commands === undefined || commands.length === 0) {
+  if (steps === undefined || steps.length === 0) {
     out +=
       "_No plan-level reviews configured. After the last unit, surface a summary and ask the user before archiving._\n";
     return out;
   }
   out +=
-    "After the last unit's review lands and is committed, run these against the cumulative plan diff:\n\n";
-  out += renderPipelineChecklist(commands);
+    "After the last unit's review lands and is committed, run the **`/planview:plan-review-prompt`** " +
+    "composer against the cumulative plan diff — don't run the vehicle(s) below directly. The composer " +
+    "aims a cross-unit focus and drives whatever is configured: it injects planview's own plan-level " +
+    "review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the " +
+    "focus into a slash command for you. Configured vehicle(s):\n\n";
+  out += renderPipelineChecklist(steps);
   return out;
 }
 
-function overviewReviewsCell(commands: string[] | undefined): string {
-  if (commands === undefined || commands.length === 0) return "—";
-  return commands.join(" + ");
+// Compact one-line cell for the overview table: labels only (a template's
+// `run` text, a slash command as-is), joined with `+`. The per-step mode badge
+// lives in the prose checklists, not this dense cell. A template `run` can
+// contain `|` (a pipeline), which would otherwise open a spurious GFM table
+// column, so escape it for the cell.
+function overviewReviewsCell(steps: ReviewStep[] | undefined): string {
+  if (steps === undefined || steps.length === 0) return "—";
+  return steps
+    .map(reviewStepLabel)
+    .map((label) => label.replaceAll("|", "\\|"))
+    .join(" + ");
 }
 
 function unitTopologyBlock(topology: Topology): string {
