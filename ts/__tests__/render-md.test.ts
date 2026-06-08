@@ -139,6 +139,43 @@ describe("buildProgressMd", () => {
     expect(md).toContain("- [ ] `/planview:pre-plan-review`");
   });
 
+  // codex plan-level review [HIGH]: a print-mode pre_review template must not be
+  // framed as agent-run — the section must route by mode, not say "the agent runs
+  // the step(s) below" (which would auto-run a print step, bypassing the human gate).
+  it("routes a print-mode pre_review step to surface-and-stop, not agent-run", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      pre_review: [{ run: "codex exec {plan_dir}", mode: "print" }],
+    };
+    const md = buildProgressMd(plan, "260505-0-x");
+    expect(md).toContain("Follow each step's routing");
+    expect(md).toContain("surface the command and stop");
+    expect(md).toContain("- [ ] `codex exec {plan_dir}` — **print**");
+    // Must NOT unconditionally claim the agent runs every step.
+    expect(md).not.toContain("runs the step(s) below");
+  });
+
+  // codex plan-level review [MED]: the plan-level block must point at the composer
+  // (which injects planview's own prompt), not tell the agent to run the vehicle
+  // template directly (which would skip the prompt injection).
+  it("frames plan-level review as the composer driving the vehicle, not direct execution", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      plan_review: [{ run: "codex exec {diff_range}", mode: "print" }],
+    };
+    const md = buildProgressMd(plan, "260505-0-x");
+    expect(md).toContain("## Plan-level review");
+    expect(md).toContain("/planview:plan-review-prompt");
+    expect(md).toContain("injects planview's own plan-level");
+    expect(md).toContain("don't run the vehicle(s) below directly");
+    // The vehicle still renders as a checklist entry the composer will drive.
+    expect(md).toContain("- [ ] `codex exec {diff_range}` — **print**");
+  });
+
   it("renders template review steps with a print/exec mode badge", () => {
     const plan: Plan = {
       task_summary: "x",

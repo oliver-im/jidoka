@@ -19345,7 +19345,7 @@ function renderPreReviewBlock(steps) {
     out += "_No pre-execution review configured. Proceed to the cursor unit._\n";
     return out;
   }
-  out += "On the first session, before starting Unit 01, the **resuming agent** runs the step(s) below against the freshly materialized plan dir, surfaces the findings, then **stops** to wait for your go-ahead \u2014 it does not roll straight into Unit 01:\n\n";
+  out += "On the first session, before starting Unit 01, the **resuming agent** works through the step(s) below against the freshly materialized plan dir, then **stops** to wait for your go-ahead \u2014 it does not roll straight into Unit 01. Follow each step's routing: **auto-run** the agent-invocable ones (the default `/planview:pre-plan-review`, or an `exec` template) and surface their findings; for a `print` template or an operator-run slash command, **surface the command and stop** for you to run it:\n\n";
   out += renderPipelineChecklist(steps);
   return out;
 }
@@ -19367,7 +19367,7 @@ function renderPlanReviewBlock(steps) {
     out += "_No plan-level reviews configured. After the last unit, surface a summary and ask the user before archiving._\n";
     return out;
   }
-  out += "After the last unit's review lands and is committed, run these against the cumulative plan diff:\n\n";
+  out += "After the last unit's review lands and is committed, run the **`/planview:plan-review-prompt`** composer against the cumulative plan diff \u2014 don't run the vehicle(s) below directly. The composer aims a cross-unit focus and drives whatever is configured: it injects planview's own plan-level review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the focus into a slash command for you. Configured vehicle(s):\n\n";
   out += renderPipelineChecklist(steps);
   return out;
 }
