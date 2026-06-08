@@ -1,6 +1,6 @@
 # 260608-0-tool-agnostic-review-command-templates-with-opt-in-exec — Progress
 
-**Cursor:** 03-record-render-the-template-form-and-its-mode (not started).
+**Cursor:** 04-author-planview-s-own-plan-level-review-prompt (not started).
 
 ## Pre-execution review
 
@@ -20,6 +20,7 @@ This plan is worked in its own git worktree, one branch per unit. Full steps: `d
 
 - **01 — Pin the design in review-pipeline.md** — appended the superseding decision block to `docs/design-docs/review-pipeline.md` (supersedes #6, refines #5; the 4 decisions + two-mechanism invocation model + stage-scoped placeholders + boundaries), and marked #5/#6 with superseded/refined pointers. Design-only, no code. Unit review `/code-review`: (none).
 - **02 — Generalize reviewCommandSchema (schema + config)** — `reviewStepSchema` is now a union of slash-command string OR `{ run, mode }` template (`mode` defaults `print`; `strictObject` rejects unknown keys); added `ReviewStep`/`ReviewStepMode` types + `reviewStepLabel` helper. `Config`/`Unit`/`Plan` review fields → `ReviewStep[]`; render-md.ts + html.ts bridged via `.map(reviewStepLabel)` (proper mode rendering deferred to Unit 03 — noted forward-ref). Project-override security boundary still excludes review arrays (existing test at config.test.ts:232). +12 schema/label/loader tests. `npm run typecheck`/`test` (339 pass)/`build` green; `dist/cli.js` rebuilt. Unit review `/code-review` (medium, independent agent): `[]`.
+- **03 — Record + render the template form and its mode** — renderer now carries `ReviewStep` through unchanged and renders template objects as their `run` text + an unambiguous `**print**`/`**exec**` mode badge in the per-unit `## Review pipeline`, `## Plan-level review`, and `## Pre-execution review` blocks; reframed the pre-execution block to state the **resuming agent** auto-runs it on the first session then **stops** before Unit 01 (no longer a passive operator checklist). A pending-substitution note appears only when a template mentions a known placeholder. Renderer still records only — substitutes/executes nothing. Code-review gate (independent `feature-dev:code-reviewer`) found 2 real output-integrity bugs in the new template form + 1 false-positive; all fixed: GFM-safe `mdInlineCode` (backtick in `run` can't garble the span), pipe-escape in the overview table cell, and anchored placeholder detection via `REVIEW_PLACEHOLDERS` (single source of truth in types.ts; `awk '{print}'` no longer false-positives). +8 render/materialize tests (347 pass). `typecheck`/`test`/`build` green; `dist/cli.js` rebuilt.
 
 ## Blockers
 
