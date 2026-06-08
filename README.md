@@ -84,7 +84,7 @@ planview reads a layered config: built-in defaults < `~/.claude/plugins/planview
 | `unit_review` | `["/code-review"]` | — | Review steps to run after each Unit lands, on the unit's local working-tree diff. The built-in **`/code-review`** (correctness bugs + reuse/simplification/efficiency cleanups) — **not** `/code-review:code-review`, which is the code-review *plugin* and reviews a GitHub PR. No `--fix` (findings are triaged against plan context, not auto-applied). Rendered as a checklist in the Unit md. |
 | `plan_review` | `[]` | — | Review steps to run after the last Unit's review and commit, against the cumulative committed diff. Opt-in; the recommended vehicle is the `/planview:plan-review-prompt` composer driving a `codex exec` template or `/codex:adversarial-review` (see below). Rendered as `## Plan-level review` in `progress.md`. |
 
-Each entry in the three review arrays is a **review step**: a slash command (`/code-review`, `/codex:adversarial-review`) **or** a `{ run, mode }` bash template for any tool — `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }`. `mode` is `print` (default — surface the command for you to run) or `exec` (the resuming agent runs it via Bash). Templates may use the placeholders `{plan_dir}`/`{base}`/`{diff_range}`/`{focus}`. Review steps are **global-config-only** (not settable in a per-repo `.planview.json`) — the security boundary that makes `exec` safe.
+Each entry in the three review arrays is a **review step**: a slash command (`/code-review`, `/codex:adversarial-review`) **or** a `{ run, mode }` bash template for any tool — e.g. `{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }`. `mode` is `print` (default — surface the command for you to run) or `exec` (the resuming agent runs it via Bash). Templates may use the placeholders `{plan_dir}`/`{base}`/`{diff_range}`/`{focus}`. Review steps are **global-config-only** (not settable in a per-repo `.planview.json`) — the security boundary that makes `exec` safe.
 
 Defaults assume "files-on-disk is the value, the browser is opt-in" — most users view plan dirs in their editor (Obsidian, VS Code, iA Writer). Flip `auto_open_browser=true` and/or `html_output=true` if you want the rendered HTML view too.
 
@@ -116,14 +116,14 @@ Example A — slash commands throughout: the pre-execution default, `/code-revie
 }
 ```
 
-Example B — drive plan-level review **fully agent-run** with a tool-agnostic `codex exec` template in `exec` mode. The composer fills `{focus}` with planview's own plan-level review prompt + the cross-unit targets, runs it via Bash, and relays the findings — no operator step:
+Example B — drive plan-level review **fully agent-run** with a tool-agnostic `codex exec` template in `exec` mode. `codex exec` is agentic, so it fetches the diff itself (paging it at its own pace — this is what scales to a large plan); the composer fills `{focus}` with planview's own plan-level review prompt + the cross-unit targets + the diff range, runs it via Bash, and relays the findings — no operator step:
 
 ```jsonc
 {
   "pre_review": ["/planview:pre-plan-review"],
   "unit_review": ["/code-review"],
   "plan_review": [
-    { "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "exec" }
+    { "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }
   ]
 }
 ```

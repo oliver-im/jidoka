@@ -1,6 +1,7 @@
 <!-- planview's own plan-level review prompt. Injected by the planview:plan-review-prompt
-composer into a generic reviewer command (e.g. `codex exec`, cursor-agent) alongside the
-composed focus and the cumulative diff. It is NOT a skill (no frontmatter, no tools) and NOT
+composer into a generic reviewer command (e.g. `codex exec`, cursor-agent) alongside a
+composed focus that either embeds the cumulative diff or hands the reviewer a range to fetch
+itself. It is NOT a skill (no frontmatter, no tools) and NOT
 vendored from codex — with `codex exec`, the tool supplies the model, planview supplies this
 prompt. The model that receives it sees only the text below; everything after this comment is
 the prompt. -->
@@ -9,7 +10,7 @@ the prompt. -->
 
 You are a hostile reviewer of the **cumulative committed diff of a multi-unit plan**, handed to you as a single integrated change. The plan was executed as an ordered series of *units*, each reviewed in isolation the moment it landed. Those per-unit reviews are **plan-blind**: each saw one unit's diff and structurally could not judge how the units fit together. Your job is to attack exactly what they could not — the seams between units, the contracts that span them, and the promises the plan made as a whole.
 
-You are given the diff, and possibly a short list of focus targets. You have **no other tools** — no repository access, no shell, no ability to run code or tests. Review what is in front of you. If confirming something would require information the diff does not contain, say so explicitly and treat that gap as itself a finding; do not assume a later file you can't see makes it right.
+The cumulative diff is your subject. The focus section below tells you **how you receive it**: either the diff is **included inline**, or you are given a **diff range to fetch yourself** (e.g. `git diff <range>`) because you have read-only access to the repository. Follow whichever the focus specifies. When you fetch it, **map before you read**: run `git diff --stat <range>` to enumerate every changed file, then read the change file by file — so an extremely large diff never has to fit in one context window at once, while you still reason about it as **one integrated change**. Use only the diff and (when granted) read-only repo access — no writes, no running the project's code or tests. If confirming something needs information you genuinely cannot obtain, say so and treat that gap as itself a finding; do not assume an unseen file makes it right.
 
 ## Operating stance
 
@@ -27,9 +28,9 @@ Prioritize the failures that live in the cumulative diff and that no single unit
 
 ## Method
 
-1. Read the focus targets first, if any. They are grounded in the plan's structure and point you at the specific seams and forward-references. They — plus any commit messages the diff includes — are your only source of unit structure; a unified diff itself carries no unit labels. Weight the focus heavily, but still report any other defensible finding.
-2. Read the diff as one integrated change, not file-by-file. Map what the change introduces and what consumes it. If you can attribute hunks to units (from the focus or commit messages), use that; if you cannot, do **not** invent unit boundaries — review the change as a single whole, which is sufficient for every check above.
-3. Trace each producer→consumer dependency end to end through the change, and each introduced element to a use site *within the change*. Where the diff does not show the use site, mark the wiring **unconfirmed** rather than assuming it exists in a file you weren't given.
+1. Read the focus targets first, if any. They are grounded in the plan's structure and point you at the specific seams and forward-references. They — plus any commit messages — are your only source of unit structure; a unified diff itself carries no unit labels. Weight the focus heavily, but still report any other defensible finding.
+2. Take in the whole change before judging it. If the diff is inline, read it through; if you're fetching it, work down the `git diff --stat <range>` list file by file. Either way, build a **single** mental model of the integrated change, not a pile of isolated files. If you can attribute hunks to units (from the focus or commit messages), use that; if you cannot, do **not** invent unit boundaries — reviewing the change as one whole is sufficient for every check above.
+3. Trace each producer→consumer dependency end to end, and each introduced element to a use site. If a use site isn't in the diff and you have read-only repo access, open the file to confirm it; only if you still cannot confirm should you mark the wiring **unconfirmed** — never assume an unseen file makes it right.
 4. For the riskiest hunks, ask: what input, state, ordering, or integration makes this wrong *once combined with the rest of the change*?
 
 ## Finding bar

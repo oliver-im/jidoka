@@ -30,8 +30,9 @@ Each entry in `pre_review` / `unit_review` / `plan_review` is a **review step**,
 
 - a **slash command** string — e.g. `"/code-review"`, `"/planview:pre-plan-review"`. Whether the resuming agent runs it or hands it to you depends on that command's own `disable-model-invocation` (codex's review commands are operator-run).
 - a **`{ run, mode }` bash template** — a tool-agnostic command. Worked examples:
-  - codex: `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }`
+  - codex (agentic — fetches the diff itself, scales to large diffs): `{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }`
   - cursor-agent: `{ "run": "agent -p --mode ask \"{focus}\"", "mode": "exec" }`
+  - feed-the-diff form, for a tool that can't run shell: `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }` (the whole diff lands in the model's context — fine for small/medium plans)
 
   `run` may contain these **placeholders**, filled by the resuming agent at run time (the renderer records them verbatim — there's no diff at materialize time): `{plan_dir}` (the materialized plan dir — the only one meaningful in `pre_review`, which runs before any diff exists), `{base}` (the branch the plan forked from), `{diff_range}` (`merge-base(<base>,HEAD)..HEAD`), `{focus}` (a composed review focus; plan-level, filled by the `/planview:plan-review-prompt` composer). Exact per-stage applicability lives in the resume protocol (`docs/exec-plans/AGENTS.md`).
 
@@ -102,14 +103,15 @@ Use this exact JSONC layout, substituting the three scalar answers from the ques
   // Set this to your review VEHICLE; the resuming agent runs the bundled
   // "/planview:plan-review-prompt" composer, which reads the plan + cumulative
   // diff, aims a hostile cross-unit focus, and drives the vehicle. Tool-agnostic:
-  //   - codex (template): { "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }
-  //     planview injects its OWN review prompt; print stops for you, exec runs it.
+  //   - codex (template): { "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }
+  //     codex fetches the diff itself (scales to large diffs); planview injects
+  //     its OWN review prompt; exec runs it, print would hand you the command.
   //   - codex (slash, legacy): "/codex:adversarial-review" — operator-run
   //     (disable-model-invocation), so the composer hands you the command.
   //   - any other tool: a { run, mode } template (see "Review step forms" above).
   // codex needs /codex:setup + `codex login` first. Leaving this [] but still
   // running the composer falls back to a default codex command.
-  // Example: [{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }]
+  // Example: [{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }]
   "plan_review": []
 }
 ```
