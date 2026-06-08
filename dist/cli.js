@@ -18150,6 +18150,12 @@ var reviewTemplateStepSchema = external_exports.strictObject({
   run: external_exports.string().min(1, "review template 'run' must be a non-empty string"),
   mode: reviewStepModeSchema.default("print")
 });
+var REVIEW_PLACEHOLDERS = [
+  "{plan_dir}",
+  "{base}",
+  "{diff_range}",
+  "{focus}"
+];
 var reviewStepSchema = external_exports.union([
   external_exports.string().min(1, "review command must be a non-empty string").startsWith("/", "review command must start with '/'"),
   reviewTemplateStepSchema
@@ -19250,7 +19256,7 @@ function buildOverviewMd(plan, dirName) {
   const unitRows = plan.units.map((unit) => {
     const prefix = unitIdPrefix(unit.id) ?? unit.id;
     const blockedBy = unit.blocked_by.length === 0 ? "\u2014" : unit.blocked_by.map((b) => unitIdPrefix(b) ?? b).join(", ");
-    const reviews = overviewReviewsCell(unit.review?.map(reviewStepLabel));
+    const reviews = overviewReviewsCell(unit.review);
     return `| ${prefix} | ${unit.title} | ${blockedBy} | ${reviews} |`;
   }).join("\n");
   return eta.render("overview.md.eta", {
@@ -19262,12 +19268,12 @@ function buildOverviewMd(plan, dirName) {
 }
 function buildProgressMd(plan, dirName) {
   const cursor = plan.units[0]?.id ?? "(no units)";
-  const preReviewBlock = renderPreReviewBlock(plan.pre_review?.map(reviewStepLabel));
+  const preReviewBlock = renderPreReviewBlock(plan.pre_review);
   const gitWorkflowBlock = renderGitWorkflowBlock(
     dirName,
     plan.git_workflow ?? false
   );
-  const planReviewBlock = renderPlanReviewBlock(plan.plan_review?.map(reviewStepLabel));
+  const planReviewBlock = renderPlanReviewBlock(plan.plan_review);
   return eta.render("progress.md.eta", {
     dirName,
     cursor,
@@ -19293,7 +19299,7 @@ function buildUnitMd(unit) {
     bodyBlock += "\n";
   }
   const topologyBlock = unit.topology !== void 0 ? unitTopologyBlock(unit.topology) + "\n\n" : "";
-  const reviewItems = renderPipelineChecklist(unit.review?.map(reviewStepLabel));
+  const reviewItems = renderPipelineChecklist(unit.review);
   return eta.render("unit.md.eta", {
     prefix,
     title: unit.title,
@@ -19306,20 +19312,41 @@ function buildUnitMd(unit) {
     reviewItems
   });
 }
-function renderPipelineChecklist(commands) {
-  if (commands === void 0 || commands.length === 0) {
+function mdInlineCode(s) {
+  const runs = s.match(/`+/g);
+  const longest = runs ? Math.max(...runs.map((r) => r.length)) : 0;
+  const fence = "`".repeat(longest + 1);
+  const pad = longest > 0 ? " " : "";
+  return `${fence}${pad}${s}${pad}${fence}`;
+}
+function renderStepItem(step) {
+  if (typeof step === "string") return `- [ ] ${mdInlineCode(step)}`;
+  const badge = step.mode === "exec" ? "**exec**: the resuming agent runs this via the Bash tool, then surfaces the findings" : "**print**: surface this command and stop for the operator to run";
+  return `- [ ] ${mdInlineCode(step.run)} \u2014 ${badge}`;
+}
+function hasPlaceholderTemplate(steps) {
+  return steps.some(
+    (s) => typeof s !== "string" && REVIEW_PLACEHOLDERS.some((p) => s.run.includes(p))
+  );
+}
+function renderPipelineChecklist(steps) {
+  if (steps === void 0 || steps.length === 0) {
     return "- [ ] _No review steps configured._\n";
   }
-  return commands.map((c) => `- [ ] \`${c}\``).join("\n") + "\n";
+  let out = steps.map(renderStepItem).join("\n") + "\n";
+  if (hasPlaceholderTemplate(steps)) {
+    out += "\n_Template steps are recorded verbatim; the **resuming agent** substitutes their placeholders per the resume protocol before running \u2014 the renderer never substitutes._\n";
+  }
+  return out;
 }
-function renderPreReviewBlock(commands) {
+function renderPreReviewBlock(steps) {
   let out = "## Pre-execution review\n\n";
-  if (commands === void 0 || commands.length === 0) {
+  if (steps === void 0 || steps.length === 0) {
     out += "_No pre-execution review configured. Proceed to the cursor unit._\n";
     return out;
   }
-  out += "Before starting the first unit, run these against the freshly materialized plan dir:\n\n";
-  out += renderPipelineChecklist(commands);
+  out += "On the first session, before starting Unit 01, the **resuming agent** runs the step(s) below against the freshly materialized plan dir, surfaces the findings, then **stops** to wait for your go-ahead \u2014 it does not roll straight into Unit 01:\n\n";
+  out += renderPipelineChecklist(steps);
   return out;
 }
 function renderGitWorkflowBlock(planId, enabled) {
@@ -19334,19 +19361,19 @@ This plan is worked in its own git worktree, one branch per unit. Full steps: \`
 
 `;
 }
-function renderPlanReviewBlock(commands) {
+function renderPlanReviewBlock(steps) {
   let out = "## Plan-level review\n\n";
-  if (commands === void 0 || commands.length === 0) {
+  if (steps === void 0 || steps.length === 0) {
     out += "_No plan-level reviews configured. After the last unit, surface a summary and ask the user before archiving._\n";
     return out;
   }
   out += "After the last unit's review lands and is committed, run these against the cumulative plan diff:\n\n";
-  out += renderPipelineChecklist(commands);
+  out += renderPipelineChecklist(steps);
   return out;
 }
-function overviewReviewsCell(commands) {
-  if (commands === void 0 || commands.length === 0) return "\u2014";
-  return commands.join(" + ");
+function overviewReviewsCell(steps) {
+  if (steps === void 0 || steps.length === 0) return "\u2014";
+  return steps.map(reviewStepLabel).map((label) => label.replaceAll("|", "\\|")).join(" + ");
 }
 function unitTopologyBlock(topology) {
   return mermaid(topology).map((g) => `\`\`\`mermaid

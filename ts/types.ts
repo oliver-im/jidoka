@@ -118,6 +118,18 @@ export const reviewTemplateStepSchema = z.strictObject({
 });
 export type ReviewTemplateStep = z.infer<typeof reviewTemplateStepSchema>;
 
+// The stage-scoped placeholders a review template's `run` may contain. Single
+// source of truth: the renderer only *detects* them (to note that substitution
+// is still pending), while the resume/agent layer substitutes them. `pre_review`
+// runs before any diff exists, so only `{plan_dir}` is meaningful there — the
+// resume protocol enforces the per-stage scope.
+export const REVIEW_PLACEHOLDERS = [
+  "{plan_dir}",
+  "{base}",
+  "{diff_range}",
+  "{focus}",
+] as const;
+
 export const reviewStepSchema = z.union([
   z
     .string()
@@ -127,11 +139,11 @@ export const reviewStepSchema = z.union([
 ]);
 export type ReviewStep = z.infer<typeof reviewStepSchema>;
 
-// Display label the renderer records for a step: a slash command is its own
-// label; a template labels as its `run` text. Unit 03 layers mode-aware
-// rendering (the print/exec badge + the pre_review auto-run framing) on top of
-// this; until then both forms render as a plain label, so existing
-// slash-command behavior is unchanged.
+// Compact display label for a step: a slash command is its own label; a
+// template labels as its `run` text. Used where one dense line is wanted (the
+// overview table cell, the HTML unit card). The prose checklists in
+// `render-md.ts` render the richer form on top of this — the `print`/`exec`
+// mode badge and the pre_review auto-run framing.
 export function reviewStepLabel(step: ReviewStep): string {
   return typeof step === "string" ? step : step.run;
 }

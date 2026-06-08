@@ -198,11 +198,34 @@ describe("materialize", () => {
     const target = materialize(samplePlan(), plansRoot, "260505", cfg);
     const progress = readFileSync(join(target, "progress.md"), "utf8");
     expect(progress).toContain("## Pre-execution review");
-    expect(progress).toContain(
-      "Before starting the first unit, run these",
-    );
+    expect(progress).toContain("before starting Unit 01");
     expect(progress).toContain("- [ ] `/planview:pre-plan-review`");
     expect(progress).toContain("- [ ] `/codex:adversarial-review`");
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  it("carries template review steps through resolvePipelines and renders their mode", () => {
+    const base = makeTempDir("template-steps");
+    const plansRoot = join(base, "plan");
+    mkdirSync(plansRoot, { recursive: true });
+    const cfg: Config = {
+      ...defaultConfig,
+      unit_review: [{ run: "codex exec review {focus}", mode: "exec" }],
+      plan_review: [{ run: "codex exec --base {base} {diff_range}", mode: "print" }],
+    };
+    const target = materialize(samplePlan(), plansRoot, "260505", cfg);
+
+    const u01 = readFileSync(join(target, "01-prep.md"), "utf8");
+    expect(u01).toContain(
+      "- [ ] `codex exec review {focus}` — **exec**",
+    );
+    expect(u01).toContain("the resuming agent runs this via the Bash tool");
+
+    const progress = readFileSync(join(target, "progress.md"), "utf8");
+    expect(progress).toContain(
+      "- [ ] `codex exec --base {base} {diff_range}` — **print**",
+    );
+    expect(progress).toContain("substitutes their placeholders");
     rmSync(base, { recursive: true, force: true });
   });
 
