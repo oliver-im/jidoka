@@ -1,8 +1,7 @@
 ---
 name: planview:pre-plan-review
-description: Adversarially review a freshly-materialized plan directory before any unit lands. Reads overview.md + per-unit md files (no diff, no code, no Bash) and flags structural plan failures — unit independence gaps, coverage holes, ambiguous acceptance, order sensitivity, boundary erosion, silent rewrites, topology mismatch. Returns findings markdown; suggests revisions.
+description: Adversarially review a freshly-materialized plan directory before any unit lands. Reads overview.md + per-unit md files (no diff, no code, no Bash) and flags structural plan failures — unit independence gaps, coverage holes, ambiguous acceptance, order sensitivity, boundary erosion, silent rewrites, topology mismatch. Returns findings markdown; suggests revisions. Agent-invocable so a resuming agent can auto-run it on the first session, then stop before the first unit for the human to read the findings.
 allowed-tools: Read, Grep, Glob
-disable-model-invocation: true
 ---
 
 # planview:pre-plan-review
