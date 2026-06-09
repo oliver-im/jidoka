@@ -3,7 +3,7 @@ import { CSS, JS, PAGE_TEMPLATE, PLAN_TEMPLATE } from "./assets.generated.js";
 import { mermaid } from "./mermaid.js";
 import { buildOverviewMd, unitIdPrefix } from "./render-md.js";
 import { reviewStepLabel } from "./types.js";
-import type { Agent, ExecutionMode, Plan, Topology } from "./types.js";
+import type { Agent, ExecutionMode, Plan, ReviewStepMode, Topology } from "./types.js";
 
 const eta = new Eta({ autoEscape: false });
 
@@ -53,6 +53,14 @@ export function renderTopologyHtml(
   return result;
 }
 
+interface ReviewCommand {
+  label: string;
+  // print/exec mode for a `{ run, mode }` template step; absent for a slash
+  // command, whose operator-vs-agent split is the skill's
+  // disable-model-invocation, not a mode badge.
+  mode?: ReviewStepMode;
+}
+
 interface UnitCard {
   index: number;
   anchor: string;
@@ -63,7 +71,7 @@ interface UnitCard {
   agents_label: string;
   has_topology: boolean;
   mermaid_graphs: string[];
-  review_commands: string[];
+  review_commands: ReviewCommand[];
 }
 
 export function renderPlanHtml(plan: Plan, dirName: string): string {
@@ -93,7 +101,11 @@ export function renderPlanHtml(plan: Plan, dirName: string): string {
       agents_label: agentsLabel,
       has_topology: unit.topology !== undefined,
       mermaid_graphs: mermaidGraphs,
-      review_commands: (unit.review ?? []).map(reviewStepLabel).map(htmlEscape),
+      review_commands: (unit.review ?? []).map((step) => ({
+        label: htmlEscape(reviewStepLabel(step)),
+        // A slash command (string form) carries no print/exec mode.
+        mode: typeof step === "string" ? undefined : step.mode,
+      })),
     };
   });
 

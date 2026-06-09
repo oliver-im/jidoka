@@ -449,6 +449,34 @@ body.plan {
   color: var(--haiku-stroke);
 }
 
+/* Per-step print/exec badge in a unit's review pipeline. Mirrors the Markdown
+   renderer's `**print**`/`**exec**` badge so the HTML view also tells the reader
+   whether the resuming agent runs the step (exec) or surfaces it (print). */
+.review-mode {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.review-mode-exec {
+  background: var(--opus-fill);
+  border-color: var(--opus-stroke);
+  color: var(--opus-stroke);
+}
+
+.review-mode-print {
+  background: var(--sonnet-fill);
+  border-color: var(--sonnet-stroke);
+  color: var(--sonnet-stroke);
+}
+
 .unit-summary {
   font-size: 0.95rem;
   color: var(--text);

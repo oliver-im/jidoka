@@ -293,6 +293,24 @@ describe("renderPlanHtml", () => {
     expect(html).not.toContain("[object Object]");
   });
 
+  it("renders a print/exec mode badge for template steps, none for slash commands", () => {
+    const plan = loadPlan("valid_plan_sequential.json");
+    plan.units[0]!.review = [
+      { run: "codex exec {diff_range}", mode: "exec" },
+      { run: "git diff {diff_range} | codex exec", mode: "print" },
+      "/code-review",
+    ];
+    const html = renderPlanHtml(plan, "260505-0-sequential-refactor");
+    // exec and print are visually distinguishable, so an HTML-only reader can
+    // tell whether the agent runs the step (exec) or it's surfaced for the
+    // operator to run (print) — the load-bearing field the MD renderer badges.
+    expect(html).toContain('class="review-mode review-mode-exec">exec<');
+    expect(html).toContain('class="review-mode review-mode-print">print<');
+    // A slash command has no print/exec mode (its operator-vs-agent split is the
+    // skill's disable-model-invocation), so it carries no badge.
+    expect(html.match(/review-mode review-mode-/g)?.length).toBe(2);
+  });
+
   it("escapes dangerous unit titles", () => {
     const plan = loadPlan("valid_plan_minimal.json");
     plan.units[0]!.title = "<script>alert(1)</script>";

@@ -67,7 +67,7 @@
           <h3>Review pipeline</h3>
           <ul>
             <% unit.review_commands.forEach((cmd) => { %>
-            <li><code><%= cmd %></code></li>
+            <li><code><%= cmd.label %></code><% if (cmd.mode) { %> <span class="review-mode review-mode-<%= cmd.mode %>"><%= cmd.mode %></span><% } %></li>
             <% }); %>
           </ul>
         </div>
