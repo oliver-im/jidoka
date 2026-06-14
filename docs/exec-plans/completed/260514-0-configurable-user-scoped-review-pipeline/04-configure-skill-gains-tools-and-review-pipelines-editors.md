@@ -2,7 +2,7 @@
 **Blocked by:** 03-setup-skill-writes-new-defaults**Agents involved:** main only**Topology:** none
 ## Summary
 
-Extend the `planview:configure` skill with two new editable sections: Tools (add/edit/remove tool definitions) and Review pipelines (per-scope unit/plan step editor that picks tools from the Tools section).
+Extend the `jidoka:configure` skill with two new editable sections: Tools (add/edit/remove tool definitions) and Review pipelines (per-scope unit/plan step editor that picks tools from the Tools section).
 
 ### Tasks
 

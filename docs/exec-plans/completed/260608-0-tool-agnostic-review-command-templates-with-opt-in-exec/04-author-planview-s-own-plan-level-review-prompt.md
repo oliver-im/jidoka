@@ -1,8 +1,8 @@
-# Unit 04 — Author planview's own plan-level review prompt
+# Unit 04 — Author jidoka's own plan-level review prompt
 **Blocked by:** 03-record-render-the-template-form-and-its-mode**Agents involved:** main only**Topology:** none
 ## Summary
 
-Write a self-contained, hostile plan-level review prompt that planview owns — the prompt fed to a generic model (`codex exec`, cursor-agent) — structurally analogous to `skills/pre-plan-review/SKILL.md` but aimed at a committed diff rather than plan markdown.
+Write a self-contained, hostile plan-level review prompt that jidoka owns — the prompt fed to a generic model (`codex exec`, cursor-agent) — structurally analogous to `skills/pre-plan-review/SKILL.md` but aimed at a committed diff rather than plan markdown.
 
 Tasks:
 - Create the prompt asset (co-located with the composer, e.g. `skills/plan-review-prompt/plan-review.prompt.md`). It instructs a reviewer to attack the **cumulative committed diff as one integrated change**: cross-unit consistency / integration seams; confirm each *deferred forward-reference* got wired up; invariants/contracts spanning units; riskiest / most-coupled / largest changes; coverage gaps (claimed-X vs delivered-X incl. tests/docs/wiring).

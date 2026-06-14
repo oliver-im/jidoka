@@ -2,15 +2,15 @@
 **Blocked by:** 02-materializer-resolution-and-renderer-integration**Agents involved:** main only**Topology:** none
 ## Summary
 
-Extend the `planview:setup` skill so its first-run questionnaire writes the `tools` and `review_pipelines` keys with the shipped defaults. No new user-facing questions; defaults are written directly.
+Extend the `jidoka:setup` skill so its first-run questionnaire writes the `tools` and `review_pipelines` keys with the shipped defaults. No new user-facing questions; defaults are written directly.
 
 ### Tasks
 
 - `skills/setup/SKILL.md`:
   - Add `tools` and `review_pipelines` to the "What you write" section as auto-populated keys (not asked; documented as defaulted).
-  - Append a short closing note in the body: "Customizing the review pipeline (adding codex, simplify, adversarial, fallbacks) happens through `planview:configure` after setup."
+  - Append a short closing note in the body: "Customizing the review pipeline (adding codex, simplify, adversarial, fallbacks) happens through `jidoka:configure` after setup."
   - Update the "preview the resulting JSON" step to show that the rendered JSON now includes the new keys at their defaults.
-- Confirm by reading the SKILL.md end-to-end that the existing hard rules still hold (never write outside `~/.claude/plugins/planview/`, never silently overwrite, all four — now six — top-level keys always present).
+- Confirm by reading the SKILL.md end-to-end that the existing hard rules still hold (never write outside `~/.claude/plugins/jidoka/`, never silently overwrite, all four — now six — top-level keys always present).
 
 ### Acceptance
 

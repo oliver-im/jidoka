@@ -6,13 +6,13 @@
 
 ## Summary
 
-Make `completed/` a real in-repo archive (de-symlink `notes/done`), seed it with the `260514` plan as a stamped record, point planview at `active/`, and write the resume protocol — now including the **pure-worktree git workflow** — into `docs/exec-plans/AGENTS.md`. Then dissolve the leftover `notes/`.
+Make `completed/` a real in-repo archive (de-symlink `notes/done`), seed it with the `260514` plan as a stamped record, point jidoka at `active/`, and write the resume protocol — now including the **pure-worktree git workflow** — into `docs/exec-plans/AGENTS.md`. Then dissolve the leftover `notes/`.
 
 ### Tasks
 
 - Remove the `notes/done` symlink (→ external vault). `docs/exec-plans/completed/` is the archive now — in git, agent-legible.
 - Seed the archive: restore `260514-0-configurable-user-scoped-review-pipeline/` from history (`git checkout 825efb5~1 -- plan/260514-…`) into `docs/exec-plans/completed/260514-…/`; prepend a provenance stamp to its `progress.md` (`STATUS: completed · 2026-05 · realized-by <commit range>`). Leave Rust-era `260505` in history.
-- **Manual operator step (out-of-repo, NOT a review gate):** set the global `~/.claude/plugins/planview/config.json` `plan_dir_root` → `docs/exec-plans/active` — set it *explicitly* rather than dropping the key, since the shipped default isn't live globally until Unit 04's `dist/cli.js` ships (dropping it would leave a window of ambiguous resolution). Unit 07 later adds `git_workflow: true` to this same file; final global state = `{ plan_dir_root: "docs/exec-plans/active", git_workflow: true, … }`. Invisible to `/code-review` — a step to *do*, not an acceptance criterion to gate on.
+- **Manual operator step (out-of-repo, NOT a review gate):** set the global `~/.claude/plugins/jidoka/config.json` `plan_dir_root` → `docs/exec-plans/active` — set it *explicitly* rather than dropping the key, since the shipped default isn't live globally until Unit 04's `dist/cli.js` ships (dropping it would leave a window of ambiguous resolution). Unit 07 later adds `git_workflow: true` to this same file; final global state = `{ plan_dir_root: "docs/exec-plans/active", git_workflow: true, … }`. Invisible to `/code-review` — a step to *do*, not an acceptance criterion to gate on.
 - Write `docs/exec-plans/AGENTS.md` — the resume protocol — seeded from the retiring `notes/plan/AGENTS.md`, updated for:
   - **Lifecycle:** `ideas → active (in a worktree) → completed (on main, via merge)`; `git worktree list` is the active-plan index.
   - **Per-plan worktree:** `worktrees/<plan-id>/` on branch `plan/<plan-id>`.
