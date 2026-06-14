@@ -27,7 +27,7 @@ let counter = 0;
 function makeTempDir(label: string): string {
   const path = join(
     tmpdir(),
-    `planview-hook-test-${process.pid}-${Date.now()}-${counter++}-${label}`,
+    `jidoka-hook-test-${process.pid}-${Date.now()}-${counter++}-${label}`,
   );
   mkdirSync(path, { recursive: true });
   return path;
@@ -321,7 +321,7 @@ describe("runWithInput: filesystem behavior", () => {
     const session = `stale-${process.pid}`;
     const plansRoot = join(project, "notes/plan");
     mkdirSync(plansRoot, { recursive: true });
-    const stale = join(plansRoot, `.planview-stage-${session}`);
+    const stale = join(plansRoot, `.jidoka-stage-${session}`);
     mkdirSync(stale, { recursive: true });
     writeFileSync(join(stale, "garbage.txt"), "leftover");
     runWithInput(stdin(session, validPlanMd), testConfig(project));
@@ -435,7 +435,7 @@ describe("runWithInput: git_workflow worktree scaffolding", () => {
       { stdio: "ignore" },
     );
 
-    // Invoke the hook as if /planview ran from *inside* that worktree.
+    // Invoke the hook as if /jidoka ran from *inside* that worktree.
     const cfg: HookConfig = {
       today: "260505",
       projectDir: existing,

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-planview is a Claude Code plugin that materializes plan-mode output as a directory of reviewable markdown units, with optional per-unit Mermaid diagrams when a unit dispatches multiple agents. It has two components:
+jidoka is a Claude Code plugin that materializes plan-mode output as a directory of reviewable markdown units, with optional per-unit Mermaid diagrams when a unit dispatches multiple agents. It has two components:
 
 - **Skill** (forked subagent) — LLM analyzes a task, decomposes it into units, returns plan markdown (`# Title` H1 + `## Unit NN:` headings + per-unit summary + body + optional ` ```topology ` fence) to the caller.
 - **Renderer** (TypeScript bundled to `dist/cli.js` via esbuild) — deterministic CLI. Reads plan markdown from PreToolUse stdin's `tool_input.plan` (hook mode) or from a file/stdin (`materialize` mode), validates, writes the plan dir, and optionally renders HTML. Never calls the LLM.
@@ -15,7 +15,7 @@ The contract between them: ExitPlanMode carries the plan markdown in `tool_input
 
 `npm run build` produces `dist/cli.js` (bundled, committed); `npm test` runs the suite via vitest. The ExitPlanMode hook is declared in `hooks/hooks.json` (the plugin-native hook location) and invokes `node "$CLAUDE_PLUGIN_ROOT/dist/cli.js" hook`. Active plans live in worktrees under `docs/exec-plans/active/`; see `docs/exec-plans/AGENTS.md` (resume protocol + git workflow) and `docs/CONVENTION.md` (the portable lifecycle). Reference docs:
 
-- `docs/CONVENTION.md` — the portable plan-lifecycle convention (three kinds, status-as-location, the two rules); standalone and planview-independent — adopt it in any repo
+- `docs/CONVENTION.md` — the portable plan-lifecycle convention (three kinds, status-as-location, the two rules); standalone and jidoka-independent — adopt it in any repo
 - `docs/data-model.md` — JSON schema, field semantics, execution modes (shared by both audiences)
 - `docs/agent-guide.md` — skill config, heuristics, hard rules (for LLM agents)
 - `docs/developer-guide.md` — architecture, validation rules, algorithms, CLI, hooks, design decisions (for developers building the renderer)

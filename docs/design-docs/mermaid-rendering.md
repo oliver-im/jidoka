@@ -1,6 +1,6 @@
 # Diagram Rendering Analysis (March 2026)
 
-Whether Mermaid is the right rendering backend for planview, or whether an alternative produces better results for this workload.
+Whether Mermaid is the right rendering backend for jidoka, or whether an alternative produces better results for this workload.
 
 ## Workload Profile
 
@@ -17,7 +17,7 @@ The renderer generates directed acyclic graphs showing agent topology:
 
 ## Candidates Evaluated
 
-Eight rendering approaches, evaluated against planview's specific requirements.
+Eight rendering approaches, evaluated against jidoka's specific requirements.
 
 ### Eliminated
 
@@ -25,7 +25,7 @@ Eight rendering approaches, evaluated against planview's specific requirements.
 
 **Excalidraw** — Hard React dependency (`react >=17.0.2`). Bundle ~2 MB+. Hand-drawn-only aesthetic (roughjs) — not configurable. No text DSL for programmatic generation. Designed for interactive editor, not CLI output. Eliminated.
 
-**vis-network** — No true compound nodes (only visual grouping). Canvas rendering, not SVG. 645 KB bundle. Missing the subgraph/container feature planview needs for team communication boundaries. Eliminated.
+**vis-network** — No true compound nodes (only visual grouping). Canvas rendering, not SVG. 645 KB bundle. Missing the subgraph/container feature jidoka needs for team communication boundaries. Eliminated.
 
 **ELK.js** — Layout-only engine (computes coordinates, no rendering). Requires 200–400 lines of SVG generation code on top. 1,610 KB bundle. EPL-2.0 license (copyleft for modifications). Excellent layout quality, but the integration cost is unjustifiable when complete rendering solutions exist at similar or smaller bundle sizes. Eliminated.
 
@@ -60,7 +60,7 @@ Eight rendering approaches, evaluated against planview's specific requirements.
 
 **Strengths:**
 
-1. **All needed shapes exist natively.** Stadium (`([text])`), double circle (`(((text)))`), and rectangle (`[text]`) are first-class. No workarounds needed for planview's visual language.
+1. **All needed shapes exist natively.** Stadium (`([text])`), double circle (`(((text)))`), and rectangle (`[text]`) are first-class. No workarounds needed for jidoka's visual language.
 2. **classDef maps directly to the 4-color model scheme.** Define `classDef haiku fill:#dbeafe,stroke:#3b82f6`, apply with `:::haiku`. Clean, minimal code generation.
 3. **Text DSL is the most readable.** `A --> B` is immediately understood. The `--mermaid` CLI flag produces human-readable, debuggable output.
 4. **GitHub ecosystem.** Mermaid text pasted in issues, PRs, or READMEs renders natively. This is a distribution advantage — topology diagrams become portable.
@@ -69,8 +69,8 @@ Eight rendering approaches, evaluated against planview's specific requirements.
 
 **Weaknesses:**
 
-1. **Largest bundle of the three.** 2.9 MB UMD (843 KB gzip) embeds dagre, D3, and all diagram type parsers. planview only uses flowcharts — the other 15 diagram types are dead weight.
-2. **dagre layout quality is mediocre.** For complex graphs, dagre produces suboptimal edge routing, excessive whitespace, and poor rank assignment compared to Graphviz's dot algorithm. At planview's typical scale (3–15 agents) this is rarely visible, but edge cases exist.
+1. **Largest bundle of the three.** 2.9 MB UMD (843 KB gzip) embeds dagre, D3, and all diagram type parsers. jidoka only uses flowcharts — the other 15 diagram types are dead weight.
+2. **dagre layout quality is mediocre.** For complex graphs, dagre produces suboptimal edge routing, excessive whitespace, and poor rank assignment compared to Graphviz's dot algorithm. At jidoka's typical scale (3–15 agents) this is rarely visible, but edge cases exist.
 3. **Subgraph direction bug.** If any node inside a subgraph links to a node outside it, the subgraph's direction declaration is silently ignored. This affects team mode where team agents connect to the external main agent.
 4. **Hyphen workaround.** Agent IDs with hyphens must be escaped to underscores in Mermaid node IDs. Already handled in the spec, but it's a footgun.
 5. **Reserved word "end".** The word `end` in a node label breaks the parser. Must capitalize.
@@ -92,7 +92,7 @@ Eight rendering approaches, evaluated against planview's specific requirements.
 2. **DOT syntax is less readable.** `a -> b [label="depends on"]` vs Mermaid's `a --> b`. For the `--mermaid` (now `--dot`?) CLI flag, the output is functional but less elegant.
 3. **No GitHub rendering.** DOT diagrams don't render in GitHub Markdown. Topology text pasted in issues/PRs would be raw text.
 4. **Async initialization required.** `await Graphviz.load()` before first render. Minor, but adds initialization code to the HTML template.
-5. **Static SVG only.** No built-in themes, no click handlers, no animations. Fine for planview (static visualization), but no path to interactivity without additional libraries.
+5. **Static SVG only.** No built-in themes, no click handlers, no animations. Fine for jidoka (static visualization), but no path to interactivity without additional libraries.
 
 ### D2 (@terrastruct/d2)
 
@@ -106,7 +106,7 @@ Eight rendering approaches, evaluated against planview's specific requirements.
 **Weaknesses:**
 
 1. **Largest bundle by far.** 8.2 MB — the full Go compiler output compiled to WASM. 2.8x larger than Mermaid, 10.5x larger than Graphviz WASM. For a CLI tool generating self-contained HTML, this is significant.
-2. **Missing required shapes.** No stadium/pill. No double circle. planview's visual language cannot be expressed without workarounds.
+2. **Missing required shapes.** No stadium/pill. No double circle. jidoka's visual language cannot be expressed without workarounds.
 3. **Best layout engine is proprietary and unavailable in browser.** TALA — the reason D2 produces good architecture diagrams — is a paid, closed-source binary that cannot run in the WASM build. Browser-side D2 uses dagre or ELK, which is the same layout quality as Mermaid.
 4. **Pre-1.0.** Both the CLI (v0.7.1) and the JS wrapper (v0.1.33) are pre-1.0. API may change. The JS wrapper has been public for ~14 months.
 5. **Tiny adoption.** ~1.9K npm weekly downloads vs Mermaid's 2.25M. Limited community, limited battle-testing.
@@ -118,7 +118,7 @@ Eight rendering approaches, evaluated against planview's specific requirements.
 |---|---|---|
 | Bundle size | Graphviz WASM (778 KB) | 3.7x smaller than Mermaid, 10.5x smaller than D2 |
 | Layout quality | Graphviz WASM (dot) | Gold standard for DAG layout, decades of optimization |
-| Node shapes (planview needs) | Mermaid | Only one with native stadium + double circle |
+| Node shapes (jidoka needs) | Mermaid | Only one with native stadium + double circle |
 | Styling (classDef) | D2 | Most powerful class/cascade system |
 | Text DSL readability | Mermaid | Flowchart syntax is the most human-readable |
 | Subgraph reliability | Graphviz WASM | No direction override bugs |
@@ -131,9 +131,9 @@ Eight rendering approaches, evaluated against planview's specific requirements.
 
 **Mermaid is the right choice for V1.**
 
-Not because it's the best rendering engine — Graphviz produces better layouts and ships at 25% of the bundle size. Mermaid wins because it's the only option where planview's visual language works without compromises:
+Not because it's the best rendering engine — Graphviz produces better layouts and ships at 25% of the bundle size. Mermaid wins because it's the only option where jidoka's visual language works without compromises:
 
-1. **Stadium/pill shape exists natively.** This is the most important differentiator. planview uses stadium vs rectangle to distinguish file output from inline output. Neither Graphviz nor D2 have this shape. Graphviz's `shape=box, style=rounded` is a rounded rectangle, not a stadium — the visual distinction is weaker. Losing this shape means redesigning the visual language, which is not worth the bundle size savings.
+1. **Stadium/pill shape exists natively.** This is the most important differentiator. jidoka uses stadium vs rectangle to distinguish file output from inline output. Neither Graphviz nor D2 have this shape. Graphviz's `shape=box, style=rounded` is a rounded rectangle, not a stadium — the visual distinction is weaker. Losing this shape means redesigning the visual language, which is not worth the bundle size savings.
 
 2. **Double circle exists natively.** `(((main agent)))` is a one-liner. Graphviz can do this with `peripheries=2`, so this alone isn't decisive — but it's additive.
 
@@ -148,7 +148,7 @@ Not because it's the best rendering engine — Graphviz produces better layouts 
 - Hyphens → underscore escaping (already in spec)
 - Reserved word "end" → capitalize in labels
 - Subgraph direction override → structure graph to avoid cross-boundary links where possible, accept the limitation where not
-- dagre layout quality → acceptable at planview's typical scale (3–15 agents)
+- dagre layout quality → acceptable at jidoka's typical scale (3–15 agents)
 
 ## D2 Assessment Revised
 
@@ -179,7 +179,7 @@ The renderer architecture is already designed for this swap — the graph text g
 
 ## Cytoscape.js: The Interactive Option
 
-If planview ever needs interactivity (drag nodes, zoom, click-to-inspect), **Cytoscape.js** (434 KB, MIT, zero deps) is the clear choice. It has compound nodes for subgraphs, 25+ shapes, rich CSS-like styling, and the `cytoscape-dagre` extension for hierarchical layout. The tradeoff is Canvas rendering (not SVG) and a programmatic API (not text DSL). This would be a larger architectural change than swapping text-based backends.
+If jidoka ever needs interactivity (drag nodes, zoom, click-to-inspect), **Cytoscape.js** (434 KB, MIT, zero deps) is the clear choice. It has compound nodes for subgraphs, 25+ shapes, rich CSS-like styling, and the `cytoscape-dagre` extension for hierarchical layout. The tradeoff is Canvas rendering (not SVG) and a programmatic API (not text DSL). This would be a larger architectural change than swapping text-based backends.
 
 ## Sources
 

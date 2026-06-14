@@ -1,12 +1,12 @@
 {
-  "name": "planview",
+  "name": "jidoka",
   "version": "0.3.0",
   "description": "Materialize multi-unit plans on ExitPlanMode; render Mermaid topology diagrams",
   "type": "module",
   "private": true,
   "main": "dist/cli.js",
   "bin": {
-    "planview": "dist/cli.js"
+    "jidoka": "dist/cli.js"
   },
   "scripts": {
     "build:assets": "node scripts/generate-assets.mjs",

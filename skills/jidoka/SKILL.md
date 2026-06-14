@@ -1,11 +1,11 @@
 ---
-name: planview
+name: jidoka
 description: Decompose a multi-step task into reviewable units and emit a plan markdown that the ExitPlanMode hook materializes as a directory under <plan_dir_root>/ (default `docs/exec-plans/active/`). Use in plan mode before ExitPlanMode. When the plan crystallizes, structure it as explicit units (## Unit 01: <title>, ## Unit 02: <title>, …) so each unit is reviewable on its own and finishable in one session.
 allowed-tools: Read, Grep, Glob, Bash
 user-invocable: false
 ---
 
-# planview
+# jidoka
 
 You produce a **plan markdown** for the caller. The renderer (the ExitPlanMode hook) handles validation, materialization (writing `overview.md` + `progress.md` + per-unit md files), HTML rendering, and browser launch. Your job is to analyze the task, decompose it into units, and output conforming markdown.
 
@@ -155,7 +155,7 @@ If two units genuinely run in parallel (independent tracks that converge later),
 
 ### review_steps
 
-You don't emit review info at all. Review pipelines come from the user's config at `~/.claude/plugins/planview/config.json`; the materializer resolves them and renders the result into each Unit md (`## Review pipeline`) and `progress.md` (`## Plan-level review`). If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body — the body is the per-unit escape hatch when the configured pipeline doesn't fit.
+You don't emit review info at all. Review pipelines come from the user's config at `~/.claude/plugins/jidoka/config.json`; the materializer resolves them and renders the result into each Unit md (`## Review pipeline`) and `progress.md` (`## Plan-level review`). If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body — the body is the per-unit escape hatch when the configured pipeline doesn't fit.
 
 ### Reference, don't paste
 

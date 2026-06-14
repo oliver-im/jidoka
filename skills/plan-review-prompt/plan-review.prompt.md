@@ -1,8 +1,8 @@
-<!-- planview's own plan-level review prompt. Injected by the planview:plan-review-prompt
+<!-- jidoka's own plan-level review prompt. Injected by the jidoka:plan-review-prompt
 composer into a generic reviewer command (e.g. `codex exec`, cursor-agent) alongside a
 composed focus that either embeds the cumulative diff or hands the reviewer a range to fetch
 itself. It is NOT a skill (no frontmatter, no tools) and NOT
-vendored from codex — with `codex exec`, the tool supplies the model, planview supplies this
+vendored from codex — with `codex exec`, the tool supplies the model, jidoka supplies this
 prompt. The model that receives it sees only the text below; everything after this comment is
 the prompt. -->
 

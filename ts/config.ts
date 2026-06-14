@@ -24,7 +24,7 @@ export const defaultConfig: Config = {
   html_output: false,
   plan_level_topology: false,
   git_workflow: false,
-  pre_review: ["/planview:pre-plan-review"],
+  pre_review: ["/jidoka:pre-plan-review"],
   unit_review: ["/code-review"],
   plan_review: [],
 };
@@ -43,16 +43,16 @@ const configSchema = z.object({
 export function globalConfigPath(): string | undefined {
   const home = homedir();
   if (!home) return undefined;
-  return join(home, ".claude", "plugins", "planview", "config.json");
+  return join(home, ".claude", "plugins", "jidoka", "config.json");
 }
 
 export function projectOverridePath(projectDir: string): string {
-  return join(projectDir, ".planview.json");
+  return join(projectDir, ".jidoka.json");
 }
 
 /**
- * Loads layered config: defaults < global (`~/.claude/plugins/planview/config.json`)
- * < project (`<root>/.planview.json`, allow-listed keys only).
+ * Loads layered config: defaults < global (`~/.claude/plugins/jidoka/config.json`)
+ * < project (`<root>/.jidoka.json`, allow-listed keys only).
  *
  * Invalid JSON / unreadable files emit a stderr warning and fall back rather
  * than throw — the renderer must keep going so the hook stays exit-0.
@@ -75,7 +75,7 @@ export function loadFromPaths(
         cfg = parsed.data;
       } else {
         process.stderr.write(
-          `planview: ignoring invalid global config at ${globalPath}: ${parsed.error.message}\n`,
+          `jidoka: ignoring invalid global config at ${globalPath}: ${parsed.error.message}\n`,
         );
       }
     }
@@ -96,14 +96,14 @@ function readJson(path: string): unknown {
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return undefined;
-    process.stderr.write(`planview: cannot read ${path}: ${err.message}\n`);
+    process.stderr.write(`jidoka: cannot read ${path}: ${err.message}\n`);
     return undefined;
   }
   try {
     return JSON.parse(stripJsonComments(raw));
   } catch (e) {
     process.stderr.write(
-      `planview: invalid JSON in ${path}: ${(e as Error).message}\n`,
+      `jidoka: invalid JSON in ${path}: ${(e as Error).message}\n`,
     );
     return undefined;
   }
@@ -119,7 +119,7 @@ const PROJECT_OVERRIDE_KEYS = [
 function applyProjectOverrides(cfg: Config, value: unknown, path: string): void {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     process.stderr.write(
-      `planview: project override at ${path} must be a JSON object; ignoring\n`,
+      `jidoka: project override at ${path} must be a JSON object; ignoring\n`,
     );
     return;
   }
@@ -128,14 +128,14 @@ function applyProjectOverrides(cfg: Config, value: unknown, path: string): void 
     if (key === "plan_dir_root") {
       if (typeof val !== "string" || val.length === 0) {
         process.stderr.write(
-          "planview: project override 'plan_dir_root' must be a non-empty string; ignoring\n",
+          "jidoka: project override 'plan_dir_root' must be a non-empty string; ignoring\n",
         );
         continue;
       }
       const reason = validateProjectPlanDirRoot(val);
       if (reason !== undefined) {
         process.stderr.write(
-          `planview: project override 'plan_dir_root' rejected (${reason}); ignoring\n`,
+          `jidoka: project override 'plan_dir_root' rejected (${reason}); ignoring\n`,
         );
         continue;
       }
@@ -143,7 +143,7 @@ function applyProjectOverrides(cfg: Config, value: unknown, path: string): void 
     } else if (key === "auto_open_browser") {
       if (typeof val !== "boolean") {
         process.stderr.write(
-          "planview: project override 'auto_open_browser' must be a boolean; ignoring\n",
+          "jidoka: project override 'auto_open_browser' must be a boolean; ignoring\n",
         );
         continue;
       }
@@ -151,7 +151,7 @@ function applyProjectOverrides(cfg: Config, value: unknown, path: string): void 
     } else if (key === "html_output") {
       if (typeof val !== "boolean") {
         process.stderr.write(
-          "planview: project override 'html_output' must be a boolean; ignoring\n",
+          "jidoka: project override 'html_output' must be a boolean; ignoring\n",
         );
         continue;
       }
@@ -159,14 +159,14 @@ function applyProjectOverrides(cfg: Config, value: unknown, path: string): void 
     } else if (key === "git_workflow") {
       if (typeof val !== "boolean") {
         process.stderr.write(
-          "planview: project override 'git_workflow' must be a boolean; ignoring\n",
+          "jidoka: project override 'git_workflow' must be a boolean; ignoring\n",
         );
         continue;
       }
       cfg.git_workflow = val;
     } else {
       process.stderr.write(
-        `planview: project override key '${key}' is not allowed (allowed: ${PROJECT_OVERRIDE_KEYS.join(", ")}); ignoring\n`,
+        `jidoka: project override key '${key}' is not allowed (allowed: ${PROJECT_OVERRIDE_KEYS.join(", ")}); ignoring\n`,
       );
     }
   }
@@ -187,7 +187,7 @@ export function validateProjectPlanDirRoot(s: string): string | undefined {
 
 /**
  * Reads the global config as a raw JSON value, preserving manually-added
- * keys. Used by `planview:setup` when overwriting an existing file, so
+ * keys. Used by `jidoka:setup` when overwriting an existing file, so
  * fields the questionnaire doesn't know about survive the round-trip.
  */
 export function loadGlobalRaw(): Record<string, unknown> | undefined {

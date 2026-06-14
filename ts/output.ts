@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 export function writeTempHtml(html: string, dir: string = tmpdir()): string {
   const timestamp = Date.now();
-  const path = join(dir, `planview-${timestamp}.html`);
+  const path = join(dir, `jidoka-${timestamp}.html`);
   writeFileSync(path, html);
   return path;
 }
@@ -27,7 +27,7 @@ export function openBrowser(path: string): void {
     stdio: "ignore",
   });
   child.on("error", (err) => {
-    process.stderr.write(`planview: could not open browser (${cmd}): ${err.message}\n`);
+    process.stderr.write(`jidoka: could not open browser (${cmd}): ${err.message}\n`);
   });
   child.unref();
 }

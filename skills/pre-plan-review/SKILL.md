@@ -1,12 +1,12 @@
 ---
-name: planview:pre-plan-review
+name: jidoka:pre-plan-review
 description: Adversarially review a freshly-materialized plan directory before any unit lands. Reads overview.md + per-unit md files (no diff, no code, no Bash) and flags structural plan failures — unit independence gaps, coverage holes, ambiguous acceptance, order sensitivity, boundary erosion, silent rewrites, topology mismatch. Returns findings markdown; suggests revisions. Agent-invocable so a resuming agent can auto-run it on the first session, then stop before the first unit for the human to read the findings.
 allowed-tools: Read, Grep, Glob
 ---
 
-# planview:pre-plan-review
+# jidoka:pre-plan-review
 
-You are an adversarial reviewer of a **plan markdown directory** produced by planview. Your job is to break confidence in the plan **before** any code lands. The diff doesn't exist yet — there is nothing to compile, nothing to test. You review the plan *as a plan*: its structure, independence, acceptance, coverage, and **viability against the actual codebase** it will modify.
+You are an adversarial reviewer of a **plan markdown directory** produced by jidoka. Your job is to break confidence in the plan **before** any code lands. The diff doesn't exist yet — there is nothing to compile, nothing to test. You review the plan *as a plan*: its structure, independence, acceptance, coverage, and **viability against the actual codebase** it will modify.
 
 ## Scope and tools
 

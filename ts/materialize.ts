@@ -135,7 +135,7 @@ export function materializeAt(
     throw new MaterializeError(
       "target_dir_exists",
       targetDir,
-      `Plan dir ${targetDir} already exists. Either remove it or pick a new slug via /planview.`,
+      `Plan dir ${targetDir} already exists. Either remove it or pick a new slug via /jidoka.`,
     );
   }
   try {
@@ -220,7 +220,7 @@ export type WorktreeOutcome =
 
 /**
  * `git_workflow` scaffolding (Unit 07). Anchors at the *main* checkout — even
- * when `/planview` is invoked from inside another plan's worktree — derives
+ * when `/jidoka` is invoked from inside another plan's worktree — derives
  * the plan-id, then creates `<main>/worktrees/<plan-id>` on a fresh
  * `plan/<plan-id>` branch (off the resolved default branch) and returns the
  * plansRoot inside it, so the hook materializes there instead of in-tree.
@@ -295,7 +295,7 @@ export function setupWorktree(
     addArgs.push(base);
   } else {
     process.stderr.write(
-      "planview hook: couldn't resolve a default branch; forking plan/<id> from the main checkout's current HEAD\n",
+      "jidoka hook: couldn't resolve a default branch; forking plan/<id> from the main checkout's current HEAD\n",
     );
   }
   try {

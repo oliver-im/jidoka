@@ -1,10 +1,10 @@
 ---
-name: planview:plan-review-prompt
-description: Compose a hostile, plan-level adversarial review for a COMPLETED planview plan and drive it through the configured plan_review vehicle. Reads the plan dir (overview + units + progress, incl. deferred forward-reference notes) and the cumulative committed diff, composes a cross-unit focus (integration seams, forward-references that should now be wired up), then honors the configured plan_review step shape — a { run, mode } bash template for a generic tool (codex exec, cursor-agent, …), into which planview injects its OWN review prompt; or a slash command, into which it composes the focus. print (default) surfaces a ready-to-run command and stops for the operator; exec runs it via Bash and surfaces findings. Tool-agnostic — no hardcoded reviewer. Use as the plan_review step, after the last unit lands and is committed.
+name: jidoka:plan-review-prompt
+description: Compose a hostile, plan-level adversarial review for a COMPLETED jidoka plan and drive it through the configured plan_review vehicle. Reads the plan dir (overview + units + progress, incl. deferred forward-reference notes) and the cumulative committed diff, composes a cross-unit focus (integration seams, forward-references that should now be wired up), then honors the configured plan_review step shape — a { run, mode } bash template for a generic tool (codex exec, cursor-agent, …), into which jidoka injects its OWN review prompt; or a slash command, into which it composes the focus. print (default) surfaces a ready-to-run command and stops for the operator; exec runs it via Bash and surfaces findings. Tool-agnostic — no hardcoded reviewer. Use as the plan_review step, after the last unit lands and is committed.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
-# planview:plan-review-prompt
+# jidoka:plan-review-prompt
 
 You compose the focus for a hostile, plan-level adversarial review **and** drive it through whatever review vehicle the user configured. You are not yourself the reviewer — you aim a *different* model (codex, cursor-agent, …) at the cumulative diff, using the context only the agent that just executed the plan has.
 
@@ -12,7 +12,7 @@ You compose the focus for a hostile, plan-level adversarial review **and** drive
 
 Per-unit review (`/code-review`) is plan-blind: it sees one unit's diff at a time and structurally cannot judge cross-unit consistency, or whether a forward-reference one unit deferred actually got wired up by a later unit. Those problems live in the **cumulative diff**, viewed as one integrated change. The agent that just executed the plan holds the best context for aiming a hostile review at them — so the high-value work is *composing the focus*, not running the review.
 
-The review vehicle is **configurable and tool-agnostic**: codex is one option, not a hardcoded dependency. With a generic `codex exec` (or `cursor-agent`, `gemini`, …) template, **the tool supplies the model and planview supplies the prompt** — its own plan-level review prompt, co-located with this skill, never vendored from codex.
+The review vehicle is **configurable and tool-agnostic**: codex is one option, not a hardcoded dependency. With a generic `codex exec` (or `cursor-agent`, `gemini`, …) template, **the tool supplies the model and jidoka supplies the prompt** — its own plan-level review prompt, co-located with this skill, never vendored from codex.
 
 ## Scope and tools
 
@@ -23,12 +23,12 @@ The review vehicle is **configurable and tool-agnostic**: codex is one option, n
 
 ## Read the configured plan_review vehicle
 
-Read `~/.claude/plugins/planview/config.json` — it is **JSONC** (strip both `//` line and `/* */` block comments before parsing, matching the renderer's loader). If it is missing or unreadable, treat `plan_review` as the shipped default `[]`. Take the `plan_review` array. Each entry is a `ReviewStep` in one of two forms:
+Read `~/.claude/plugins/jidoka/config.json` — it is **JSONC** (strip both `//` line and `/* */` block comments before parsing, matching the renderer's loader). If it is missing or unreadable, treat `plan_review` as the shipped default `[]`. Take the `plan_review` array. Each entry is a `ReviewStep` in one of two forms:
 
 - a **`{ run, mode }` template** — a tool-agnostic bash command. For an agentic tool that fetches the diff itself: `{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }`; to feed the diff in to a non-agentic tool: `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }`. `run` may contain the placeholders `{plan_dir}`, `{base}`, `{diff_range}`, `{focus}`; `mode` is `"print"` (default) or `"exec"`.
 - a **slash command string** (e.g. `"/codex:adversarial-review"`).
 
-**First drop any entry equal to this composer itself** (`/planview:plan-review-prompt`) — a legacy/self-referential config that would recurse. Then drive **each remaining step** (usually one), branching on its form (see **Drive the vehicle**). If nothing remains — the array was empty, or held only the composer — there is **no concrete vehicle**: fall back (case C).
+**First drop any entry equal to this composer itself** (`/jidoka:plan-review-prompt`) — a legacy/self-referential config that would recurse. Then drive **each remaining step** (usually one), branching on its form (see **Drive the vehicle**). If nothing remains — the array was empty, or held only the composer — there is **no concrete vehicle**: fall back (case C).
 
 ## Target selection
 
@@ -65,9 +65,9 @@ Branch on the configured step's form. Resolve `{plan_dir}` (the target plan dir)
 
 ### A. `{ run, mode }` template — a generic tool
 
-The tool brings the *model*; planview brings the *prompt*. So `{focus}` here is the **full reviewer instruction** = planview's own plan-level review prompt **plus** your focus targets:
+The tool brings the *model*; jidoka brings the *prompt*. So `{focus}` here is the **full reviewer instruction** = jidoka's own plan-level review prompt **plus** your focus targets:
 
-1. **Read** planview's own plan-level reviewer prompt at `$CLAUDE_PLUGIN_ROOT/skills/plan-review-prompt/plan-review.prompt.md` (the harness also names this skill's base directory in your invocation context). If `$CLAUDE_PLUGIN_ROOT` is unset, resolve it with Bash `echo "$CLAUDE_PLUGIN_ROOT"`, or `Glob` for `**/skills/plan-review-prompt/plan-review.prompt.md` and take the match.
+1. **Read** jidoka's own plan-level reviewer prompt at `$CLAUDE_PLUGIN_ROOT/skills/plan-review-prompt/plan-review.prompt.md` (the harness also names this skill's base directory in your invocation context). If `$CLAUDE_PLUGIN_ROOT` is unset, resolve it with Bash `echo "$CLAUDE_PLUGIN_ROOT"`, or `Glob` for `**/skills/plan-review-prompt/plan-review.prompt.md` and take the match.
 2. Build `{focus}` = that prompt's text, then a `## Focus for this plan` section containing your composed targets (name the units/symbols; for each deferred forward-reference, instruct the reviewer to confirm it is wired up).
 3. **Decide how the diff reaches the reviewer — read it off the template's `run`:**
    - **The reviewer fetches it (agentic tool, e.g. `codex exec`).** If `run` does *not* pipe a diff in (e.g. `codex exec -s read-only "{focus}"`), the tool runs shell itself, so let it pull the diff at its own pace — this is what scales to an **extremely large** diff, because the whole diff never has to fit in one context window. Append to `{focus}` a delivery line naming the concrete `{diff_range}`, stating the reviewer has read-only repo access, and telling it to **map first** (`git diff --stat {diff_range}`) then read the change file by file. Do **not** pipe the diff. A read-only sandbox suffices — the reviewer only reads and runs `git diff`.
@@ -79,7 +79,7 @@ The tool brings the *model*; planview brings the *prompt*. So `{focus}` here is 
 
 ### B. Slash command (e.g. `/codex:adversarial-review`)
 
-The slash command carries its own reviewer prompt, so do **not** inject planview's — here `{focus}` is just your **focus targets** (one line). Present the ready-to-run command for the operator (these commands are typically `disable-model-invocation`, so they're operator-run — you compose, they pull the trigger):
+The slash command carries its own reviewer prompt, so do **not** inject jidoka's — here `{focus}` is just your **focus targets** (one line). Present the ready-to-run command for the operator (these commands are typically `disable-model-invocation`, so they're operator-run — you compose, they pull the trigger):
 
 ```
 <configured-command> --base <base> "Cumulative diff of the N-unit '<slug>' plan; review as one integrated change. Targets: <target 1>; <target 2>; confirm forward-reference <symbol> added in Unit 0X is wired up by Unit 0Y; …"

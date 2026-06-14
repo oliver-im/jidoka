@@ -28,15 +28,15 @@ import {
 } from "./types.js";
 import { formatError, validatePlan, validateTopology } from "./validate.js";
 
-declare const __PLANVIEW_VERSION__: string;
+declare const __JIDOKA_VERSION__: string;
 
 const program = new Command();
 program
-  .name("planview")
+  .name("jidoka")
   .description(
     "Visualize multi-agent task decomposition; materialize plans on ExitPlanMode",
   )
-  .version(__PLANVIEW_VERSION__, "-v, --version", "Show version number");
+  .version(__JIDOKA_VERSION__, "-v, --version", "Show version number");
 
 program
   .command("hook")
@@ -175,7 +175,7 @@ function runMaterialize(
   if (
     cfg.html_output &&
     cfg.auto_open_browser &&
-    process.env["PLANVIEW_NO_OPEN"] === undefined
+    process.env["JIDOKA_NO_OPEN"] === undefined
   ) {
     try {
       openBrowser(join(target, "overview.html"));
@@ -263,7 +263,7 @@ function renderAndOpen(
   const html = renderTopologyHtml(topology, graphs, desc, planMd);
   const path = writeTempHtml(html);
   process.stdout.write(`${path}\n`);
-  if (process.env["PLANVIEW_NO_OPEN"] === undefined) openBrowser(path);
+  if (process.env["JIDOKA_NO_OPEN"] === undefined) openBrowser(path);
 }
 
 await program.parseAsync();

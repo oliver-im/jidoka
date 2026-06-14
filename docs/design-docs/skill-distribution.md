@@ -1,10 +1,10 @@
 # Skill Distribution and Local Testing (March 2026)
 
-How planview should distribute a single skill set across multiple coding agents without relying on symlinks, and how to test those skills locally after making repo changes.
+How jidoka should distribute a single skill set across multiple coding agents without relying on symlinks, and how to test those skills locally after making repo changes.
 
 ## Context
 
-planview's renderer is designed as a portable CLI binary, while skills and hooks are platform adapters around that binary. If the project wants to support multiple agents such as Claude Code, Codex, and Cursor, the skill authoring model needs to solve three problems together:
+jidoka's renderer is designed as a portable CLI binary, while skills and hooks are platform adapters around that binary. If the project wants to support multiple agents such as Claude Code, Codex, and Cursor, the skill authoring model needs to solve three problems together:
 
 1. **Single source of truth** — edit the skill once
 2. **Distribution** — install it into the right locations for each agent
@@ -71,7 +71,7 @@ This matters because:
 - Cursor loads `.agents/skills/` officially
 - Claude Code does not, but it can consume the same `SKILL.md` format once copied into `.claude/skills/`
 
-For planview, this suggests a clean architecture:
+For jidoka, this suggests a clean architecture:
 
 - **Canonical source:** `.agents/skills/` or `skills-src/`
 - **Generated adapter location for Claude Code:** `.claude/skills/`
@@ -108,16 +108,16 @@ Less elegant, but operationally simple:
 
 This works well when users want out-of-the-box discovery in multiple agents without running an installer first.
 
-## Recommended model for planview
+## Recommended model for jidoka
 
 ### Source of truth
 
 Prefer one of these:
 
 1. **`.agents/skills/` as canonical source**
-   Best if planview wants to align with the open Agent Skills ecosystem and keep the repo interoperable by default.
+   Best if jidoka wants to align with the open Agent Skills ecosystem and keep the repo interoperable by default.
 2. **`skills-src/` as canonical source**
-   Best if planview expects future per-agent transforms or generated metadata and wants a clearly non-runtime source directory.
+   Best if jidoka expects future per-agent transforms or generated metadata and wants a clearly non-runtime source directory.
 
 If no per-agent transforms are needed, `.agents/skills/` is the simplest choice.
 
@@ -131,7 +131,7 @@ Generate these as needed:
 
 ### Distribution commands
 
-planview should eventually expose a small distribution surface such as:
+jidoka should eventually expose a small distribution surface such as:
 
 - `scripts/sync-skills` — copy canonical skills into repo-local target directories
 - `scripts/install-skills --agent <agent> --scope <repo|user>` — install into user-level directories for local testing
@@ -179,7 +179,7 @@ Actually open the target agent and verify:
 
 Smoke tests matter because skill systems use progressive loading and tool-specific discovery rules. Passing static checks does not prove the agent will actually pick the skill up.
 
-## Minimal test matrix for planview
+## Minimal test matrix for jidoka
 
 For each supported agent, the useful smoke-test cases are:
 
@@ -206,7 +206,7 @@ For each supported agent, the useful smoke-test cases are:
 
 ## Release and distribution implications
 
-If planview wants the skill layer to be reused outside this repository, distribution should be designed early rather than bolted on later.
+If jidoka wants the skill layer to be reused outside this repository, distribution should be designed early rather than bolted on later.
 
 The likely progression is:
 
@@ -217,11 +217,11 @@ The likely progression is:
 
 This mirrors the lesson from [`googleworkspace-cli.md`](googleworkspace-cli.md): distribution is part of the product, not a post-launch chore.
 
-## Implications for planview specifically
+## Implications for jidoka specifically
 
 The skill layer should remain thin and adapter-like:
 
-- the durable asset is still the `planview` CLI binary
+- the durable asset is still the `jidoka` CLI binary
 - skills should mostly explain how to call the binary and interpret its outputs
 - per-agent differences should live in generated skill bundles, not in the renderer itself
 
@@ -238,7 +238,7 @@ That keeps the architecture aligned with the conclusion in [`cli-over-mcp.md`](c
 5. **Define a manual smoke-test checklist for Claude Code, Codex, and Cursor**
 6. **Treat release/install tooling as part of the skill work, not separate future cleanup**
 
-This gives planview:
+This gives jidoka:
 
 - one edit point
 - predictable multi-agent installs

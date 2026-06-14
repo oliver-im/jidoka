@@ -23,7 +23,7 @@ import { formatError, isValidId, validatePlan } from "./validate.js";
 
 // PreToolUse stdin shape: { session_id, tool_name, tool_input: { plan } }.
 // The skill body produces the markdown that ExitPlanMode carries in `plan`,
-// so we read it straight from there — no `/tmp/planview-*.json` ferry. Other
+// so we read it straight from there — no `/tmp/jidoka-*.json` ferry. Other
 // fields are accepted but ignored; passthrough keeps us forward-compatible
 // with payload additions.
 const hookInputSchema = z.object({
@@ -38,7 +38,7 @@ const hookInputSchema = z.object({
 
 interface HookConfig {
   today: string;
-  /** Where `/planview` was invoked from (CLAUDE_PROJECT_DIR or cwd). The
+  /** Where `/jidoka` was invoked from (CLAUDE_PROJECT_DIR or cwd). The
    * git_workflow path resolves the main checkout from here. */
   projectDir: string;
   plansRoot: string;
@@ -51,11 +51,11 @@ function configFromEnv(): HookConfig {
   const projectDir = process.env["CLAUDE_PROJECT_DIR"] ?? process.cwd();
   if (process.env["CLAUDE_PROJECT_DIR"] === undefined) {
     process.stderr.write(
-      "planview hook: CLAUDE_PROJECT_DIR is unset; falling back to current working directory\n",
+      "jidoka hook: CLAUDE_PROJECT_DIR is unset; falling back to current working directory\n",
     );
   }
   const cfg = loadConfig(projectDir);
-  const noOpen = process.env["PLANVIEW_NO_OPEN"] !== undefined;
+  const noOpen = process.env["JIDOKA_NO_OPEN"] !== undefined;
   const plansRoot = isAbsolute(cfg.plan_dir_root)
     ? cfg.plan_dir_root
     : join(projectDir, cfg.plan_dir_root);
@@ -79,7 +79,7 @@ export async function runHook(): Promise<number> {
     const config = configFromEnv();
     runWithInput(stdin, config);
   } catch (e) {
-    process.stderr.write(`planview hook: ${(e as Error).message}\n`);
+    process.stderr.write(`jidoka hook: ${(e as Error).message}\n`);
   }
   return 0;
 }
@@ -109,7 +109,7 @@ export function runWithInput(input: string, config: HookConfig): void {
 
   const planResult = parsePlanMarkdown(planMd);
   if (!planResult.ok) {
-    emitDeny(`planview: cannot parse plan markdown: ${planResult.error}`);
+    emitDeny(`jidoka: cannot parse plan markdown: ${planResult.error}`);
     return;
   }
   const plan = planResult.value;
@@ -152,12 +152,12 @@ export function runWithInput(input: string, config: HookConfig): void {
         );
     } else if (outcome.kind === "deny") {
       emitDeny(
-        `planview: ${outcome.reason}. No files were written; active/ stays clean.`,
+        `jidoka: ${outcome.reason}. No files were written; active/ stays clean.`,
       );
       return;
     } else {
       process.stderr.write(
-        `planview hook: ${outcome.reason}; materializing in-tree\n`,
+        `jidoka hook: ${outcome.reason}; materializing in-tree\n`,
       );
     }
   }
@@ -170,7 +170,7 @@ export function runWithInput(input: string, config: HookConfig): void {
   if (existsSync(target)) {
     onPublishFailure?.();
     emitDeny(
-      `Plan dir ${target} already exists. Either remove it or pick a new slug via /planview.`,
+      `Plan dir ${target} already exists. Either remove it or pick a new slug via /jidoka.`,
     );
     return;
   }
@@ -178,7 +178,7 @@ export function runWithInput(input: string, config: HookConfig): void {
   // Stage all writes into a sibling temp dir so a mid-write failure can't
   // leave a partial plan dir at the final target. On any failure after the
   // worktree was created, roll the worktree back too so no orphan is left.
-  const staging = join(plansRoot, `.planview-stage-${sessionId}`);
+  const staging = join(plansRoot, `.jidoka-stage-${sessionId}`);
   try {
     mkdirSync(plansRoot, { recursive: true });
     if (existsSync(staging)) {
@@ -198,7 +198,7 @@ export function runWithInput(input: string, config: HookConfig): void {
     const msg =
       e instanceof MaterializeError ? e.message : (e as Error).message;
     emitDeny(
-      `planview: failed to materialize plan: ${msg}. No files were written.`,
+      `jidoka: failed to materialize plan: ${msg}. No files were written.`,
     );
     return;
   }
@@ -211,7 +211,7 @@ export function runWithInput(input: string, config: HookConfig): void {
       openBrowser(join(target, "overview.html"));
     } catch (e) {
       process.stderr.write(
-        `planview hook: could not open browser: ${(e as Error).message}\n`,
+        `jidoka hook: could not open browser: ${(e as Error).message}\n`,
       );
     }
   }

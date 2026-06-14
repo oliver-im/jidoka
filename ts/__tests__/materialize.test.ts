@@ -22,7 +22,7 @@ let tempDirCounter = 0;
 function makeTempDir(label: string): string {
   const path = join(
     tmpdir(),
-    `planview-mat-test-${process.pid}-${Date.now()}-${tempDirCounter++}-${label}`,
+    `jidoka-mat-test-${process.pid}-${Date.now()}-${tempDirCounter++}-${label}`,
   );
   mkdirSync(path, { recursive: true });
   return path;
@@ -121,7 +121,7 @@ describe("materialize", () => {
     const progress = readFileSync(join(target, "progress.md"), "utf8");
     expect(progress).toContain("**Cursor:** 01-prep");
     expect(progress).toContain("## Pre-execution review");
-    expect(progress).toContain("- [ ] `/planview:pre-plan-review`");
+    expect(progress).toContain("- [ ] `/jidoka:pre-plan-review`");
     expect(progress).toContain("## Plan-level review");
     expect(progress).toContain("_No plan-level reviews configured.");
     expect(progress).not.toContain("## Git workflow");
@@ -192,14 +192,14 @@ describe("materialize", () => {
     const plansRoot = join(base, "plan");
     mkdirSync(plansRoot, { recursive: true });
     const cfg = cfgWithPreReview([
-      "/planview:pre-plan-review",
+      "/jidoka:pre-plan-review",
       "/codex:adversarial-review",
     ]);
     const target = materialize(samplePlan(), plansRoot, "260505", cfg);
     const progress = readFileSync(join(target, "progress.md"), "utf8");
     expect(progress).toContain("## Pre-execution review");
     expect(progress).toContain("before starting Unit 01");
-    expect(progress).toContain("- [ ] `/planview:pre-plan-review`");
+    expect(progress).toContain("- [ ] `/jidoka:pre-plan-review`");
     expect(progress).toContain("- [ ] `/codex:adversarial-review`");
     rmSync(base, { recursive: true, force: true });
   });

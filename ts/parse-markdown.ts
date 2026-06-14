@@ -126,8 +126,8 @@ const UNIT_HEADING_RE = /^##\s+(?:(?:Unit|Step)\s+)?(\d{1,3})\s*[:.—\-]\s*(.+?
 
 // If the entire input is a single fenced code block whose info string is
 // empty or `markdown`, strip that wrapper. This handles the case where the
-// `/planview` skill emits its plan inside a ```markdown fence (per
-// `.claude/skills/planview/SKILL.md`) and the caller pastes the fenced
+// `/jidoka` skill emits its plan inside a ```markdown fence (per
+// `.claude/skills/jidoka/SKILL.md`) and the caller pastes the fenced
 // payload through ExitPlanMode verbatim. We require the closer to use
 // exactly the same tick count as the opener (stricter than CommonMark
 // §4.5's "≥ N") so that an internal fence whose closer happens to be the

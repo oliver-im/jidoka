@@ -1,4 +1,4 @@
-# Refactor planview pipeline to plan-md
+# Refactor jidoka pipeline to plan-md
 
 This is preamble prose. The parser should ignore it for unit detection but keep the H1 above as the task summary.
 
@@ -38,7 +38,7 @@ Remove `Topology`, `Agent`, and friends from `ts/types.ts`. Slim `validatePlan` 
 
 ## Unit 06: Skill emits markdown
 
-Rewrite `.claude/skills/planview/SKILL.md` to produce markdown (not JSON), preserving the unit-splitting heuristics.
+Rewrite `.claude/skills/jidoka/SKILL.md` to produce markdown (not JSON), preserving the unit-splitting heuristics.
 
 ## Unit 07: Docs
 

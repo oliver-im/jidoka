@@ -88,8 +88,8 @@ The structure is just directories and this file:
 
 ```sh
 mkdir -p docs/{ideas,exec-plans/{active,completed},design-docs/superseded}
-# drop this file in (planview is its canonical home):
-curl -sfo docs/CONVENTION.md https://raw.githubusercontent.com/oliverim/planview/main/docs/CONVENTION.md
+# drop this file in (jidoka is its canonical home):
+curl -sfo docs/CONVENTION.md https://raw.githubusercontent.com/oliverim/jidoka/main/docs/CONVENTION.md
 # add a one-line index.md to each dir naming its kind + drift rule
 ```
 
@@ -109,4 +109,4 @@ The payoff: `main` stays clean of in-flight churn, completed work lands atomical
 
 ## Tooling (optional)
 
-The convention is directories + two rules; it needs no tool. [planview](https://github.com/oliverim/planview) is the **reference driver** — a Claude Code plugin that materializes plan-mode output straight into `exec-plans/active/<id>/`, and can render the execution workflow into each plan's `progress.md` and create the worktree automatically (an opt-in `git_workflow` flag). It is one way to drive the lifecycle, not a requirement: any tool, script, or a bare `mkdir` and `git mv` works just as well.
+The convention is directories + two rules; it needs no tool. [jidoka](https://github.com/oliverim/jidoka) is the **reference driver** — a Claude Code plugin that materializes plan-mode output straight into `exec-plans/active/<id>/`, and can render the execution workflow into each plan's `progress.md` and create the worktree automatically (an opt-in `git_workflow` flag). It is one way to drive the lifecycle, not a requirement: any tool, script, or a bare `mkdir` and `git mv` works just as well.

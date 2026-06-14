@@ -1,6 +1,6 @@
 # Review-pipeline direction after the June 2026 landscape shift
 
-Decisions and rationale for how planview's review pipeline should use the current
+Decisions and rationale for how jidoka's review pipeline should use the current
 Claude Code / codex review tooling. Companion to `codex-adversarial-review.md`
 (which covers codex's 1MB diff behavior). Scope: review pipeline only — `/goals`
 integration was raised but **deferred**, not decided.
@@ -11,7 +11,7 @@ Three landscape changes prompted a re-evaluation:
 
 1. **`/goal`** (Claude Code v2.1.139) — set a completion condition; Claude works across
    turns until a separate evaluator model confirms it. Session-scoped, no plugin API,
-   evaluator sees only the transcript. Orthogonal to planview's pre-execution structure.
+   evaluator sees only the transcript. Orthogonal to jidoka's pre-execution structure.
    **Deferred** for a later session.
 2. **`/code-review ultra`** — multi-agent *cloud* review, verified findings, but
    user-triggered + billed ($5–20, 5–10 min).
@@ -51,17 +51,17 @@ Mitigations, in order of preference:
 ### 4. `/code-review` takes no focus argument
 Its only inputs are effort (`low…max`), `--fix`, `--comment`, and a `target`. There is
 **no** free-text focus/instruction. So per-unit review *focus* ("watch for races") goes in
-the **unit body prose**, not the command — which validates planview's existing
+the **unit body prose**, not the command — which validates jidoka's existing
 body-as-escape-hatch model. `/simplify` is now **cleanup-only** (no bug hunting) — a
 complement to `/code-review`, not a substitute.
 
 ### 5. plan_review: keep default `[]`, document `/codex:adversarial-review --base <branch>`
-> **Refined (2026-06)** — see *Generalize review steps to tool-agnostic templates* at the end of this doc: `plan_review` becomes a tool-agnostic command template (codex is one vehicle, not the only one), and planview authors its own plan-review prompt rather than relying on codex's.
+> **Refined (2026-06)** — see *Generalize review steps to tool-agnostic templates* at the end of this doc: `plan_review` becomes a tool-agnostic command template (codex is one vehicle, not the only one), and jidoka authors its own plan-review prompt rather than relying on codex's.
 
 Plan-level review is the **completeness net** for cross-unit issues the unit gate can't
 see. By plan-end the cumulative diff is **committed**, so it lives between the base branch
 and HEAD — a bare working-tree review sees nothing. The recommended vehicle is the
-**`/planview:plan-review-prompt` composer skill** (see #6), which emits a
+**`/jidoka:plan-review-prompt` composer skill** (see #6), which emits a
 `/codex:adversarial-review --base <branch>` command (reviews `merge-base..HEAD`, and
 uniquely **accepts free-form focus text**). No-codex alternative: `/code-review <branch>`.
 
@@ -74,13 +74,13 @@ non-empty default would fail loudly for users without codex.
 
 `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation: true`, so a
 resuming agent **cannot** invoke them via the SlashCommand tool. The resume protocol must
-**surface the command and stop** for the human to run it (consistent with planview's
+**surface the command and stop** for the human to run it (consistent with jidoka's
 existing plan-level sign-off checkpoint).
 
 **Chosen design — a prompt-composer skill, not the bare command.** Rather than put
 `/codex:adversarial-review --base main` directly in `plan_review` (which renders as "user
 runs this," losing the agent's context), the recommended entry is a new bundled skill
-**`/planview:plan-review-prompt`** (agent-invocable, symmetric to `/planview:pre-plan-review`).
+**`/jidoka:plan-review-prompt`** (agent-invocable, symmetric to `/jidoka:pre-plan-review`).
 The resuming agent runs it; it reads the plan + cumulative diff and **composes** a focused,
 ready-to-run `/codex:adversarial-review --base <branch>` command, which the operator runs.
 Rationale: the agent that just executed the plan has the sharpest context for aiming a
@@ -90,16 +90,16 @@ the forward-reference loop — the per-unit gate defers them (decision #3), and 
 tells the adversarial reviewer to confirm each got wired up. The skill is agent-invocable
 because it is cheap (reads + composes text, no external call) and we *want* the agent to
 produce the prompt; the codex command it emits remains operator-run. Note `pre-plan-review`
-is itself `disable-model-invocation`, so operator-run review steps are already planview's
+is itself `disable-model-invocation`, so operator-run review steps are already jidoka's
 norm — the composer is the deliberate exception so the agent can do the aiming.
 
 **Why not fork codex-plugin-cc to remove the flag:**
-- **Dispositive:** planview is *distributable*. Its config references `/codex:adversarial-review`
+- **Dispositive:** jidoka is *distributable*. Its config references `/codex:adversarial-review`
   for other users, who run the **stock official codex plugin**. A fork patches only one
-  machine and breaks the "install planview + official codex" story for everyone else.
+  machine and breaks the "install jidoka + official codex" story for everyone else.
 - The flag is an intentional guardrail for expensive/deliberate commands (Anthropic's
   recommended use, same class as `/deploy`). Removing it fights upstream intent.
-- planview's plan-level review is *already* a deliberate human checkpoint, so auto-
+- jidoka's plan-level review is *already* a deliberate human checkpoint, so auto-
   invocation removes a checkpoint both designs place there — solving a non-problem.
 
 **Community signal** (openai/codex-plugin-cc): demand to lift the flag is real and matches
@@ -114,14 +114,14 @@ quickly" and ships off by default. De-facto workaround is a local edit, with the
 footgun "just try not to update the plugin."
 
 No-fork escape hatches if agent-driven invocation is ever wanted (neither shipped in
-planview defaults): (a) direct `node <codex>/scripts/codex-companion.mjs adversarial-review
+jidoka defaults): (a) direct `node <codex>/scripts/codex-companion.mjs adversarial-review
 --wait --base <ref> "<focus>"` via Bash (community issue #232); (b) local edit of one's own
 codex install. Caveat: an upstream Claude Code over-hiding bug (anthropics/claude-code#26251,
 codex #211) can block even *user-typed* invocation on some versions — if bitten, the direct
 companion call is the fallback.
 
 ### 7. Don't double-gate
-If planview drives plan-level review, leave codex's own Stop-time `--enable-review-gate`
+If jidoka drives plan-level review, leave codex's own Stop-time `--enable-review-gate`
 off (it's off by default in 1.0.4).
 
 ## Repo changes made
@@ -142,9 +142,9 @@ off (it's off by default in 1.0.4).
 - `docs/agent-guide.md` — added "independently testable" splitting criterion, "Mid-plan
   incompleteness" guidance, no-focus note in `review_steps`.
 - `notes/plan/AGENTS.md` — resume protocol: built-in `/code-review`, triage-not-apply;
-  plan-level step runs `/planview:plan-review-prompt`, which hands the operator the codex command.
-- `~/.claude/plugins/planview/config.json` (global, outside the repo) — set
-  `plan_review: ["/planview:plan-review-prompt"]`; fixed stale `unit_review`
+  plan-level step runs `/jidoka:plan-review-prompt`, which hands the operator the codex command.
+- `~/.claude/plugins/jidoka/config.json` (global, outside the repo) — set
+  `plan_review: ["/jidoka:plan-review-prompt"]`; fixed stale `unit_review`
   (`/code-review:code-review` → `/code-review`); refreshed annotated comments.
 
 Historical materialized plans under `plan/**` and `notes/plan/2605*/` left untouched
@@ -152,7 +152,7 @@ Historical materialized plans under `plan/**` and `notes/plan/2605*/` left untou
 
 ## Deferred
 
-- **`/goal` integration.** Whether/how planview's unit acceptance criteria should be shaped
+- **`/goal` integration.** Whether/how jidoka's unit acceptance criteria should be shaped
   into transcript-observable goal conditions, and a "drive each unit with `/goal`" workflow.
   Constraint to design around: the goal evaluator reads only the transcript (not the
   filesystem), and plugins cannot create goals programmatically.
@@ -182,13 +182,13 @@ template can legitimately start with `/` (absolute paths), so a prefix is ambigu
 object is unambiguous and extensible. Placeholders: `{plan_dir}`, `{base}`, `{diff_range}`
 (= `merge-base..HEAD`), `{focus}`.
 
-**2. planview authors its own plan-level review prompt — it does not vendor codex's.**
+**2. jidoka authors its own plan-level review prompt — it does not vendor codex's.**
 codex's `adversarial-review.md` is diff/code-shaped and generic (mandatory file +
 `line_start`/`line_end`; its attack surface is runtime failure, not plan structure), it
-drifts when upstream changes, and copying it redistributes someone else's prompt. planview
+drifts when upstream changes, and copying it redistributes someone else's prompt. jidoka
 already owns `pre-plan-review`'s prompt; it owns a plan-level one the same way — aimed at the
 cumulative committed diff, cross-unit seams, and deferred forward-references. With a
-`codex exec` template, **codex supplies the model, planview supplies the prompt.**
+`codex exec` template, **codex supplies the model, jidoka supplies the prompt.**
 
 **3. Operator-vs-agent (`print`/`exec`) axis spans all three stages.** `print` (default) —
 surface the ready-to-run command and stop for the operator. `exec` (opt-in) — the resuming
@@ -217,12 +217,12 @@ valid there; `{base}`/`{diff_range}`/`{focus}` apply to `unit_review`/`plan_revi
 **Boundaries (load-bearing).** (a) The renderer still only *records* commands; the exit-0
 ExitPlanMode hook never runs shell — all execution stays in the resume/agent layer. (b)
 Review steps stay **global-config-only** (the project-override allow-list excludes the review
-arrays), so a cloned repo's `.planview.json` can't make the agent run arbitrary shell — the
+arrays), so a cloned repo's `.jidoka.json` can't make the agent run arbitrary shell — the
 security boundary that makes `exec` safe.
 
 **Still not forking codex** (the #6 dispositive argument holds): `exec` bypasses the codex
 *plugin* by calling a generic `codex exec` template via Bash — escape hatch (a) that #6
-itself named — not by patching the plugin's `disable-model-invocation`. planview stays
+itself named — not by patching the plugin's `disable-model-invocation`. jidoka stays
 installable alongside the stock official codex plugin, and `print`/operator-run remains the
 default for the heavyweight codex review.
 

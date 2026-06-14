@@ -14,7 +14,7 @@ let counter = 0;
 function makeTempDir(label: string): string {
   const path = join(
     tmpdir(),
-    `planview-cfg-test-${process.pid}-${Date.now()}-${counter++}-${label}`,
+    `jidoka-cfg-test-${process.pid}-${Date.now()}-${counter++}-${label}`,
   );
   mkdirSync(path, { recursive: true });
   return path;
@@ -34,8 +34,8 @@ describe("defaults", () => {
     expect(defaultConfig.plan_review).toEqual([]);
   });
 
-  it("ships a pre-execution review defaulting to /planview:pre-plan-review", () => {
-    expect(defaultConfig.pre_review).toEqual(["/planview:pre-plan-review"]);
+  it("ships a pre-execution review defaulting to /jidoka:pre-plan-review", () => {
+    expect(defaultConfig.pre_review).toEqual(["/jidoka:pre-plan-review"]);
   });
 });
 
@@ -57,7 +57,7 @@ describe("loadFromPaths", () => {
 
   it("project override accepts plan_dir_root, auto_open_browser, html_output, git_workflow", () => {
     const dir = makeTempDir("proj");
-    const path = join(dir, ".planview.json");
+    const path = join(dir, ".jidoka.json");
     writeFileSync(
       path,
       JSON.stringify({
@@ -77,7 +77,7 @@ describe("loadFromPaths", () => {
 
   it("project override rejects unknown keys", () => {
     const dir = makeTempDir("unknown");
-    const path = join(dir, ".planview.json");
+    const path = join(dir, ".jidoka.json");
     writeFileSync(
       path,
       JSON.stringify({
@@ -92,7 +92,7 @@ describe("loadFromPaths", () => {
 
   it("project override rejects non-boolean for auto_open_browser/html_output", () => {
     const dir = makeTempDir("nonbool");
-    const path = join(dir, ".planview.json");
+    const path = join(dir, ".jidoka.json");
     writeFileSync(
       path,
       JSON.stringify({
@@ -108,7 +108,7 @@ describe("loadFromPaths", () => {
 
   it("project override rejects non-boolean git_workflow", () => {
     const dir = makeTempDir("gwbad");
-    const path = join(dir, ".planview.json");
+    const path = join(dir, ".jidoka.json");
     writeFileSync(path, JSON.stringify({ git_workflow: "yes" }));
     const cfg = loadFromPaths(undefined, path);
     expect(cfg.git_workflow).toBe(false);
@@ -117,7 +117,7 @@ describe("loadFromPaths", () => {
 
   it("rejects absolute plan_dir_root in project override", () => {
     const dir = makeTempDir("abs");
-    const path = join(dir, ".planview.json");
+    const path = join(dir, ".jidoka.json");
     writeFileSync(path, JSON.stringify({ plan_dir_root: "/etc/foo" }));
     const cfg = loadFromPaths(undefined, path);
     expect(cfg.plan_dir_root).toBe("docs/exec-plans/active");
@@ -126,7 +126,7 @@ describe("loadFromPaths", () => {
 
   it("rejects parent traversal in project override", () => {
     const dir = makeTempDir("traversal");
-    const path = join(dir, ".planview.json");
+    const path = join(dir, ".jidoka.json");
     writeFileSync(path, JSON.stringify({ plan_dir_root: "../escape" }));
     const cfg = loadFromPaths(undefined, path);
     expect(cfg.plan_dir_root).toBe("docs/exec-plans/active");
@@ -182,12 +182,12 @@ describe("loadFromPaths", () => {
     writeFileSync(
       path,
       JSON.stringify({
-        pre_review: ["/planview:pre-plan-review", "/codex:adversarial-review"],
+        pre_review: ["/jidoka:pre-plan-review", "/codex:adversarial-review"],
       }),
     );
     const cfg = loadFromPaths(path, undefined);
     expect(cfg.pre_review).toEqual([
-      "/planview:pre-plan-review",
+      "/jidoka:pre-plan-review",
       "/codex:adversarial-review",
     ]);
     rmSync(dir, { recursive: true, force: true });
@@ -234,7 +234,7 @@ describe("loadFromPaths", () => {
 
   it("rejects unit_review / plan_review / pre_review as project overrides", () => {
     const dir = makeTempDir("scope");
-    const path = join(dir, ".planview.json");
+    const path = join(dir, ".jidoka.json");
     writeFileSync(
       path,
       JSON.stringify({
@@ -437,14 +437,14 @@ describe("loadFromPaths — template review steps", () => {
       path,
       JSON.stringify({
         pre_review: [
-          "/planview:pre-plan-review",
+          "/jidoka:pre-plan-review",
           { run: "agent -p --mode ask {plan_dir}", mode: "exec" },
         ],
       }),
     );
     const cfg = loadFromPaths(path, undefined);
     expect(cfg.pre_review).toEqual([
-      "/planview:pre-plan-review",
+      "/jidoka:pre-plan-review",
       { run: "agent -p --mode ask {plan_dir}", mode: "exec" },
     ]);
     rmSync(dir, { recursive: true, force: true });

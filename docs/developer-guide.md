@@ -1,13 +1,13 @@
 # Developer Guide: Building the Renderer
 
-Self-contained reference for rebuilding planview in any language. See [Data Model](data-model.md) for the typed shapes (Plan + per-unit Topology) and the plan markdown surface, and [Agent Guide](agent-guide.md) for the skill's behavior and heuristics.
+Self-contained reference for rebuilding jidoka in any language. See [Data Model](data-model.md) for the typed shapes (Plan + per-unit Topology) and the plan markdown surface, and [Agent Guide](agent-guide.md) for the skill's behavior and heuristics.
 
 ## System Architecture
 
 Two components with a strict boundary between them.
 
 ```
-User types /planview <task>
+User types /jidoka <task>
       |
       v
 +- SKILL (forked subagent) -------------------------+
@@ -30,7 +30,7 @@ User types /planview <task>
 +----------------------------------------------------+
 
 Direct topology rendering (legacy path, unchanged):
-  echo '<topology-json>' | planview  ->  /tmp/*.html
+  echo '<topology-json>' | jidoka  ->  /tmp/*.html
 ```
 
 ### Skill (SKILL.md)
@@ -52,7 +52,7 @@ plan markdown (from PreToolUse stdin's tool_input.plan, or from a file/stdin)
          -> build_overview_md / build_progress_md / build_unit_md
             -> atomic_write per file
        write_plan_html         (when html_output=true; embeds overview.md)
-  -> open_browser              (when auto_open_browser=true and !PLANVIEW_NO_OPEN)
+  -> open_browser              (when auto_open_browser=true and !JIDOKA_NO_OPEN)
 
 Per-unit topology (when extracted from a fence):
   validate_topology_into       (path-prefixed: units[N].topology.agents…)
@@ -78,14 +78,14 @@ ExitPlanMode fires with markdown in tool_input.plan
 
 ```bash
 # Plan path:
-planview materialize <plan.md>            # parses markdown, writes plan dir + overview.html
-planview materialize - < plan.md          # same, via stdin
-planview materialize <legacy-plan.json>   # legacy Plan JSON also accepted (auto-detected)
+jidoka materialize <plan.md>            # parses markdown, writes plan dir + overview.html
+jidoka materialize - < plan.md          # same, via stdin
+jidoka materialize <legacy-plan.json>   # legacy Plan JSON also accepted (auto-detected)
 
 # Topology path (legacy, standalone):
-echo '<topology-json>' | planview         # writes /tmp/*.html, opens browser
-planview <topology.json>                  # same
-planview --example                        # built-in showcase
+echo '<topology-json>' | jidoka         # writes /tmp/*.html, opens browser
+jidoka <topology.json>                  # same
+jidoka --example                        # built-in showcase
 ```
 
 The skill never invokes the binary. Renderer-skill separation is preserved.
@@ -316,16 +316,16 @@ Combines Mermaid graphs + description + optional plan into a self-contained HTML
 
 ```
 Usage:
-  planview <file>                      Render a topology JSON file
-  echo '<json>' | planview             Read topology JSON from stdin
-  planview --example                   Render the built-in showcase
-  planview --example --json            Dump the showcase JSON to stdout
-  planview <file> --mermaid            Output raw Mermaid graph definitions
-  planview <file> --plan <plan.md>     Render topology with plan panel
-  planview materialize <plan.md>       Materialize a plan markdown into <plan_dir_root>/
-  planview materialize - < plan.md     Materialize plan markdown from stdin
+  jidoka <file>                      Render a topology JSON file
+  echo '<json>' | jidoka             Read topology JSON from stdin
+  jidoka --example                   Render the built-in showcase
+  jidoka --example --json            Dump the showcase JSON to stdout
+  jidoka <file> --mermaid            Output raw Mermaid graph definitions
+  jidoka <file> --plan <plan.md>     Render topology with plan panel
+  jidoka materialize <plan.md>       Materialize a plan markdown into <plan_dir_root>/
+  jidoka materialize - < plan.md     Materialize plan markdown from stdin
                                        (legacy Plan JSON is also accepted; format auto-detected)
-  planview hook                        Process ExitPlanMode hook from stdin
+  jidoka hook                        Process ExitPlanMode hook from stdin
 
 Options:
   -h, --help          Show this help message
@@ -343,30 +343,30 @@ Materialize subcommand options:
 ### Mode Details
 
 - **Normal mode** (default): Read topology JSON from file/stdin, validate, render HTML, write to temp file, open browser. Stdout: HTML file path. Exit 0 on success, 1 on error.
-- **Materialize mode** (`planview materialize`): Read a plan from file (or stdin when the file argument is `-`), auto-detect markdown vs legacy JSON by the first non-whitespace character (`{` → JSON, otherwise markdown), validate, write `<plan_dir_root>/<YYMMDD-N-slug>/{overview,progress,0N-*}.md`. `overview.html` is written only when `html_output=true`; the browser opens only when `auto_open_browser=true` (both default off — see [Configuration](#configuration)). Plans root resolves from `$CLAUDE_PROJECT_DIR/<plan_dir_root>` (PWD fallback with stderr warning). Exit 0 on success, 1 on error.
-- **Hook mode** (`planview hook`): Process ExitPlanMode PreToolUse hook input from stdin. See [Hook Integration](#hook-integration) for full details. Always exits 0 (never blocks ExitPlanMode).
+- **Materialize mode** (`jidoka materialize`): Read a plan from file (or stdin when the file argument is `-`), auto-detect markdown vs legacy JSON by the first non-whitespace character (`{` → JSON, otherwise markdown), validate, write `<plan_dir_root>/<YYMMDD-N-slug>/{overview,progress,0N-*}.md`. `overview.html` is written only when `html_output=true`; the browser opens only when `auto_open_browser=true` (both default off — see [Configuration](#configuration)). Plans root resolves from `$CLAUDE_PROJECT_DIR/<plan_dir_root>` (PWD fallback with stderr warning). Exit 0 on success, 1 on error.
+- **Hook mode** (`jidoka hook`): Process ExitPlanMode PreToolUse hook input from stdin. See [Hook Integration](#hook-integration) for full details. Always exits 0 (never blocks ExitPlanMode).
 - **Mermaid mode** (`--mermaid`): Output raw Mermaid graph definitions to stdout instead of generating HTML. Useful for embedding in markdown.
 
 ### Environment Variables
 
 | Variable | Effect |
 |---|---|
-| `PLANVIEW_NO_OPEN` | If set, don't open the browser (just write the HTML and print the path) |
+| `JIDOKA_NO_OPEN` | If set, don't open the browser (just write the HTML and print the path) |
 | `CLAUDE_PROJECT_DIR` | Project root used to resolve `<project>/<plan_dir_root>/`; PWD fallback with a stderr warning when unset (claude-code issue [#22343](https://github.com/anthropics/claude-code/issues/22343)) |
 | `TMPDIR` | Override default `/tmp` for the topology renderer's HTML output |
 
 ## Configuration
 
-The renderer reads a layered config: built-in defaults < `~/.claude/plugins/planview/config.json` (global) < `<project>/.planview.json` (project). Defined in `ts/config.ts`; loaded via `loadConfig(projectDir)` and threaded into the hook + materialize CLI paths.
+The renderer reads a layered config: built-in defaults < `~/.claude/plugins/jidoka/config.json` (global) < `<project>/.jidoka.json` (project). Defined in `ts/config.ts`; loaded via `loadConfig(projectDir)` and threaded into the hook + materialize CLI paths.
 
 | Key | Type | Default | Project override? | Notes |
 |---|---|---|---|---|
 | `plan_dir_root` | string | `docs/exec-plans/active` | yes (relative paths only, no `..`) | Where plan dirs land. Project paths are resolved against `$CLAUDE_PROJECT_DIR`. |
-| `auto_open_browser` | bool | `false` | yes | Open `overview.html` after materialize. `PLANVIEW_NO_OPEN=1` always wins. |
+| `auto_open_browser` | bool | `false` | yes | Open `overview.html` after materialize. `JIDOKA_NO_OPEN=1` always wins. |
 | `html_output` | bool | `false` | yes | Write `overview.html` alongside the markdown. When false, only the `.md` files are produced. |
 | `plan_level_topology` | bool | `false` | no | Reserved for v2; currently always false. |
-| `git_workflow` | bool | `false` | yes | When on, renders a `## Git workflow` block (the worktree-per-plan / branch-per-unit reminder) into `progress.md`. Shipped off — OSS opt-in; a committed `.planview.json` opts a repo in. |
-| `pre_review` | `ReviewStep[]` | `["/planview:pre-plan-review"]` | **no** | Pre-execution review steps. Each is a slash command or a `{ run, mode }` template (`ReviewStep`; see [data-model.md](data-model.md#review-commands)). Project-override **excluded** — global-config-only, the boundary that makes `exec` safe (a cloned repo's `.planview.json` can't inject shell). |
+| `git_workflow` | bool | `false` | yes | When on, renders a `## Git workflow` block (the worktree-per-plan / branch-per-unit reminder) into `progress.md`. Shipped off — OSS opt-in; a committed `.jidoka.json` opts a repo in. |
+| `pre_review` | `ReviewStep[]` | `["/jidoka:pre-plan-review"]` | **no** | Pre-execution review steps. Each is a slash command or a `{ run, mode }` template (`ReviewStep`; see [data-model.md](data-model.md#review-commands)). Project-override **excluded** — global-config-only, the boundary that makes `exec` safe (a cloned repo's `.jidoka.json` can't inject shell). |
 | `unit_review` | `ReviewStep[]` | `["/code-review"]` | **no** | Per-unit review steps, same `ReviewStep` shape and global-only boundary. |
 | `plan_review` | `ReviewStep[]` | `[]` | **no** | Plan-level review steps (opt-in), same `ReviewStep` shape and global-only boundary. |
 
@@ -375,7 +375,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 - Missing files are not errors: layer falls through silently.
 - Invalid JSON or shape mismatch on the global file: stderr warning, fall back to defaults.
 - Project file may only set the keys marked above. Other keys are warn-and-ignored. Non-boolean values for the boolean keys are warn-and-ignored. `plan_dir_root` strings are validated (`isAbsolute` and `..` segments rejected) before being applied.
-- `mergeForWrite(base, cfg)` round-trips the global file preserving any manually added keys — used by `planview:setup` when overwriting an existing file.
+- `mergeForWrite(base, cfg)` round-trips the global file preserving any manually added keys — used by `jidoka:setup` when overwriting an existing file.
 
 ### Daily counter
 
@@ -385,7 +385,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/plan
 
 One skill fronts the config UX (runs outside the planning fork so `AskUserQuestion` works):
 
-- `planview:setup` — first-run Q&A walkthrough that writes the global file. Triggered by phrases like "set up planview". Handles only the scalar knobs; the review steps (`pre_review`, `unit_review`, `plan_review` — each a slash command or `{ run, mode }` template) are written at their defaults and hand-edited in the JSON afterward (see README → Editing review commands). The hook re-validates on next plan-mode use, so no separate validator is needed.
+- `jidoka:setup` — first-run Q&A walkthrough that writes the global file. Triggered by phrases like "set up jidoka". Handles only the scalar knobs; the review steps (`pre_review`, `unit_review`, `plan_review` — each a slash command or `{ run, mode }` template) are written at their defaults and hand-edited in the JSON afterward (see README → Editing review commands). The hook re-validates on next plan-mode use, so no separate validator is needed.
 
 ## Plugin Manifest
 
@@ -393,7 +393,7 @@ The plugin ships with `.claude-plugin/plugin.json` (metadata), `.claude-plugin/m
 
 ```json
 {
-  "name": "planview",
+  "name": "jidoka",
   "version": "0.3.0",
   "description": "Materialize multi-unit plans …"
 }
@@ -414,7 +414,7 @@ The hook in `hooks/hooks.json`:
 }
 ```
 
-`$CLAUDE_PLUGIN_ROOT` expands to the plugin install path, so no `planview` binary needs to be on `$PATH`. The bundle always exits 0 internally — there is no `|| true` shell guard, since a non-zero exit from `dist/cli.js` would indicate a bug we want to surface, not silently swallow. Hook errors land on stderr via the run() wrapper.
+`$CLAUDE_PLUGIN_ROOT` expands to the plugin install path, so no `jidoka` binary needs to be on `$PATH`. The bundle always exits 0 internally — there is no `|| true` shell guard, since a non-zero exit from `dist/cli.js` would indicate a bug we want to surface, not silently swallow. Hook errors land on stderr via the run() wrapper.
 
 ## Hook Integration
 
@@ -433,7 +433,7 @@ PostToolUse is structurally incompatible with "review before approval."
 
 PreToolUse fires before the user sees the approval dialog:
 
-1. Agent (in plan mode) crystallizes a plan, runs `/planview`
+1. Agent (in plan mode) crystallizes a plan, runs `/jidoka`
 2. Skill returns plan markdown to the main agent
 3. Main agent calls `ExitPlanMode` with the markdown as the `plan` argument
 4. **>> PreToolUse hook fires** (synchronous, blocks until complete)
@@ -459,13 +459,13 @@ Hook receives stdin JSON: { "session_id": "...", "tool_name": "ExitPlanMode", "t
       +-- validate_plan       -> errors? -> deny with reasons      -> exit 0
       +-- resolve_target_dir
       +-- target dir already exists? -> deny "Plan dir <path> already exists" -> exit 0
-      +-- stage in <plansRoot>/.planview-stage-<sessionId>/
+      +-- stage in <plansRoot>/.jidoka-stage-<sessionId>/
       +-- materialize_at + (optional) write_plan_html
       +-- atomic rename staging -> target ; cleanup staging on any failure
-      +-- open browser (only if cfg.auto_open_browser && !PLANVIEW_NO_OPEN) -> exit 0
+      +-- open browser (only if cfg.auto_open_browser && !JIDOKA_NO_OPEN) -> exit 0
 ```
 
-There is no marker file, deny-loop, or `hook_behavior` knob — `ExitPlanMode` + `PreToolUse` shipped in Claude Code v2.1.85 (2026-03-26), four days after this project started; the original `/tmp/planview-{session_id}.json` ferry was forced by that timing and is now obsolete. The hook either has the markdown or it doesn't; if it doesn't, it stays out of the way.
+There is no marker file, deny-loop, or `hook_behavior` knob — `ExitPlanMode` + `PreToolUse` shipped in Claude Code v2.1.85 (2026-03-26), four days after this project started; the original `/tmp/jidoka-{session_id}.json` ferry was forced by that timing and is now obsolete. The hook either has the markdown or it doesn't; if it doesn't, it stays out of the way.
 
 ### Deny payloads
 
@@ -508,11 +508,11 @@ PreToolUse hooks block the tool if they return a non-zero exit code. The hook mu
 
 ### Post-v1: MCP Server
 
-Deferred per [design-docs/cli-over-mcp.md](design-docs/cli-over-mcp.md). The CLI binary (`echo JSON | planview`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
+Deferred per [design-docs/cli-over-mcp.md](design-docs/cli-over-mcp.md). The CLI binary (`echo JSON | jidoka`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
 
 ## Rendering Backend
 
-Mermaid via CDN — the only evaluated option with native stadium/pill and double circle shapes matching planview's visual language. The renderer architecture is swappable — `ts/mermaid.ts` can be replaced with a `ts/graphviz.ts` without changing any other pipeline stage (validate, graph, describe, html shell). Graphviz WASM (778 KB, gold-standard layout) is the strongest alternative if Mermaid limitations become blocking. See [design-docs/mermaid-rendering.md](design-docs/mermaid-rendering.md) for the full evaluation.
+Mermaid via CDN — the only evaluated option with native stadium/pill and double circle shapes matching jidoka's visual language. The renderer architecture is swappable — `ts/mermaid.ts` can be replaced with a `ts/graphviz.ts` without changing any other pipeline stage (validate, graph, describe, html shell). Graphviz WASM (778 KB, gold-standard layout) is the strongest alternative if Mermaid limitations become blocking. See [design-docs/mermaid-rendering.md](design-docs/mermaid-rendering.md) for the full evaluation.
 
 ## Development Setup
 
@@ -532,7 +532,7 @@ The bundled `dist/cli.js` is committed; rebuild after editing anything in `ts/` 
 For standalone CLI use outside the plugin, symlink the bundled entrypoint into `~/.local/bin`:
 
 ```bash
-ln -sf "$(pwd)/dist/cli.js" ~/.local/bin/planview
+ln -sf "$(pwd)/dist/cli.js" ~/.local/bin/jidoka
 ```
 
 `dist/cli.js` carries a `#!/usr/bin/env node` shebang and is chmod 755, so the symlink is executable directly. Subsequent `npm run build` runs overwrite the file in place — the symlink picks up the new version automatically.
@@ -546,5 +546,5 @@ When the plugin is enabled in Claude Code, the hook calls the bundle directly vi
 - **macOS first:** uses `open` for browser launch (code has `win32: "start"` and fallback `xdg-open` but untested). `today_yymmdd_local()` shells out to `date(1)`, which is GNU/BSD-compatible but not on Windows.
 - **Node ≥ 20 required:** TypeScript source in `ts/`, bundled to `dist/cli.js` via esbuild (`commander`, `zod`, `eta` inlined). `npm run build` rebuilds the bundle, `npm test` runs vitest, `npm run typecheck` runs `tsc --noEmit`.
 - **No LLM calls in renderer:** the renderer is deterministic I/O only.
-- **Session-scoped staging dir:** the hook stages writes in `<plansRoot>/.planview-stage-<sessionId>/` and renames on success. Concurrent hook invocations from different sessions don't collide; identical session_ids would (extremely unlikely under Claude Code).
+- **Session-scoped staging dir:** the hook stages writes in `<plansRoot>/.jidoka-stage-<sessionId>/` and renames on success. Concurrent hook invocations from different sessions don't collide; identical session_ids would (extremely unlikely under Claude Code).
 - **Project-scoped plan dirs:** `<project>/<plan_dir_root>/` (default `docs/exec-plans/active/`). `$CLAUDE_PROJECT_DIR` is the source of truth (PWD fallback with stderr warning when unset).

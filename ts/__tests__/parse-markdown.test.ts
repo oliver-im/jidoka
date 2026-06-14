@@ -19,8 +19,8 @@ describe("parsePlanMarkdown — fixtures", () => {
     const md = readFileSync(join(FIXTURES, "plan.md"), "utf8");
     const plan = parse(md);
 
-    expect(plan.task_summary).toBe("Refactor planview pipeline to plan-md");
-    expect(plan.slug).toBe("refactor-planview-pipeline-to-plan-md");
+    expect(plan.task_summary).toBe("Refactor jidoka pipeline to plan-md");
+    expect(plan.slug).toBe("refactor-jidoka-pipeline-to-plan-md");
     expect(plan.units.length).toBe(7);
 
     const ids = plan.units.map((u) => u.id);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { createRequire as __planviewCreateRequire } from "node:module";
-const require = __planviewCreateRequire(import.meta.url);
+import { createRequire as __jidokaCreateRequire } from "node:module";
+const require = __jidokaCreateRequire(import.meta.url);
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -18229,7 +18229,7 @@ var defaultConfig = {
   html_output: false,
   plan_level_topology: false,
   git_workflow: false,
-  pre_review: ["/planview:pre-plan-review"],
+  pre_review: ["/jidoka:pre-plan-review"],
   unit_review: ["/code-review"],
   plan_review: []
 };
@@ -18246,10 +18246,10 @@ var configSchema = external_exports.object({
 function globalConfigPath() {
   const home = homedir();
   if (!home) return void 0;
-  return join(home, ".claude", "plugins", "planview", "config.json");
+  return join(home, ".claude", "plugins", "jidoka", "config.json");
 }
 function projectOverridePath(projectDir) {
-  return join(projectDir, ".planview.json");
+  return join(projectDir, ".jidoka.json");
 }
 function loadConfig(projectDir) {
   return loadFromPaths(globalConfigPath(), projectOverridePath(projectDir));
@@ -18264,7 +18264,7 @@ function loadFromPaths(globalPath, projectPath) {
         cfg = parsed.data;
       } else {
         process.stderr.write(
-          `planview: ignoring invalid global config at ${globalPath}: ${parsed.error.message}
+          `jidoka: ignoring invalid global config at ${globalPath}: ${parsed.error.message}
 `
         );
       }
@@ -18283,7 +18283,7 @@ function readJson(path2) {
   } catch (e) {
     const err = e;
     if (err.code === "ENOENT") return void 0;
-    process.stderr.write(`planview: cannot read ${path2}: ${err.message}
+    process.stderr.write(`jidoka: cannot read ${path2}: ${err.message}
 `);
     return void 0;
   }
@@ -18291,7 +18291,7 @@ function readJson(path2) {
     return JSON.parse(stripJsonComments(raw));
   } catch (e) {
     process.stderr.write(
-      `planview: invalid JSON in ${path2}: ${e.message}
+      `jidoka: invalid JSON in ${path2}: ${e.message}
 `
     );
     return void 0;
@@ -18306,7 +18306,7 @@ var PROJECT_OVERRIDE_KEYS = [
 function applyProjectOverrides(cfg, value, path2) {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     process.stderr.write(
-      `planview: project override at ${path2} must be a JSON object; ignoring
+      `jidoka: project override at ${path2} must be a JSON object; ignoring
 `
     );
     return;
@@ -18315,14 +18315,14 @@ function applyProjectOverrides(cfg, value, path2) {
     if (key === "plan_dir_root") {
       if (typeof val !== "string" || val.length === 0) {
         process.stderr.write(
-          "planview: project override 'plan_dir_root' must be a non-empty string; ignoring\n"
+          "jidoka: project override 'plan_dir_root' must be a non-empty string; ignoring\n"
         );
         continue;
       }
       const reason = validateProjectPlanDirRoot(val);
       if (reason !== void 0) {
         process.stderr.write(
-          `planview: project override 'plan_dir_root' rejected (${reason}); ignoring
+          `jidoka: project override 'plan_dir_root' rejected (${reason}); ignoring
 `
         );
         continue;
@@ -18331,7 +18331,7 @@ function applyProjectOverrides(cfg, value, path2) {
     } else if (key === "auto_open_browser") {
       if (typeof val !== "boolean") {
         process.stderr.write(
-          "planview: project override 'auto_open_browser' must be a boolean; ignoring\n"
+          "jidoka: project override 'auto_open_browser' must be a boolean; ignoring\n"
         );
         continue;
       }
@@ -18339,7 +18339,7 @@ function applyProjectOverrides(cfg, value, path2) {
     } else if (key === "html_output") {
       if (typeof val !== "boolean") {
         process.stderr.write(
-          "planview: project override 'html_output' must be a boolean; ignoring\n"
+          "jidoka: project override 'html_output' must be a boolean; ignoring\n"
         );
         continue;
       }
@@ -18347,14 +18347,14 @@ function applyProjectOverrides(cfg, value, path2) {
     } else if (key === "git_workflow") {
       if (typeof val !== "boolean") {
         process.stderr.write(
-          "planview: project override 'git_workflow' must be a boolean; ignoring\n"
+          "jidoka: project override 'git_workflow' must be a boolean; ignoring\n"
         );
         continue;
       }
       cfg.git_workflow = val;
     } else {
       process.stderr.write(
-        `planview: project override key '${key}' is not allowed (allowed: ${PROJECT_OVERRIDE_KEYS.join(", ")}); ignoring
+        `jidoka: project override key '${key}' is not allowed (allowed: ${PROJECT_OVERRIDE_KEYS.join(", ")}); ignoring
 `
       );
     }
@@ -18999,8 +18999,8 @@ var Eta = class extends Eta$1 {
 };
 
 // ts/assets.generated.ts
-var CSS = '/* planview styles \u2014 embedded via include_str!() */\n\n/* \u2500\u2500 Reset & Base \u2500\u2500 */\n*,\n*::before,\n*::after {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\n\n:root {\n  --bg: #ffffff;\n  --bg-secondary: #f9fafb;\n  --text: #111827;\n  --text-secondary: #6b7280;\n  --border: #e5e7eb;\n  --header-bg: #f3f4f6;\n  --code-bg: #f3f4f6;\n\n  --haiku-fill: #dbeafe;\n  --haiku-stroke: #3b82f6;\n  --sonnet-fill: #dcfce7;\n  --sonnet-stroke: #22c55e;\n  --opus-fill: #ede9fe;\n  --opus-stroke: #8b5cf6;\n  --main-fill: #fef3c7;\n  --main-stroke: #f59e0b;\n}\n\n[data-theme="dark"] {\n  --bg: #111827;\n  --bg-secondary: #1f2937;\n  --text: #f9fafb;\n  --text-secondary: #9ca3af;\n  --border: #374151;\n  --header-bg: #1f2937;\n  --code-bg: #1f2937;\n\n  --haiku-fill: #1e3a5f;\n  --haiku-stroke: #60a5fa;\n  --sonnet-fill: #14532d;\n  --sonnet-stroke: #4ade80;\n  --opus-fill: #3b0764;\n  --opus-stroke: #a78bfa;\n  --main-fill: #78350f;\n  --main-stroke: #fbbf24;\n}\n\nhtml, body {\n  height: 100%;\n}\n\nbody {\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n  background: var(--bg);\n  color: var(--text);\n  line-height: 1.6;\n}\n\n/* \u2500\u2500 Header \u2500\u2500 */\nheader {\n  background: var(--header-bg);\n  border-bottom: 1px solid var(--border);\n  padding: 1rem 1.5rem;\n}\n\nheader h1 {\n  font-size: 1.25rem;\n  font-weight: 600;\n  margin-bottom: 0.5rem;\n}\n\n.header-meta {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 1rem;\n}\n\n.mode-badge {\n  font-size: 0.8rem;\n  color: var(--text-secondary);\n  background: var(--bg);\n  border: 1px solid var(--border);\n  padding: 0.15rem 0.6rem;\n  border-radius: 9999px;\n}\n\n.header-actions {\n  display: flex;\n  gap: 0.5rem;\n}\n\n.header-actions button {\n  background: var(--bg);\n  border: 1px solid var(--border);\n  color: var(--text);\n  padding: 0.3rem 0.7rem;\n  border-radius: 6px;\n  cursor: pointer;\n  font-size: 0.8rem;\n  transition: background 0.15s;\n}\n\n.header-actions button:hover {\n  background: var(--bg-secondary);\n}\n\n.icon-dark { display: none; }\n[data-theme="dark"] .icon-light { display: none; }\n[data-theme="dark"] .icon-dark { display: inline; }\n\n/* \u2500\u2500 Main Layout \u2500\u2500 */\nmain {\n  display: flex;\n  min-height: calc(100vh - 5rem);\n}\n\n.no-plan main {\n  flex-direction: column;\n  max-width: 960px;\n  margin: 0 auto;\n  padding: 1.5rem;\n}\n\n.has-plan main {\n  flex-direction: row;\n}\n\n/* \u2500\u2500 Plan Panel \u2500\u2500 */\n.plan-panel {\n  width: 45%;\n  min-width: 320px;\n  max-width: 560px;\n  border-right: 1px solid var(--border);\n  padding: 1.5rem;\n  overflow-y: auto;\n  max-height: calc(100vh - 5rem);\n  background: var(--bg);\n}\n\n.plan-panel h2 {\n  font-size: 1.1rem;\n  font-weight: 600;\n  margin-bottom: 1rem;\n  padding-bottom: 0.5rem;\n  border-bottom: 1px solid var(--border);\n}\n\n#plan-content h1,\n#plan-content h2,\n#plan-content h3 {\n  margin-top: 1.2em;\n  margin-bottom: 0.5em;\n}\n\n#plan-content h1 { font-size: 1.3rem; }\n#plan-content h2 { font-size: 1.1rem; }\n#plan-content h3 { font-size: 1rem; }\n\n#plan-content p {\n  margin-bottom: 0.8em;\n}\n\n#plan-content ul,\n#plan-content ol {\n  margin-bottom: 0.8em;\n  padding-left: 1.5em;\n}\n\n#plan-content li {\n  margin-bottom: 0.3em;\n}\n\n#plan-content code {\n  background: var(--code-bg);\n  padding: 0.15em 0.35em;\n  border-radius: 3px;\n  font-size: 0.9em;\n}\n\n#plan-content pre {\n  background: var(--code-bg);\n  padding: 1em;\n  border-radius: 6px;\n  overflow-x: auto;\n  margin-bottom: 1em;\n}\n\n#plan-content pre code {\n  background: none;\n  padding: 0;\n}\n\n/* \u2500\u2500 Diagram Panel \u2500\u2500 */\n.diagram-panel {\n  flex: 1;\n  padding: 1.5rem;\n  overflow-y: auto;\n  max-height: calc(100vh - 5rem);\n}\n\n.has-plan .diagram-panel {\n  min-width: 0;\n}\n\n.diagram-block {\n  margin-bottom: 2rem;\n}\n\n.phase-label {\n  font-size: 0.95rem;\n  font-weight: 600;\n  color: var(--text-secondary);\n  margin-bottom: 0.75rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\npre.mermaid {\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  padding: 1.5rem;\n  overflow-x: auto;\n}\n\n/* \u2500\u2500 Legend \u2500\u2500 */\n.legend {\n  margin-top: 2rem;\n  padding: 1rem 1.25rem;\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n}\n\n.legend h3 {\n  font-size: 0.9rem;\n  font-weight: 600;\n  margin-bottom: 0.75rem;\n}\n\n.legend-grid {\n  display: flex;\n  gap: 2.5rem;\n  flex-wrap: wrap;\n}\n\n.legend-section h4 {\n  font-size: 0.75rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: var(--text-secondary);\n  margin-bottom: 0.4rem;\n}\n\n.legend-items {\n  display: flex;\n  gap: 1rem;\n  flex-wrap: wrap;\n}\n\n.legend-item {\n  display: flex;\n  align-items: center;\n  gap: 0.4rem;\n  font-size: 0.8rem;\n}\n\n.swatch {\n  display: inline-block;\n  width: 14px;\n  height: 14px;\n  border-radius: 3px;\n  border: 2px solid;\n}\n\n.swatch-haiku  { background: var(--haiku-fill);  border-color: var(--haiku-stroke); }\n.swatch-sonnet { background: var(--sonnet-fill); border-color: var(--sonnet-stroke); }\n.swatch-opus   { background: var(--opus-fill);   border-color: var(--opus-stroke); }\n.swatch-main   { background: var(--main-fill);   border-color: var(--main-stroke); }\n\n.shape {\n  display: inline-block;\n  width: 20px;\n  height: 14px;\n  border: 2px solid var(--text-secondary);\n  background: transparent;\n}\n\n.shape-rect {\n  border-radius: 2px;\n}\n\n.shape-pill {\n  border-radius: 7px;\n}\n\n/* \u2500\u2500 Overview \u2500\u2500 */\n.overview {\n  margin-top: 2rem;\n}\n\n.overview h3 {\n  font-size: 0.9rem;\n  font-weight: 600;\n  margin-bottom: 0.75rem;\n}\n\n.overview-text {\n  font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;\n  font-size: 0.8rem;\n  line-height: 1.7;\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  padding: 1rem 1.25rem;\n  white-space: pre-wrap;\n  overflow-x: auto;\n}\n\n/* \u2500\u2500 Responsive \u2500\u2500 */\n@media (max-width: 768px) {\n  .has-plan main {\n    flex-direction: column;\n  }\n\n  .plan-panel {\n    width: 100%;\n    max-width: none;\n    border-right: none;\n    border-bottom: 1px solid var(--border);\n    max-height: 50vh;\n  }\n\n  .diagram-panel {\n    max-height: none;\n  }\n\n  .legend-grid {\n    flex-direction: column;\n    gap: 1rem;\n  }\n}\n\n/* \u2500\u2500 Plan view \u2500\u2500 */\nbody.plan {\n  background: var(--bg);\n  color: var(--text);\n}\n\n.plan-main {\n  display: grid;\n  grid-template-columns: 240px minmax(0, 1fr);\n  gap: 1.5rem;\n  padding: 1.5rem;\n  align-items: start;\n}\n\n.plan-toc {\n  position: sticky;\n  top: 1.5rem;\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 6px;\n  padding: 1rem;\n  font-size: 0.875rem;\n}\n\n.plan-toc h2 {\n  font-size: 0.95rem;\n  margin-bottom: 0.5rem;\n}\n\n.plan-toc ul {\n  list-style: none;\n  display: flex;\n  flex-direction: column;\n  gap: 0.25rem;\n}\n\n.plan-toc a {\n  display: flex;\n  gap: 0.5rem;\n  align-items: baseline;\n  color: var(--text-secondary);\n  text-decoration: none;\n  padding: 0.25rem 0.4rem;\n  border-radius: 4px;\n}\n\n.plan-toc a:hover {\n  background: var(--header-bg);\n  color: var(--text);\n}\n\n.plan-toc .unit-prefix {\n  font-variant-numeric: tabular-nums;\n  font-weight: 600;\n  color: var(--text);\n}\n\n.plan-content {\n  display: flex;\n  flex-direction: column;\n  gap: 1.25rem;\n  min-width: 0;\n}\n\n.plan-overview-card,\n.unit-card {\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  padding: 1.25rem 1.5rem;\n}\n\n.plan-overview-card h2,\n.unit-header h2 {\n  font-size: 1.1rem;\n  margin-bottom: 0.75rem;\n}\n\n.unit-chips {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 0.4rem;\n  margin-bottom: 0.75rem;\n}\n\n.chip {\n  display: inline-block;\n  font-size: 0.75rem;\n  padding: 0.15rem 0.5rem;\n  border-radius: 999px;\n  border: 1px solid var(--border);\n  background: var(--bg);\n  color: var(--text-secondary);\n}\n\n.chip-blocked-by {\n  font-variant-numeric: tabular-nums;\n}\n\n.chip-topology {\n  background: var(--haiku-fill);\n  border-color: var(--haiku-stroke);\n  color: var(--haiku-stroke);\n}\n\n/* Per-step print/exec badge in a unit\'s review pipeline. Mirrors the Markdown\n   renderer\'s `**print**`/`**exec**` badge so the HTML view also tells the reader\n   whether the resuming agent runs the step (exec) or surfaces it (print). */\n.review-mode {\n  display: inline-block;\n  margin-left: 0.4rem;\n  font-size: 0.65rem;\n  font-weight: 600;\n  text-transform: uppercase;\n  letter-spacing: 0.03em;\n  padding: 0.05rem 0.4rem;\n  border-radius: 999px;\n  border: 1px solid var(--border);\n  vertical-align: middle;\n}\n\n.review-mode-exec {\n  background: var(--opus-fill);\n  border-color: var(--opus-stroke);\n  color: var(--opus-stroke);\n}\n\n.review-mode-print {\n  background: var(--sonnet-fill);\n  border-color: var(--sonnet-stroke);\n  color: var(--sonnet-stroke);\n}\n\n.unit-summary {\n  font-size: 0.95rem;\n  color: var(--text);\n  margin-bottom: 0.75rem;\n}\n\n.markdown-body {\n  font-size: 0.92rem;\n  line-height: 1.55;\n}\n\n.markdown-body h1,\n.markdown-body h2,\n.markdown-body h3 {\n  margin-top: 0.9rem;\n  margin-bottom: 0.4rem;\n  font-weight: 600;\n}\n\n.markdown-body h1 { font-size: 1.05rem; }\n.markdown-body h2 { font-size: 0.98rem; }\n.markdown-body h3 { font-size: 0.92rem; }\n\n.markdown-body p {\n  margin-bottom: 0.5rem;\n}\n\n.markdown-body ul,\n.markdown-body ol {\n  margin: 0.4rem 0 0.6rem 1.25rem;\n}\n\n.markdown-body table {\n  border-collapse: collapse;\n  margin: 0.5rem 0;\n  font-size: 0.85rem;\n}\n\n.markdown-body th,\n.markdown-body td {\n  border: 1px solid var(--border);\n  padding: 0.25rem 0.5rem;\n  text-align: left;\n}\n\n.markdown-body code {\n  background: var(--code-bg);\n  padding: 0.05rem 0.3rem;\n  border-radius: 3px;\n  font-size: 0.85em;\n}\n\n.markdown-body pre {\n  background: var(--code-bg);\n  padding: 0.5rem 0.75rem;\n  border-radius: 6px;\n  overflow-x: auto;\n  margin: 0.5rem 0;\n}\n\n.unit-card .diagram-block {\n  background: var(--bg);\n  border: 1px solid var(--border);\n  border-radius: 6px;\n  padding: 0.75rem;\n  margin-top: 0.75rem;\n}\n\n.unit-review {\n  margin-top: 1rem;\n  padding-top: 0.75rem;\n  border-top: 1px dashed var(--border);\n}\n\n.unit-review h3 {\n  font-size: 0.85rem;\n  text-transform: uppercase;\n  letter-spacing: 0.04em;\n  color: var(--text-secondary);\n  margin-bottom: 0.4rem;\n}\n\n.unit-review ul {\n  list-style: none;\n  display: flex;\n  flex-direction: column;\n  gap: 0.2rem;\n}\n\n.unit-review li::before {\n  content: "\u25A2 ";\n  color: var(--text-secondary);\n  margin-right: 0.25rem;\n}\n\n.unit-review code {\n  background: var(--code-bg);\n  padding: 0.05rem 0.4rem;\n  border-radius: 3px;\n  font-size: 0.85em;\n}\n\n.unit-footer {\n  margin-top: 0.75rem;\n  font-size: 0.8rem;\n  color: var(--text-secondary);\n  text-align: right;\n}\n\n.unit-footer a {\n  color: var(--text-secondary);\n  text-decoration: none;\n}\n\n.unit-footer a:hover {\n  text-decoration: underline;\n}\n\n@media (max-width: 720px) {\n  .plan-main {\n    grid-template-columns: 1fr;\n  }\n  .plan-toc {\n    position: static;\n  }\n}\n\n';
-var JS = `// planview client-side JS \u2014 embedded via include_str!()
+var CSS = '/* jidoka styles \u2014 embedded via include_str!() */\n\n/* \u2500\u2500 Reset & Base \u2500\u2500 */\n*,\n*::before,\n*::after {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\n\n:root {\n  --bg: #ffffff;\n  --bg-secondary: #f9fafb;\n  --text: #111827;\n  --text-secondary: #6b7280;\n  --border: #e5e7eb;\n  --header-bg: #f3f4f6;\n  --code-bg: #f3f4f6;\n\n  --haiku-fill: #dbeafe;\n  --haiku-stroke: #3b82f6;\n  --sonnet-fill: #dcfce7;\n  --sonnet-stroke: #22c55e;\n  --opus-fill: #ede9fe;\n  --opus-stroke: #8b5cf6;\n  --main-fill: #fef3c7;\n  --main-stroke: #f59e0b;\n}\n\n[data-theme="dark"] {\n  --bg: #111827;\n  --bg-secondary: #1f2937;\n  --text: #f9fafb;\n  --text-secondary: #9ca3af;\n  --border: #374151;\n  --header-bg: #1f2937;\n  --code-bg: #1f2937;\n\n  --haiku-fill: #1e3a5f;\n  --haiku-stroke: #60a5fa;\n  --sonnet-fill: #14532d;\n  --sonnet-stroke: #4ade80;\n  --opus-fill: #3b0764;\n  --opus-stroke: #a78bfa;\n  --main-fill: #78350f;\n  --main-stroke: #fbbf24;\n}\n\nhtml, body {\n  height: 100%;\n}\n\nbody {\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n  background: var(--bg);\n  color: var(--text);\n  line-height: 1.6;\n}\n\n/* \u2500\u2500 Header \u2500\u2500 */\nheader {\n  background: var(--header-bg);\n  border-bottom: 1px solid var(--border);\n  padding: 1rem 1.5rem;\n}\n\nheader h1 {\n  font-size: 1.25rem;\n  font-weight: 600;\n  margin-bottom: 0.5rem;\n}\n\n.header-meta {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 1rem;\n}\n\n.mode-badge {\n  font-size: 0.8rem;\n  color: var(--text-secondary);\n  background: var(--bg);\n  border: 1px solid var(--border);\n  padding: 0.15rem 0.6rem;\n  border-radius: 9999px;\n}\n\n.header-actions {\n  display: flex;\n  gap: 0.5rem;\n}\n\n.header-actions button {\n  background: var(--bg);\n  border: 1px solid var(--border);\n  color: var(--text);\n  padding: 0.3rem 0.7rem;\n  border-radius: 6px;\n  cursor: pointer;\n  font-size: 0.8rem;\n  transition: background 0.15s;\n}\n\n.header-actions button:hover {\n  background: var(--bg-secondary);\n}\n\n.icon-dark { display: none; }\n[data-theme="dark"] .icon-light { display: none; }\n[data-theme="dark"] .icon-dark { display: inline; }\n\n/* \u2500\u2500 Main Layout \u2500\u2500 */\nmain {\n  display: flex;\n  min-height: calc(100vh - 5rem);\n}\n\n.no-plan main {\n  flex-direction: column;\n  max-width: 960px;\n  margin: 0 auto;\n  padding: 1.5rem;\n}\n\n.has-plan main {\n  flex-direction: row;\n}\n\n/* \u2500\u2500 Plan Panel \u2500\u2500 */\n.plan-panel {\n  width: 45%;\n  min-width: 320px;\n  max-width: 560px;\n  border-right: 1px solid var(--border);\n  padding: 1.5rem;\n  overflow-y: auto;\n  max-height: calc(100vh - 5rem);\n  background: var(--bg);\n}\n\n.plan-panel h2 {\n  font-size: 1.1rem;\n  font-weight: 600;\n  margin-bottom: 1rem;\n  padding-bottom: 0.5rem;\n  border-bottom: 1px solid var(--border);\n}\n\n#plan-content h1,\n#plan-content h2,\n#plan-content h3 {\n  margin-top: 1.2em;\n  margin-bottom: 0.5em;\n}\n\n#plan-content h1 { font-size: 1.3rem; }\n#plan-content h2 { font-size: 1.1rem; }\n#plan-content h3 { font-size: 1rem; }\n\n#plan-content p {\n  margin-bottom: 0.8em;\n}\n\n#plan-content ul,\n#plan-content ol {\n  margin-bottom: 0.8em;\n  padding-left: 1.5em;\n}\n\n#plan-content li {\n  margin-bottom: 0.3em;\n}\n\n#plan-content code {\n  background: var(--code-bg);\n  padding: 0.15em 0.35em;\n  border-radius: 3px;\n  font-size: 0.9em;\n}\n\n#plan-content pre {\n  background: var(--code-bg);\n  padding: 1em;\n  border-radius: 6px;\n  overflow-x: auto;\n  margin-bottom: 1em;\n}\n\n#plan-content pre code {\n  background: none;\n  padding: 0;\n}\n\n/* \u2500\u2500 Diagram Panel \u2500\u2500 */\n.diagram-panel {\n  flex: 1;\n  padding: 1.5rem;\n  overflow-y: auto;\n  max-height: calc(100vh - 5rem);\n}\n\n.has-plan .diagram-panel {\n  min-width: 0;\n}\n\n.diagram-block {\n  margin-bottom: 2rem;\n}\n\n.phase-label {\n  font-size: 0.95rem;\n  font-weight: 600;\n  color: var(--text-secondary);\n  margin-bottom: 0.75rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\npre.mermaid {\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  padding: 1.5rem;\n  overflow-x: auto;\n}\n\n/* \u2500\u2500 Legend \u2500\u2500 */\n.legend {\n  margin-top: 2rem;\n  padding: 1rem 1.25rem;\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n}\n\n.legend h3 {\n  font-size: 0.9rem;\n  font-weight: 600;\n  margin-bottom: 0.75rem;\n}\n\n.legend-grid {\n  display: flex;\n  gap: 2.5rem;\n  flex-wrap: wrap;\n}\n\n.legend-section h4 {\n  font-size: 0.75rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: var(--text-secondary);\n  margin-bottom: 0.4rem;\n}\n\n.legend-items {\n  display: flex;\n  gap: 1rem;\n  flex-wrap: wrap;\n}\n\n.legend-item {\n  display: flex;\n  align-items: center;\n  gap: 0.4rem;\n  font-size: 0.8rem;\n}\n\n.swatch {\n  display: inline-block;\n  width: 14px;\n  height: 14px;\n  border-radius: 3px;\n  border: 2px solid;\n}\n\n.swatch-haiku  { background: var(--haiku-fill);  border-color: var(--haiku-stroke); }\n.swatch-sonnet { background: var(--sonnet-fill); border-color: var(--sonnet-stroke); }\n.swatch-opus   { background: var(--opus-fill);   border-color: var(--opus-stroke); }\n.swatch-main   { background: var(--main-fill);   border-color: var(--main-stroke); }\n\n.shape {\n  display: inline-block;\n  width: 20px;\n  height: 14px;\n  border: 2px solid var(--text-secondary);\n  background: transparent;\n}\n\n.shape-rect {\n  border-radius: 2px;\n}\n\n.shape-pill {\n  border-radius: 7px;\n}\n\n/* \u2500\u2500 Overview \u2500\u2500 */\n.overview {\n  margin-top: 2rem;\n}\n\n.overview h3 {\n  font-size: 0.9rem;\n  font-weight: 600;\n  margin-bottom: 0.75rem;\n}\n\n.overview-text {\n  font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;\n  font-size: 0.8rem;\n  line-height: 1.7;\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  padding: 1rem 1.25rem;\n  white-space: pre-wrap;\n  overflow-x: auto;\n}\n\n/* \u2500\u2500 Responsive \u2500\u2500 */\n@media (max-width: 768px) {\n  .has-plan main {\n    flex-direction: column;\n  }\n\n  .plan-panel {\n    width: 100%;\n    max-width: none;\n    border-right: none;\n    border-bottom: 1px solid var(--border);\n    max-height: 50vh;\n  }\n\n  .diagram-panel {\n    max-height: none;\n  }\n\n  .legend-grid {\n    flex-direction: column;\n    gap: 1rem;\n  }\n}\n\n/* \u2500\u2500 Plan view \u2500\u2500 */\nbody.plan {\n  background: var(--bg);\n  color: var(--text);\n}\n\n.plan-main {\n  display: grid;\n  grid-template-columns: 240px minmax(0, 1fr);\n  gap: 1.5rem;\n  padding: 1.5rem;\n  align-items: start;\n}\n\n.plan-toc {\n  position: sticky;\n  top: 1.5rem;\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 6px;\n  padding: 1rem;\n  font-size: 0.875rem;\n}\n\n.plan-toc h2 {\n  font-size: 0.95rem;\n  margin-bottom: 0.5rem;\n}\n\n.plan-toc ul {\n  list-style: none;\n  display: flex;\n  flex-direction: column;\n  gap: 0.25rem;\n}\n\n.plan-toc a {\n  display: flex;\n  gap: 0.5rem;\n  align-items: baseline;\n  color: var(--text-secondary);\n  text-decoration: none;\n  padding: 0.25rem 0.4rem;\n  border-radius: 4px;\n}\n\n.plan-toc a:hover {\n  background: var(--header-bg);\n  color: var(--text);\n}\n\n.plan-toc .unit-prefix {\n  font-variant-numeric: tabular-nums;\n  font-weight: 600;\n  color: var(--text);\n}\n\n.plan-content {\n  display: flex;\n  flex-direction: column;\n  gap: 1.25rem;\n  min-width: 0;\n}\n\n.plan-overview-card,\n.unit-card {\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  padding: 1.25rem 1.5rem;\n}\n\n.plan-overview-card h2,\n.unit-header h2 {\n  font-size: 1.1rem;\n  margin-bottom: 0.75rem;\n}\n\n.unit-chips {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 0.4rem;\n  margin-bottom: 0.75rem;\n}\n\n.chip {\n  display: inline-block;\n  font-size: 0.75rem;\n  padding: 0.15rem 0.5rem;\n  border-radius: 999px;\n  border: 1px solid var(--border);\n  background: var(--bg);\n  color: var(--text-secondary);\n}\n\n.chip-blocked-by {\n  font-variant-numeric: tabular-nums;\n}\n\n.chip-topology {\n  background: var(--haiku-fill);\n  border-color: var(--haiku-stroke);\n  color: var(--haiku-stroke);\n}\n\n/* Per-step print/exec badge in a unit\'s review pipeline. Mirrors the Markdown\n   renderer\'s `**print**`/`**exec**` badge so the HTML view also tells the reader\n   whether the resuming agent runs the step (exec) or surfaces it (print). */\n.review-mode {\n  display: inline-block;\n  margin-left: 0.4rem;\n  font-size: 0.65rem;\n  font-weight: 600;\n  text-transform: uppercase;\n  letter-spacing: 0.03em;\n  padding: 0.05rem 0.4rem;\n  border-radius: 999px;\n  border: 1px solid var(--border);\n  vertical-align: middle;\n}\n\n.review-mode-exec {\n  background: var(--opus-fill);\n  border-color: var(--opus-stroke);\n  color: var(--opus-stroke);\n}\n\n.review-mode-print {\n  background: var(--sonnet-fill);\n  border-color: var(--sonnet-stroke);\n  color: var(--sonnet-stroke);\n}\n\n.unit-summary {\n  font-size: 0.95rem;\n  color: var(--text);\n  margin-bottom: 0.75rem;\n}\n\n.markdown-body {\n  font-size: 0.92rem;\n  line-height: 1.55;\n}\n\n.markdown-body h1,\n.markdown-body h2,\n.markdown-body h3 {\n  margin-top: 0.9rem;\n  margin-bottom: 0.4rem;\n  font-weight: 600;\n}\n\n.markdown-body h1 { font-size: 1.05rem; }\n.markdown-body h2 { font-size: 0.98rem; }\n.markdown-body h3 { font-size: 0.92rem; }\n\n.markdown-body p {\n  margin-bottom: 0.5rem;\n}\n\n.markdown-body ul,\n.markdown-body ol {\n  margin: 0.4rem 0 0.6rem 1.25rem;\n}\n\n.markdown-body table {\n  border-collapse: collapse;\n  margin: 0.5rem 0;\n  font-size: 0.85rem;\n}\n\n.markdown-body th,\n.markdown-body td {\n  border: 1px solid var(--border);\n  padding: 0.25rem 0.5rem;\n  text-align: left;\n}\n\n.markdown-body code {\n  background: var(--code-bg);\n  padding: 0.05rem 0.3rem;\n  border-radius: 3px;\n  font-size: 0.85em;\n}\n\n.markdown-body pre {\n  background: var(--code-bg);\n  padding: 0.5rem 0.75rem;\n  border-radius: 6px;\n  overflow-x: auto;\n  margin: 0.5rem 0;\n}\n\n.unit-card .diagram-block {\n  background: var(--bg);\n  border: 1px solid var(--border);\n  border-radius: 6px;\n  padding: 0.75rem;\n  margin-top: 0.75rem;\n}\n\n.unit-review {\n  margin-top: 1rem;\n  padding-top: 0.75rem;\n  border-top: 1px dashed var(--border);\n}\n\n.unit-review h3 {\n  font-size: 0.85rem;\n  text-transform: uppercase;\n  letter-spacing: 0.04em;\n  color: var(--text-secondary);\n  margin-bottom: 0.4rem;\n}\n\n.unit-review ul {\n  list-style: none;\n  display: flex;\n  flex-direction: column;\n  gap: 0.2rem;\n}\n\n.unit-review li::before {\n  content: "\u25A2 ";\n  color: var(--text-secondary);\n  margin-right: 0.25rem;\n}\n\n.unit-review code {\n  background: var(--code-bg);\n  padding: 0.05rem 0.4rem;\n  border-radius: 3px;\n  font-size: 0.85em;\n}\n\n.unit-footer {\n  margin-top: 0.75rem;\n  font-size: 0.8rem;\n  color: var(--text-secondary);\n  text-align: right;\n}\n\n.unit-footer a {\n  color: var(--text-secondary);\n  text-decoration: none;\n}\n\n.unit-footer a:hover {\n  text-decoration: underline;\n}\n\n@media (max-width: 720px) {\n  .plan-main {\n    grid-template-columns: 1fr;\n  }\n  .plan-toc {\n    position: static;\n  }\n}\n\n';
+var JS = `// jidoka client-side JS \u2014 embedded via include_str!()
 
 (function () {
   "use strict";
@@ -19049,7 +19049,7 @@ var JS = `// planview client-side JS \u2014 embedded via include_str!()
       var current = document.documentElement.getAttribute("data-theme");
       var next = current === "dark" ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", next);
-      localStorage.setItem("planview-theme", next);
+      localStorage.setItem("jidoka-theme", next);
       rerenderMermaid(next);
     });
   }
@@ -19085,7 +19085,7 @@ var JS = `// planview client-side JS \u2014 embedded via include_str!()
         canvas.toBlob(function (blob) {
           var a = document.createElement("a");
           a.href = URL.createObjectURL(blob);
-          a.download = "planview-topology.png";
+          a.download = "jidoka-topology.png";
           a.click();
           URL.revokeObjectURL(a.href);
           URL.revokeObjectURL(url);
@@ -19118,7 +19118,7 @@ var JS = `// planview client-side JS \u2014 embedded via include_str!()
     el.innerHTML = DOMPurify.sanitize(marked.parse(source));
   }
 
-  function initPlanViewRendering() {
+  function initJidokaRendering() {
     if (typeof window.__overviewMarkdown !== "undefined") {
       renderMarkdownInto(document.getElementById("overview-md"), window.__overviewMarkdown);
     }
@@ -19131,7 +19131,7 @@ var JS = `// planview client-side JS \u2014 embedded via include_str!()
   }
 
   function restoreTheme() {
-    var saved = localStorage.getItem("planview-theme");
+    var saved = localStorage.getItem("jidoka-theme");
     if (saved) {
       document.documentElement.setAttribute("data-theme", saved);
     }
@@ -19139,7 +19139,7 @@ var JS = `// planview client-side JS \u2014 embedded via include_str!()
 
   document.addEventListener("DOMContentLoaded", function () {
     restoreTheme();
-    initPlanViewRendering();
+    initJidokaRendering();
     preserveMermaidSource();
     initMermaid();
     initThemeToggle();
@@ -19345,7 +19345,7 @@ function renderPreReviewBlock(steps) {
     out += "_No pre-execution review configured. Proceed to the cursor unit._\n";
     return out;
   }
-  out += "On the first session, before starting Unit 01, the **resuming agent** works through the step(s) below against the freshly materialized plan dir, then **stops** to wait for your go-ahead \u2014 it does not roll straight into Unit 01. Follow each step's routing: **auto-run** the agent-invocable ones (the default `/planview:pre-plan-review`, or an `exec` template) and surface their findings; for a `print` template or an operator-run slash command, **surface the command and stop** for you to run it:\n\n";
+  out += "On the first session, before starting Unit 01, the **resuming agent** works through the step(s) below against the freshly materialized plan dir, then **stops** to wait for your go-ahead \u2014 it does not roll straight into Unit 01. Follow each step's routing: **auto-run** the agent-invocable ones (the default `/jidoka:pre-plan-review`, or an `exec` template) and surface their findings; for a `print` template or an operator-run slash command, **surface the command and stop** for you to run it:\n\n";
   out += renderPipelineChecklist(steps);
   return out;
 }
@@ -19367,7 +19367,7 @@ function renderPlanReviewBlock(steps) {
     out += "_No plan-level reviews configured. After the last unit, surface a summary and ask the user before archiving._\n";
     return out;
   }
-  out += "After the last unit's review lands and is committed, run the **`/planview:plan-review-prompt`** composer against the cumulative plan diff \u2014 don't run the vehicle(s) below directly. The composer aims a cross-unit focus and drives whatever is configured: it injects planview's own plan-level review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the focus into a slash command for you. Configured vehicle(s):\n\n";
+  out += "After the last unit's review lands and is committed, run the **`/jidoka:plan-review-prompt`** composer against the cumulative plan diff \u2014 don't run the vehicle(s) below directly. The composer aims a cross-unit focus and drives whatever is configured: it injects jidoka's own plan-level review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the focus into a slash command for you. Configured vehicle(s):\n\n";
   out += renderPipelineChecklist(steps);
   return out;
 }
@@ -19557,7 +19557,7 @@ function materializeAt(plan, targetDir, config2, dirNameOverride) {
     throw new MaterializeError(
       "target_dir_exists",
       targetDir,
-      `Plan dir ${targetDir} already exists. Either remove it or pick a new slug via /planview.`
+      `Plan dir ${targetDir} already exists. Either remove it or pick a new slug via /jidoka.`
     );
   }
   try {
@@ -19641,7 +19641,7 @@ function setupWorktree(plan, fromDir, planDirRoot, today) {
     addArgs.push(base);
   } else {
     process.stderr.write(
-      "planview hook: couldn't resolve a default branch; forking plan/<id> from the main checkout's current HEAD\n"
+      "jidoka hook: couldn't resolve a default branch; forking plan/<id> from the main checkout's current HEAD\n"
     );
   }
   try {
@@ -19741,7 +19741,7 @@ import { tmpdir } from "node:os";
 import { join as join5 } from "node:path";
 function writeTempHtml(html, dir = tmpdir()) {
   const timestamp = Date.now();
-  const path2 = join5(dir, `planview-${timestamp}.html`);
+  const path2 = join5(dir, `jidoka-${timestamp}.html`);
   writeFileSync2(path2, html);
   return path2;
 }
@@ -19752,7 +19752,7 @@ function openBrowser(path2) {
     stdio: "ignore"
   });
   child.on("error", (err) => {
-    process.stderr.write(`planview: could not open browser (${cmd}): ${err.message}
+    process.stderr.write(`jidoka: could not open browser (${cmd}): ${err.message}
 `);
   });
   child.unref();
@@ -20243,11 +20243,11 @@ function configFromEnv() {
   const projectDir = process.env["CLAUDE_PROJECT_DIR"] ?? process.cwd();
   if (process.env["CLAUDE_PROJECT_DIR"] === void 0) {
     process.stderr.write(
-      "planview hook: CLAUDE_PROJECT_DIR is unset; falling back to current working directory\n"
+      "jidoka hook: CLAUDE_PROJECT_DIR is unset; falling back to current working directory\n"
     );
   }
   const cfg = loadConfig(projectDir);
-  const noOpen = process.env["PLANVIEW_NO_OPEN"] !== void 0;
+  const noOpen = process.env["JIDOKA_NO_OPEN"] !== void 0;
   const plansRoot = isAbsolute4(cfg.plan_dir_root) ? cfg.plan_dir_root : join6(projectDir, cfg.plan_dir_root);
   return {
     today: todayYymmddLocal(),
@@ -20264,7 +20264,7 @@ async function runHook() {
     const config2 = configFromEnv();
     runWithInput(stdin, config2);
   } catch (e) {
-    process.stderr.write(`planview hook: ${e.message}
+    process.stderr.write(`jidoka hook: ${e.message}
 `);
   }
   return 0;
@@ -20290,7 +20290,7 @@ function runWithInput(input, config2) {
   }
   const planResult = parsePlanMarkdown(planMd);
   if (!planResult.ok) {
-    emitDeny(`planview: cannot parse plan markdown: ${planResult.error}`);
+    emitDeny(`jidoka: cannot parse plan markdown: ${planResult.error}`);
     return;
   }
   const plan = planResult.value;
@@ -20322,12 +20322,12 @@ function runWithInput(input, config2) {
       );
     } else if (outcome.kind === "deny") {
       emitDeny(
-        `planview: ${outcome.reason}. No files were written; active/ stays clean.`
+        `jidoka: ${outcome.reason}. No files were written; active/ stays clean.`
       );
       return;
     } else {
       process.stderr.write(
-        `planview hook: ${outcome.reason}; materializing in-tree
+        `jidoka hook: ${outcome.reason}; materializing in-tree
 `
       );
     }
@@ -20336,11 +20336,11 @@ function runWithInput(input, config2) {
   if (existsSync2(target)) {
     onPublishFailure?.();
     emitDeny(
-      `Plan dir ${target} already exists. Either remove it or pick a new slug via /planview.`
+      `Plan dir ${target} already exists. Either remove it or pick a new slug via /jidoka.`
     );
     return;
   }
-  const staging = join6(plansRoot, `.planview-stage-${sessionId}`);
+  const staging = join6(plansRoot, `.jidoka-stage-${sessionId}`);
   try {
     mkdirSync2(plansRoot, { recursive: true });
     if (existsSync2(staging)) {
@@ -20358,7 +20358,7 @@ function runWithInput(input, config2) {
     onPublishFailure?.();
     const msg = e instanceof MaterializeError ? e.message : e.message;
     emitDeny(
-      `planview: failed to materialize plan: ${msg}. No files were written.`
+      `jidoka: failed to materialize plan: ${msg}. No files were written.`
     );
     return;
   }
@@ -20370,7 +20370,7 @@ function runWithInput(input, config2) {
       openBrowser(join6(target, "overview.html"));
     } catch (e) {
       process.stderr.write(
-        `planview hook: could not open browser: ${e.message}
+        `jidoka hook: could not open browser: ${e.message}
 `
       );
     }
@@ -20442,7 +20442,7 @@ var topologyJsonSchema = {
 
 // ts/cli.ts
 var program2 = new Command();
-program2.name("planview").description(
+program2.name("jidoka").description(
   "Visualize multi-agent task decomposition; materialize plans on ExitPlanMode"
 ).version("0.3.0", "-v, --version", "Show version number");
 program2.command("hook").description("Process ExitPlanMode hook from stdin").action(async () => {
@@ -20541,7 +20541,7 @@ function runMaterialize(file2, opts) {
 `);
   process.stdout.write(`${target}
 `);
-  if (cfg.html_output && cfg.auto_open_browser && process.env["PLANVIEW_NO_OPEN"] === void 0) {
+  if (cfg.html_output && cfg.auto_open_browser && process.env["JIDOKA_NO_OPEN"] === void 0) {
     try {
       openBrowser(join7(target, "overview.html"));
     } catch (e) {
@@ -20619,6 +20619,6 @@ function renderAndOpen(topology, opts) {
   const path2 = writeTempHtml(html);
   process.stdout.write(`${path2}
 `);
-  if (process.env["PLANVIEW_NO_OPEN"] === void 0) openBrowser(path2);
+  if (process.env["JIDOKA_NO_OPEN"] === void 0) openBrowser(path2);
 }
 await program2.parseAsync();

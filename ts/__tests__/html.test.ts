@@ -164,8 +164,8 @@ describe("renderTopologyHtml", () => {
 
   it("embeds css and js", () => {
     const html = minimalHtml();
-    expect(html).toContain("planview styles");
-    expect(html).toContain("planview client-side JS");
+    expect(html).toContain("jidoka styles");
+    expect(html).toContain("jidoka client-side JS");
   });
 
   it("embeds mermaid graphs", () => {
@@ -213,8 +213,8 @@ describe("renderPlanHtml", () => {
     expect(html).toContain("Plan: Bump version and tidy README");
     expect(html).toContain("1 unit");
     expect(html).not.toMatch(/\b1 units\b/);
-    expect(html).toContain("planview styles");
-    expect(html).toContain("planview client-side JS");
+    expect(html).toContain("jidoka styles");
+    expect(html).toContain("jidoka client-side JS");
   });
 
   it("renders unit cards with anchors", () => {

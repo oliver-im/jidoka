@@ -130,13 +130,13 @@ describe("buildProgressMd", () => {
       task_summary: "x",
       slug: "x",
       units: [minimalUnit("01-prep")],
-      pre_review: ["/planview:pre-plan-review"],
+      pre_review: ["/jidoka:pre-plan-review"],
     };
     const md = buildProgressMd(plan, "260505-0-x");
     expect(md).toContain("## Pre-execution review");
     expect(md).toContain("before starting Unit 01");
     expect(md).toContain("does not roll straight into Unit 01");
-    expect(md).toContain("- [ ] `/planview:pre-plan-review`");
+    expect(md).toContain("- [ ] `/jidoka:pre-plan-review`");
   });
 
   // codex plan-level review [HIGH]: a print-mode pre_review template must not be
@@ -158,7 +158,7 @@ describe("buildProgressMd", () => {
   });
 
   // codex plan-level review [MED]: the plan-level block must point at the composer
-  // (which injects planview's own prompt), not tell the agent to run the vehicle
+  // (which injects jidoka's own prompt), not tell the agent to run the vehicle
   // template directly (which would skip the prompt injection).
   it("frames plan-level review as the composer driving the vehicle, not direct execution", () => {
     const plan: Plan = {
@@ -169,8 +169,8 @@ describe("buildProgressMd", () => {
     };
     const md = buildProgressMd(plan, "260505-0-x");
     expect(md).toContain("## Plan-level review");
-    expect(md).toContain("/planview:plan-review-prompt");
-    expect(md).toContain("injects planview's own plan-level");
+    expect(md).toContain("/jidoka:plan-review-prompt");
+    expect(md).toContain("injects jidoka's own plan-level");
     expect(md).toContain("don't run the vehicle(s) below directly");
     // The vehicle still renders as a checklist entry the composer will drive.
     expect(md).toContain("- [ ] `codex exec {diff_range}` — **print**");
@@ -267,7 +267,7 @@ describe("buildProgressMd", () => {
       task_summary: "x",
       slug: "x",
       units: [minimalUnit("01-prep")],
-      pre_review: ["/planview:pre-plan-review"],
+      pre_review: ["/jidoka:pre-plan-review"],
       plan_review: ["/codex:adversarial-review"],
     };
     const md = buildProgressMd(plan, "260505-0-x");

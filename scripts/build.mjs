@@ -17,16 +17,16 @@ await build({
   banner: {
     js: [
       "#!/usr/bin/env node",
-      'import { createRequire as __planviewCreateRequire } from "node:module";',
-      "const require = __planviewCreateRequire(import.meta.url);",
+      'import { createRequire as __jidokaCreateRequire } from "node:module";',
+      "const require = __jidokaCreateRequire(import.meta.url);",
     ].join("\n"),
   },
   define: {
-    __PLANVIEW_VERSION__: JSON.stringify(pkg.version),
+    __JIDOKA_VERSION__: JSON.stringify(pkg.version),
   },
   legalComments: "none",
   logLevel: "info",
 });
 
 chmodSync(outfile, 0o755);
-console.log(`Bundled ${outfile} (planview ${pkg.version})`);
+console.log(`Bundled ${outfile} (jidoka ${pkg.version})`);

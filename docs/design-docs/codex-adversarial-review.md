@@ -1,16 +1,16 @@
 # Codex Adversarial Review on Large Diffs (May 2026)
 
-How `/codex:adversarial-review` behaves on large diffs, why it rejects, and how planview should invoke it.
+How `/codex:adversarial-review` behaves on large diffs, why it rejects, and how jidoka should invoke it.
 
 ## Context
 
-planview reviews are intended to use `/codex:adversarial-review` from the [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) plugin (v1.0.4). On heavy PRs the command fails with:
+jidoka reviews are intended to use `/codex:adversarial-review` from the [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) plugin (v1.0.4). On heavy PRs the command fails with:
 
 ```
 Input exceeds the maximum length of 1048576 characters.
 ```
 
-This note records why that happens, what the plugin already does about it, and the invocation style planview should standardize on.
+This note records why that happens, what the plugin already does about it, and the invocation style jidoka should standardize on.
 
 ## Two review paths, two failure modes
 
@@ -40,13 +40,13 @@ For working-tree mode no base ref is needed — `git diff` and `git diff --cache
 
 Codex runs with `sandbox: "read-only"`, which permits the git commands it needs.
 
-## Decision for planview
+## Decision for jidoka
 
 **Always invoke `/codex:adversarial-review` in a way that triggers self-collect.** Do not rely on inline-diff context. The benefits of inlining (one fewer Codex turn) are marginal; the cost (random 1MB rejections on heavy PRs) is high.
 
 Operationally, this means one of:
 
-1. **Trust the existing threshold.** Any review that touches >2 files or >256KB already self-collects. For planview, almost any review larger than a single-unit edit will land here.
+1. **Trust the existing threshold.** Any review that touches >2 files or >256KB already self-collects. For jidoka, almost any review larger than a single-unit edit will land here.
 2. **Force self-collect explicitly** if a tiny review still hits the boundary case. The plugin does not currently expose a `--no-inline` flag; the cleanest forcing function is to invoke against a base ref where the diff naturally crosses the threshold, or to patch `DEFAULT_INLINE_DIFF_MAX_BYTES = 0` locally.
 3. **Pull PR #313 or #314** when one merges — both add a hard prompt cap (~800KB) with a truncation fallback, eliminating the boundary failure by construction.
 
@@ -54,7 +54,7 @@ The cleanest upstream fix is option (3) generalized: drop the inline path entire
 
 ## Practical invocation
 
-For planview reviews:
+For jidoka reviews:
 
 ```bash
 # Working tree (uncommitted changes against HEAD)

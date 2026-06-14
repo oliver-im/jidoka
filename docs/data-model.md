@@ -4,16 +4,16 @@ Shared reference for both [agents](agent-guide.md) and [developers](developer-gu
 
 ## Plan vs. Topology
 
-planview has **two** related but distinct shapes:
+jidoka has **two** related but distinct shapes:
 
-- **Plan** — the top-level output of `/planview`. A markdown document with a `# Title` H1 and a sequence of `## Unit NN: <title>` sections, materialized as a directory of markdown files (`overview.md`, `progress.md`, `0N-<unit-slug>.md`) plus an opt-in `overview.html`. Most plans are pure markdown — multi-agent diagrams aren't the headline anymore.
-- **Topology** — an optional shape that lives **inside a Unit** when that unit dispatches multiple agents in a meaningful structure. Embedded as a ` ```topology ` fenced JSON block inside the unit body; the parser extracts it, validates it, attaches it to the unit, and strips the fence so the renderer can draw the Mermaid diagram from the typed object instead of from the raw JSON code. Topology can also still be rendered standalone via the direct CLI (`echo '<topology-json>' | planview`) — that path is kept for backwards compatibility and one-off diagrams.
+- **Plan** — the top-level output of `/jidoka`. A markdown document with a `# Title` H1 and a sequence of `## Unit NN: <title>` sections, materialized as a directory of markdown files (`overview.md`, `progress.md`, `0N-<unit-slug>.md`) plus an opt-in `overview.html`. Most plans are pure markdown — multi-agent diagrams aren't the headline anymore.
+- **Topology** — an optional shape that lives **inside a Unit** when that unit dispatches multiple agents in a meaningful structure. Embedded as a ` ```topology ` fenced JSON block inside the unit body; the parser extracts it, validates it, attaches it to the unit, and strips the fence so the renderer can draw the Mermaid diagram from the typed object instead of from the raw JSON code. Topology can also still be rendered standalone via the direct CLI (`echo '<topology-json>' | jidoka`) — that path is kept for backwards compatibility and one-off diagrams.
 
 A unit without multi-agent dispatch (the common case) carries no topology. A unit with one agent never carries a topology — it's just main doing the work.
 
 ## Plan markdown shape
 
-This is what the skill emits and what the hook / `planview materialize` parses. The renderer auto-derives the slug, the unit IDs, and the default `blocked_by` chain — you don't write those.
+This is what the skill emits and what the hook / `jidoka materialize` parses. The renderer auto-derives the slug, the unit IDs, and the default `blocked_by` chain — you don't write those.
 
 ```
 # <task summary — used as the plan slug source>
@@ -83,7 +83,7 @@ interface Unit {
 
 ### Plan JSON Schema (legacy)
 
-`planview materialize` still accepts a JSON document of this shape (auto-detected when the input begins with `{`) for hand-written or scripted callers. The skill no longer emits this format — markdown is the primary interface.
+`jidoka materialize` still accepts a JSON document of this shape (auto-detected when the input begins with `{`) for hand-written or scripted callers. The skill no longer emits this format — markdown is the primary interface.
 
 ```json
 {
@@ -103,7 +103,7 @@ interface Unit {
 }
 ```
 
-Review pipelines aren't part of the wire format — the parser doesn't accept them and the skill doesn't produce them. They come from the user's config (`~/.claude/plugins/planview/config.json`) and are attached to the in-memory plan at materialize time. See [Review commands](#review-commands) below.
+Review pipelines aren't part of the wire format — the parser doesn't accept them and the skill doesn't produce them. They come from the user's config (`~/.claude/plugins/jidoka/config.json`) and are attached to the in-memory plan at materialize time. See [Review commands](#review-commands) below.
 
 ### Plan Field Semantics
 
@@ -234,7 +234,7 @@ The `produces` field describes what an agent outputs in human terms. It appears 
 
 ## Review commands
 
-Review commands come from the user's config at `~/.claude/plugins/planview/config.json` (scaffolded by `planview:setup`; hand-edited afterward). The materializer copies them onto each Unit (rendered into the Unit md), onto the Plan as a pre-execution checklist (rendered into `progress.md` as `## Pre-execution review`), and onto the Plan as a post-execution checklist (rendered into `progress.md` as `## Plan-level review`).
+Review commands come from the user's config at `~/.claude/plugins/jidoka/config.json` (scaffolded by `jidoka:setup`; hand-edited afterward). The materializer copies them onto each Unit (rendered into the Unit md), onto the Plan as a pre-execution checklist (rendered into `progress.md` as `## Pre-execution review`), and onto the Plan as a post-execution checklist (rendered into `progress.md` as `## Plan-level review`).
 
 ### Config shape
 
@@ -263,7 +263,7 @@ Object form (not a prefix-tagged string) because a bash template can legitimatel
 
 | Stage | Config key | Renders into | Default | When it runs |
 |---|---|---|---|---|
-| Pre-execution | `pre_review` | `progress.md` (`## Pre-execution review`, above Done) | `["/planview:pre-plan-review"]` | On the first session, before Unit 01 — the resuming agent works through it against the freshly materialized plan dir, then stops: it auto-runs the agent-invocable steps (the default `/planview:pre-plan-review`, or an `exec` template) and surfaces any `print` template / operator-run slash command for the human. Reviews the plan *as a plan* — no diff exists yet. |
+| Pre-execution | `pre_review` | `progress.md` (`## Pre-execution review`, above Done) | `["/jidoka:pre-plan-review"]` | On the first session, before Unit 01 — the resuming agent works through it against the freshly materialized plan dir, then stops: it auto-runs the agent-invocable steps (the default `/jidoka:pre-plan-review`, or an `exec` template) and surfaces any `print` template / operator-run slash command for the human. Reviews the plan *as a plan* — no diff exists yet. |
 | Per-unit | `unit_review` | Each `<id>.md` (`## Review pipeline`) | `["/code-review"]` | After the unit's diff lands and before it's committed. Local correctness gate on the unit's working-tree diff. |
 | Plan-level | `plan_review` | `progress.md` (`## Plan-level review`, below Notes) | `[]` | After the last unit's review lands and is committed. Adversarial pass against the cumulative *committed* plan diff — the completeness net for cross-unit issues. |
 
@@ -271,11 +271,11 @@ Object form (not a prefix-tagged string) because a bash template can legitimatel
 
 The materializer denies the ExitPlanMode hook (or fails the `materialize` CLI) when an entry is neither a non-empty string starting with `/` nor a `{ run, mode }` template (`run` a non-empty string; `mode` one of `print`/`exec`, defaulting to `print`; no unknown keys). Otherwise every entry is rendered verbatim — the renderer never substitutes placeholders or runs anything.
 
-Review steps are **global-config-only**: the per-repo `.planview.json` override allow-list excludes `pre_review`/`unit_review`/`plan_review`, so a cloned repo's committed config can never make a resuming agent run arbitrary shell. This is the security boundary that makes `exec` (below) safe.
+Review steps are **global-config-only**: the per-repo `.jidoka.json` override allow-list excludes `pre_review`/`unit_review`/`plan_review`, so a cloned repo's committed config can never make a resuming agent run arbitrary shell. This is the security boundary that makes `exec` (below) safe.
 
 ### Command semantics & invocation
 
-planview renders commands verbatim; it does not run them. These properties of the common review commands shape what belongs in each stage:
+jidoka renders commands verbatim; it does not run them. These properties of the common review commands shape what belongs in each stage:
 
 - **Namespace trap.** Built-in `/code-review` reviews a **local working-tree diff** (correctness bugs + reuse/simplification/efficiency cleanups). `/code-review:code-review` is a *different* tool — the code-review plugin, which reviews a **GitHub PR**. Per-unit and plan-level gates operate on local diffs, so they want the built-in `/code-review`, not the PR plugin.
 - **No `--fix` on unit review.** Unit review runs mid-plan with no plan context, so it flags intentional forward-references (a function unit 01 adds but unit 03 wires up reads as "unused"). Findings are therefore *candidates* a plan-aware reviewer triages, not edits to auto-apply — `--fix` would "fix" a correct forward-reference by deleting it.
@@ -283,9 +283,9 @@ planview renders commands verbatim; it does not run them. These properties of th
 - **`/simplify` is cleanup-only.** It applies reuse/simplification/efficiency/altitude fixes and does **not** hunt bugs — a complement to `/code-review`, not a substitute.
 - **Plan-level diff is committed.** By plan-end every unit is committed, so the cumulative diff lives between the base branch and HEAD. A bare working-tree review sees nothing; pass a base ref: `/codex:adversarial-review --base <branch>` (reviews `merge-base..HEAD`) or `/code-review <branch>`.
 - **Two-mechanism invocation (operator-run vs agent-run spans all three stages).** Whether a resuming agent runs a step or hands it to the operator is decided two ways. For a **template**, the step's own `mode`: `print` (default) surfaces the ready-to-run command and stops for the operator; `exec` has the agent run it via the **Bash** tool and relay the findings. For a **slash command**, the target skill's `disable-model-invocation` — codex's review commands set it, so they're operator-run (the agent can't invoke them via the SlashCommand tool). The `exec`/Bash route is legitimate precisely because `disable-model-invocation` blocks only `SlashCommand`, not Bash. The default is **print**/operator-run, preserving the human checkpoint for expensive/external review; opt a step into `exec` deliberately.
-- **Placeholders are stage-scoped, substituted by the resume/agent layer (never the renderer).** A template `run` may reference `{plan_dir}` (the materialized plan dir), `{base}` (the branch the plan forked from), `{diff_range}` (`merge-base(<base>,HEAD)..HEAD`), and `{focus}` (a composed review focus). The renderer records them verbatim — there's no diff at materialize time. The resuming agent substitutes them before running; the `/planview:plan-review-prompt` composer fills `{focus}` (and the rest) for plan-level review. `pre_review` runs before any unit, so only `{plan_dir}` is meaningful there.
-- **codex commands are operator-run.** `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation: true`, so a resuming agent cannot invoke them via the SlashCommand tool — they're surfaced for the human to run. They require `/codex:setup` + `codex login` (they fail loudly otherwise). If planview drives plan-level review, leave codex's own Stop-time `--enable-review-gate` off to avoid double-gating. (Running codex as a `{ run: "… codex exec …", mode }` **template** is the agent-run alternative — Bash, not SlashCommand — when you want the agent to drive it.)
-- **`/planview:plan-review-prompt` drives the configured `plan_review` vehicle (tool-agnostic).** The resuming agent runs this bundled composer (it is agent-invocable); it reads the plan + cumulative diff, composes a cross-unit focus (seams, deferred forward-references that should now be wired up), and drives whatever `plan_review` configures: a `{ run, mode }` template for a generic tool — into which planview injects its **own** plan-level review prompt, then `print` (surface the command) or `exec` (run via Bash) — or a slash command like `/codex:adversarial-review`, into which it composes the focus for the operator. codex is one vehicle, not hardcoded; the agent does the aiming, the configured mode decides who runs it. **How the diff reaches the reviewer is read off the template's `run`:** a no-pipe skeleton (e.g. `codex exec -s read-only "{focus}"`) is *agentic* — the tool runs `git diff` itself from the range the composer puts in `{focus}`, paging it at its own pace so an extremely large diff never has to fit in one context window; a `git diff {diff_range} | …` skeleton *feeds* the diff in (the only option for a tool that can't run shell, but the whole diff then lands in the model's context, so it doesn't scale to very large plans).
+- **Placeholders are stage-scoped, substituted by the resume/agent layer (never the renderer).** A template `run` may reference `{plan_dir}` (the materialized plan dir), `{base}` (the branch the plan forked from), `{diff_range}` (`merge-base(<base>,HEAD)..HEAD`), and `{focus}` (a composed review focus). The renderer records them verbatim — there's no diff at materialize time. The resuming agent substitutes them before running; the `/jidoka:plan-review-prompt` composer fills `{focus}` (and the rest) for plan-level review. `pre_review` runs before any unit, so only `{plan_dir}` is meaningful there.
+- **codex commands are operator-run.** `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation: true`, so a resuming agent cannot invoke them via the SlashCommand tool — they're surfaced for the human to run. They require `/codex:setup` + `codex login` (they fail loudly otherwise). If jidoka drives plan-level review, leave codex's own Stop-time `--enable-review-gate` off to avoid double-gating. (Running codex as a `{ run: "… codex exec …", mode }` **template** is the agent-run alternative — Bash, not SlashCommand — when you want the agent to drive it.)
+- **`/jidoka:plan-review-prompt` drives the configured `plan_review` vehicle (tool-agnostic).** The resuming agent runs this bundled composer (it is agent-invocable); it reads the plan + cumulative diff, composes a cross-unit focus (seams, deferred forward-references that should now be wired up), and drives whatever `plan_review` configures: a `{ run, mode }` template for a generic tool — into which jidoka injects its **own** plan-level review prompt, then `print` (surface the command) or `exec` (run via Bash) — or a slash command like `/codex:adversarial-review`, into which it composes the focus for the operator. codex is one vehicle, not hardcoded; the agent does the aiming, the configured mode decides who runs it. **How the diff reaches the reviewer is read off the template's `run`:** a no-pipe skeleton (e.g. `codex exec -s read-only "{focus}"`) is *agentic* — the tool runs `git diff` itself from the range the composer puts in `{focus}`, paging it at its own pace so an extremely large diff never has to fit in one context window; a `git diff {diff_range} | …` skeleton *feeds* the diff in (the only option for a tool that can't run shell, but the whole diff then lands in the model's context, so it doesn't scale to very large plans).
 
 ### Terminology
 

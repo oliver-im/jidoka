@@ -1,6 +1,6 @@
 # CLI vs MCP for Agent-Agnostic Design (March 2026)
 
-Whether planview's renderer needs an MCP server mode for agent-agnosticism, or whether the CLI binary is already the portable interface.
+Whether jidoka's renderer needs an MCP server mode for agent-agnosticism, or whether the CLI binary is already the portable interface.
 
 ## Context
 
@@ -34,39 +34,39 @@ Core thesis: **LLMs are trained on CLIs. MCP is an unnecessary protocol layer.**
 - Authentication fragmentation — MCP creates redundant auth when existing tools already work for both humans and agents.
 - "Ship a good API, then ship a good CLI. The agents will figure it out."
 
-## Application to planview
+## Application to jidoka
 
-planview's renderer already matches the CLI-first pattern both articles advocate:
+jidoka's renderer already matches the CLI-first pattern both articles advocate:
 
-| Property | planview renderer | MCP requirement? |
+| Property | jidoka renderer | MCP requirement? |
 |---|---|---|
 | Input | JSON on stdin | No — already structured, no escaping ambiguity |
 | Output | File path on stdout, exit code | No — already machine-readable |
 | State | Stateless, single invocation | No — nothing to keep alive |
 | Auth | None | No — no credentials involved |
-| Composability | `echo JSON \| planview`, `planview file.json --mermaid \| pbcopy` | MCP would lose this |
+| Composability | `echo JSON \| jidoka`, `jidoka file.json --mermaid \| pbcopy` | MCP would lose this |
 | Background process | None — runs and exits | MCP would require one |
-| Debugging | `echo JSON \| planview` reproduces any issue | MCP adds transport layer to debug through |
+| Debugging | `echo JSON \| jidoka` reproduces any issue | MCP adds transport layer to debug through |
 
-Every coding agent that can run shell commands (Cursor, Cline, Copilot, OpenHands — all of them) can call `echo '<json>' | planview` today. The CLI binary **is** the agent-agnostic interface.
+Every coding agent that can run shell commands (Cursor, Cline, Copilot, OpenHands — all of them) can call `echo '<json>' | jidoka` today. The CLI binary **is** the agent-agnostic interface.
 
 ## What an MCP wrapper would add
 
-An MCP server wrapping planview would:
+An MCP server wrapping jidoka would:
 1. Start a background process (stdio or HTTP transport)
 2. Accept JSON-RPC calls with the topology JSON as a parameter
 3. Call the CLI binary internally
 4. Return the result over JSON-RPC
 
-This adds a process lifecycle, transport layer, and initialization sequence — all to avoid shell-invoking a binary that already takes JSON on stdin. The only benefit is standardized tool discovery (agents auto-discover MCP tools), but planview is invoked by a skill prompt that already knows the binary exists.
+This adds a process lifecycle, transport layer, and initialization sequence — all to avoid shell-invoking a binary that already takes JSON on stdin. The only benefit is standardized tool discovery (agents auto-discover MCP tools), but jidoka is invoked by a skill prompt that already knows the binary exists.
 
 ## What the CLI already needs (and doesn't have)
 
-Both articles identify patterns planview should adopt regardless of MCP:
+Both articles identify patterns jidoka should adopt regardless of MCP:
 
 - **`--output json`** — already planned (`--mermaid` outputs raw Mermaid; could add `--json` to echo back validated/normalized JSON)
-- **Schema introspection** — `planview --schema` could dump the JSON schema, letting agents self-serve validation rules
-- **`--dry-run`** — `planview --validate` could validate without rendering or opening browser
+- **Schema introspection** — `jidoka --schema` could dump the JSON schema, letting agents self-serve validation rules
+- **`--dry-run`** — `jidoka --validate` could validate without rendering or opening browser
 - **`--example --json`** — already in the spec, dumps showcase JSON to stdout
 
 These are CLI-level improvements that make the binary more agent-friendly without MCP.

@@ -2,7 +2,7 @@
 
 # Tech Stack Analysis (March 2026)
 
-Evaluation of runtime/language options for the planview renderer, prioritizing technical merits over development velocity.
+Evaluation of runtime/language options for the jidoka renderer, prioritizing technical merits over development velocity.
 
 ## Workload Profile
 
@@ -85,7 +85,7 @@ The renderer reads JSON from stdin, validates against 18 rules, generates Mermai
 
 **Claude Code ecosystem:** Claude Code itself is Bun+TypeScript (with embedded Rust streaming component). Community hooks/tools split across Bash, Go, Rust, Python.
 
-**Mermaid tools:** mermaid-cli and Mermaid MCP servers use TypeScript+Puppeteer, but planview doesn't need Puppeteer (client-side rendering).
+**Mermaid tools:** mermaid-cli and Mermaid MCP servers use TypeScript+Puppeteer, but jidoka doesn't need Puppeteer (client-side rendering).
 
 ## Dimension-by-Dimension Winner
 

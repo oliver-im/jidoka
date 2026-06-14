@@ -22,13 +22,13 @@ interface Result {
 }
 
 function run(args: string[], opts: { stdin?: string; env?: NodeJS.ProcessEnv } = {}): Result {
-  // Override HOME so the global-config layer (`~/.claude/plugins/planview/config.json`)
+  // Override HOME so the global-config layer (`~/.claude/plugins/jidoka/config.json`)
   // resolves to a missing path and falls back to defaults. Without this, smoke
   // tests pick up the developer's real config and become non-hermetic.
   const env = {
     ...process.env,
-    HOME: "/nonexistent-planview-smoke-home",
-    PLANVIEW_NO_OPEN: "1",
+    HOME: "/nonexistent-jidoka-smoke-home",
+    JIDOKA_NO_OPEN: "1",
     ...opts.env,
   };
   const result = spawnSync("node", [cli, ...args], {
@@ -81,18 +81,18 @@ describe("--example", () => {
     expect(existsSync(path)).toBe(true);
     const html = readFileSync(path, "utf8");
     expect(html).toContain("--haiku-fill");
-    expect(html).toContain("planview-topology");
+    expect(html).toContain("jidoka-topology");
   });
 
   it("survives a missing browser opener (PATH stripped)", () => {
     // Without an error handler on the opener spawn, a missing
     // open/xdg-open/cmd would crash the parent with an unhandled async
-    // ENOENT after rendering. Build env manually so PLANVIEW_NO_OPEN is
+    // ENOENT after rendering. Build env manually so JIDOKA_NO_OPEN is
     // genuinely absent and the opener actually runs. Use process.execPath
     // so we can still locate node — the child inherits the empty PATH and
     // therefore can't locate open/xdg-open.
     const env: NodeJS.ProcessEnv = { ...process.env, PATH: "" };
-    delete env.PLANVIEW_NO_OPEN;
+    delete env.JIDOKA_NO_OPEN;
     const result = spawnSync(process.execPath, [cli, "--example"], {
       env,
       encoding: "utf8",
@@ -124,7 +124,7 @@ describe("--validate", () => {
 
 describe("materialize", () => {
   it("accepts a file path and writes the plan dir (no overview.html by default)", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "planview-smoke-mat-"));
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-mat-"));
     try {
       const fixture = join(fixtures, "valid_plan_minimal.json");
       const r = run(
@@ -143,7 +143,7 @@ describe("materialize", () => {
   });
 
   it("accepts `-` for stdin", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "planview-smoke-stdin-"));
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-stdin-"));
     try {
       const json = readFileSync(join(fixtures, "valid_plan_minimal.json"), "utf8");
       const r = run(
@@ -159,7 +159,7 @@ describe("materialize", () => {
   });
 
   it("accepts a plan markdown file (auto-detected by leading `#`)", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "planview-smoke-md-"));
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-md-"));
     try {
       const md = "# Smoke plan\n\n## Unit 01: Only\n\nSummary.\n";
       const r = run(
@@ -176,7 +176,7 @@ describe("materialize", () => {
   });
 
   it("accepts a BOM-prefixed plan markdown via stdin", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "planview-smoke-bom-"));
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-bom-"));
     try {
       const md = "\uFEFF# Smoke plan\n\n## Unit 01: Only\n\nSummary.\n";
       const r = run(
@@ -192,18 +192,18 @@ describe("materialize", () => {
     }
   });
 
-  it("writes overview.html when project .planview.json sets html_output=true", () => {
-    const project = mkdtempSync(join(tmpdir(), "planview-smoke-html-"));
-    const plansRoot = mkdtempSync(join(tmpdir(), "planview-smoke-html-pr-"));
+  it("writes overview.html when project .jidoka.json sets html_output=true", () => {
+    const project = mkdtempSync(join(tmpdir(), "jidoka-smoke-html-"));
+    const plansRoot = mkdtempSync(join(tmpdir(), "jidoka-smoke-html-pr-"));
     try {
       writeFileSync(
-        join(project, ".planview.json"),
+        join(project, ".jidoka.json"),
         JSON.stringify({ html_output: true }),
       );
       const fixture = join(fixtures, "valid_plan_minimal.json");
       const r = run(
         ["materialize", fixture, "--plans-root", plansRoot, "--today", "260101"],
-        { env: { CLAUDE_PROJECT_DIR: project, PLANVIEW_NO_OPEN: "1" } },
+        { env: { CLAUDE_PROJECT_DIR: project, JIDOKA_NO_OPEN: "1" } },
       );
       expect(r.status).toBe(0);
       const target = r.stdout.trim();
@@ -230,7 +230,7 @@ describe("hook", () => {
   });
 
   it("exits 0 silently when tool_input.plan is absent", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "planview-smoke-hook-empty-"));
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-hook-empty-"));
     try {
       const sessionId = `smoke-${Date.now()}`;
       const r = run(["hook"], {
@@ -246,7 +246,7 @@ describe("hook", () => {
   });
 
   it("materializes a plan dir from tool_input.plan markdown", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "planview-smoke-hook-ok-"));
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-hook-ok-"));
     try {
       const sessionId = `smoke-${Date.now()}`;
       const planMd = "# Smoke plan\n\n## Unit 01: Only\n\nSummary.\n";
@@ -270,13 +270,13 @@ describe("hook", () => {
   });
 
   it("emits a deny payload when the plan markdown is malformed", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "planview-smoke-hook-bad-"));
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-hook-bad-"));
     try {
       const sessionId = `smoke-${Date.now()}`;
       const r = run(["hook"], {
         stdin: JSON.stringify({
           session_id: sessionId,
-          tool_input: { plan: "not a planview plan" },
+          tool_input: { plan: "not a jidoka plan" },
         }),
         env: { CLAUDE_PROJECT_DIR: tmp },
       });

@@ -8,7 +8,7 @@ let counter = 0;
 function makeTempDir(label: string): string {
   const path = join(
     tmpdir(),
-    `planview-out-test-${process.pid}-${Date.now()}-${counter++}-${label}`,
+    `jidoka-out-test-${process.pid}-${Date.now()}-${counter++}-${label}`,
   );
   mkdirSync(path, { recursive: true });
   return path;
@@ -24,10 +24,10 @@ describe("writeTempHtml", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("uses a planview-<timestamp>.html filename", () => {
+  it("uses a jidoka-<timestamp>.html filename", () => {
     const dir = makeTempDir("name");
     const path = writeTempHtml("x", dir);
-    expect(path).toMatch(/planview-\d+\.html$/);
+    expect(path).toMatch(/jidoka-\d+\.html$/);
     rmSync(dir, { recursive: true, force: true });
   });
 });

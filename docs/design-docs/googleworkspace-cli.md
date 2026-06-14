@@ -1,6 +1,6 @@
 # Reference Project Review: `googleworkspace/cli` (March 2026)
 
-What planview can learn from [`googleworkspace/cli`](https://github.com/googleworkspace/cli), and what should remain specific to planview's much smaller scope.
+What jidoka can learn from [`googleworkspace/cli`](https://github.com/googleworkspace/cli), and what should remain specific to jidoka's much smaller scope.
 
 ## Why this project is relevant
 
@@ -11,7 +11,7 @@ What planview can learn from [`googleworkspace/cli`](https://github.com/googlewo
 - Built around structured I/O and predictable command behavior
 - Packaged together with agent skills, rather than treating skills as a separate afterthought
 
-It is not a domain match for planview, but it is a good productization match.
+It is not a domain match for jidoka, but it is a good productization match.
 
 ## Key observations
 
@@ -24,7 +24,7 @@ The `gws` README presents the CLI itself as the primary interface for both human
 - structured JSON output
 - schema and dry-run support
 
-This reinforces the conclusion in [`cli-over-mcp.md`](cli-over-mcp.md): planview should treat the CLI binary as the main interface, not as a temporary shell transport to be replaced by MCP.
+This reinforces the conclusion in [`cli-over-mcp.md`](cli-over-mcp.md): jidoka should treat the CLI binary as the main interface, not as a temporary shell transport to be replaced by MCP.
 
 ### 2. Self-describing interfaces matter
 
@@ -35,11 +35,11 @@ This reinforces the conclusion in [`cli-over-mcp.md`](cli-over-mcp.md): planview
 - predictable help output
 - structured exit behavior
 
-For planview, this supports the existing direction toward:
+For jidoka, this supports the existing direction toward:
 
-- `planview --schema`
-- `planview --validate`
-- `planview --example --json`
+- `jidoka --schema`
+- `jidoka --validate`
+- `jidoka --example --json`
 
 The general lesson: agent-friendly tools should explain themselves at the command line, not only in documentation.
 
@@ -52,7 +52,7 @@ The general lesson: agent-friendly tools should explain themselves at the comman
 - explicit examples
 - deterministic behavior
 
-This is a useful model for planview. The same command surface should work for:
+This is a useful model for jidoka. The same command surface should work for:
 
 - a human piping JSON into the binary
 - a Claude Code skill invoking the renderer
@@ -60,7 +60,7 @@ This is a useful model for planview. The same command surface should work for:
 
 ### 4. Skills are adapters around the CLI, not the core asset
 
-`gws` ships agent skills, but the durable product is still the CLI. That maps well to planview's architecture:
+`gws` ships agent skills, but the durable product is still the CLI. That maps well to jidoka's architecture:
 
 - portable renderer binary as the stable core
 - Claude-specific skill and hook as platform adapters
@@ -77,7 +77,7 @@ This is a better framing than "agent-agnostic from day one" in the abstract. The
 - source install
 - agent/extension installation paths
 
-That is a reminder that "single binary" is necessary but not sufficient. If planview works, it will eventually need a clean distribution story such as:
+That is a reminder that "single binary" is necessary but not sufficient. If jidoka works, it will eventually need a clean distribution story such as:
 
 - GitHub Releases first
 - Homebrew second
@@ -87,9 +87,9 @@ This is likely more important than early MCP support.
 
 ### 6. Operational contracts should be explicit
 
-`gws` documents exit codes and behavior clearly. That is a good model for planview's renderer and validation modes.
+`gws` documents exit codes and behavior clearly. That is a good model for jidoka's renderer and validation modes.
 
-Useful implications for planview:
+Useful implications for jidoka:
 
 - stdout should remain machine-oriented
 - stderr should remain for errors and hints
@@ -98,7 +98,7 @@ Useful implications for planview:
 
 The more deterministic the command contract, the easier it is to reuse from skills, shell scripts, tests, and future wrappers.
 
-## What planview should apply
+## What jidoka should apply
 
 ### Apply directly
 
@@ -117,13 +117,13 @@ The more deterministic the command contract, the easier it is to reuse from skil
 5. **Early attention to distribution**
    Think about installation and packaging earlier than a typical internal tool would.
 
-## What planview should not copy
+## What jidoka should not copy
 
 ### 1. Dynamic command generation
 
-`gws` builds its command surface dynamically from Google Discovery documents. That is a good fit for a huge API surface, but not for planview.
+`gws` builds its command surface dynamically from Google Discovery documents. That is a good fit for a huge API surface, but not for jidoka.
 
-planview should keep:
+jidoka should keep:
 
 - a small fixed CLI
 - boring predictable flags
@@ -131,9 +131,9 @@ planview should keep:
 
 ### 2. Authentication and environment complexity
 
-`gws` has to solve OAuth, token precedence, credentials files, and cloud project setup. planview should avoid that class of complexity entirely if possible.
+`gws` has to solve OAuth, token precedence, credentials files, and cloud project setup. jidoka should avoid that class of complexity entirely if possible.
 
-One of planview's advantages is that it can stay:
+One of jidoka's advantages is that it can stay:
 
 - local
 - stateless per invocation
@@ -141,9 +141,9 @@ One of planview's advantages is that it can stay:
 
 ### 3. Large skill surface area
 
-`gws` benefits from many skills because it spans many APIs and workflows. planview likely does not.
+`gws` benefits from many skills because it spans many APIs and workflows. jidoka likely does not.
 
-For planview, the better pattern is:
+For jidoka, the better pattern is:
 
 - one core skill
 - maybe a few thin platform-specific variants later
@@ -152,7 +152,7 @@ For planview, the better pattern is:
 
 [`googleworkspace/cli`](https://github.com/googleworkspace/cli) is evidence that a Rust CLI can successfully serve both humans and AI agents without MCP being the starting point.
 
-The most important transferable lessons for planview are:
+The most important transferable lessons for jidoka are:
 
 - the CLI should be a first-class product
 - the command surface should be self-describing
@@ -160,7 +160,7 @@ The most important transferable lessons for planview are:
 - skills should wrap the CLI rather than replace it
 - packaging and distribution are part of adoption
 
-## Recommendation for planview
+## Recommendation for jidoka
 
 Use this project as a productization reference, not a feature template.
 

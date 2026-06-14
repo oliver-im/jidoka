@@ -4,14 +4,14 @@
 
 ## Overview
 
-You produce **plan markdown**. The renderer (the ExitPlanMode hook, or `planview materialize` from the CLI) parses it, validates the result, and writes the materialized plan dir. Your job is to analyze the task, decompose it into reviewable units, and emit conforming markdown.
+You produce **plan markdown**. The renderer (the ExitPlanMode hook, or `jidoka materialize` from the CLI) parses it, validates the result, and writes the materialized plan dir. Your job is to analyze the task, decompose it into reviewable units, and emit conforming markdown.
 
 A unit may carry an optional **topology** when it dispatches multiple agents in a meaningful structure — embedded as a ` ```topology ` fenced JSON block inside the unit body. Most units don't need one.
 
 ## Skill Configuration
 
 ```
-name: planview
+name: jidoka
 context: fork
 allowed-tools: Read, Grep, Glob, Bash
 ```
@@ -24,7 +24,7 @@ Read the codebase using Read, Grep, Glob, then decompose the task into the markd
 
 ### Step 2: Return the markdown
 
-Output the complete plan in a single ` ```markdown ` fence. The caller (main agent) decides what to do — typically reviews it, surfaces the summary to the user, then either accepts (calls `ExitPlanMode` with the markdown as the `plan` argument) or re-invokes `/planview` with adjustments.
+Output the complete plan in a single ` ```markdown ` fence. The caller (main agent) decides what to do — typically reviews it, surfaces the summary to the user, then either accepts (calls `ExitPlanMode` with the markdown as the `plan` argument) or re-invokes `/jidoka` with adjustments.
 
 You do **not** save the markdown anywhere. The hook reads it directly from PreToolUse stdin's `tool_input.plan` field when ExitPlanMode fires.
 
@@ -77,7 +77,7 @@ If two units are genuinely independent tracks that converge later, call that out
 
 ### review_steps
 
-You don't emit review info at all. Review pipelines come from the user's config (`~/.claude/plugins/planview/config.json`); the materializer resolves them at materialize time and renders them into each Unit md and into `progress.md`'s `## Plan-level review` section. Each configured step is a slash command **or** a `{ run, mode }` bash template (a tool-agnostic command for `codex exec`, cursor-agent, etc.) — but that's the user's config concern, not something you emit or need to reason about when decomposing. If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body so the human reviewer takes the right action when the unit lands — the body remains the per-unit escape hatch. The built-in `/code-review` takes no focus argument, so any "pay attention to X" steer for a unit's review also lives in the body prose, not in the command.
+You don't emit review info at all. Review pipelines come from the user's config (`~/.claude/plugins/jidoka/config.json`); the materializer resolves them at materialize time and renders them into each Unit md and into `progress.md`'s `## Plan-level review` section. Each configured step is a slash command **or** a `{ run, mode }` bash template (a tool-agnostic command for `codex exec`, cursor-agent, etc.) — but that's the user's config concern, not something you emit or need to reason about when decomposing. If a unit needs a different review approach (e.g. an adversarial second-opinion pass for a foundational change), call it out in the body so the human reviewer takes the right action when the unit lands — the body remains the per-unit escape hatch. The built-in `/code-review` takes no focus argument, so any "pay attention to X" steer for a unit's review also lives in the body prose, not in the command.
 
 ### Reference, don't paste
 
@@ -85,12 +85,12 @@ When a unit body needs to talk about existing code, reference it by `path:symbol
 
 ### Promoting an idea to a plan
 
-planview's lifecycle convention parks open questions and proposals as `ideas/<YYMMDD-N-slug>.md` entries (see `exec-plans/AGENTS.md` for the surrounding lifecycle). When the task you're decomposing traces back to such an idea, the plan you emit *is* its promotion: an idea graduates to `exec-plans/active/` the moment it acquires units. Name the source idea in the overview's references so the plan's eventual archive stamp can record which idea it realized. An idea that never gets units stays an idea — open-ended drift is allowed there, not inside a plan.
+jidoka's lifecycle convention parks open questions and proposals as `ideas/<YYMMDD-N-slug>.md` entries (see `exec-plans/AGENTS.md` for the surrounding lifecycle). When the task you're decomposing traces back to such an idea, the plan you emit *is* its promotion: an idea graduates to `exec-plans/active/` the moment it acquires units. Name the source idea in the overview's references so the plan's eventual archive stamp can record which idea it realized. An idea that never gets units stays an idea — open-ended drift is allowed there, not inside a plan.
 
 ## Hard Rules
 
 1. **NEVER** generate HTML. The renderer handles that.
-2. **NEVER** call the renderer binary. Return markdown only; the hook (or `planview materialize`) handles rendering.
+2. **NEVER** call the renderer binary. Return markdown only; the hook (or `jidoka materialize`) handles rendering.
 3. **NEVER** execute the plan. The skill is a planner only.
 4. **NEVER** loop or ask for approval. One-shot generator.
 5. On re-invocation with adjustments, regenerate the **FULL** markdown from scratch — no patching.
@@ -108,9 +108,9 @@ Plan mode blocks Edit, Write, NotebookEdit, and Task tools. The Skill tool isn't
 
 ### Why the hook reads `tool_input.plan` directly
 
-ExitPlanMode + PreToolUse hooks shipped in Claude Code v2.1.85 (2026-03-26). Before that, planview ferried the plan through `/tmp/planview-{session_id}.json` because the hook had no way to see what the user was about to approve. Now the markdown is right there in the PreToolUse payload — no temp file, no marker file, no deny-loop.
+ExitPlanMode + PreToolUse hooks shipped in Claude Code v2.1.85 (2026-03-26). Before that, jidoka ferried the plan through `/tmp/jidoka-{session_id}.json` because the hook had no way to see what the user was about to approve. Now the markdown is right there in the PreToolUse payload — no temp file, no marker file, no deny-loop.
 
-The standalone CLI (`echo '<topology-json>' | planview` or `planview <file>`) still accepts a bare Topology for direct rendering, untouched. Users wanting topology-only output don't go through the hook.
+The standalone CLI (`echo '<topology-json>' | jidoka` or `jidoka <file>`) still accepts a bare Topology for direct rendering, untouched. Users wanting topology-only output don't go through the hook.
 
 ## Execution Mode Details
 

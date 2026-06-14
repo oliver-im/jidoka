@@ -1,4 +1,4 @@
-// planview client-side JS — embedded via include_str!()
+// jidoka client-side JS — embedded via include_str!()
 
 (function () {
   "use strict";
@@ -47,7 +47,7 @@
       var current = document.documentElement.getAttribute("data-theme");
       var next = current === "dark" ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", next);
-      localStorage.setItem("planview-theme", next);
+      localStorage.setItem("jidoka-theme", next);
       rerenderMermaid(next);
     });
   }
@@ -83,7 +83,7 @@
         canvas.toBlob(function (blob) {
           var a = document.createElement("a");
           a.href = URL.createObjectURL(blob);
-          a.download = "planview-topology.png";
+          a.download = "jidoka-topology.png";
           a.click();
           URL.revokeObjectURL(a.href);
           URL.revokeObjectURL(url);
@@ -116,7 +116,7 @@
     el.innerHTML = DOMPurify.sanitize(marked.parse(source));
   }
 
-  function initPlanViewRendering() {
+  function initJidokaRendering() {
     if (typeof window.__overviewMarkdown !== "undefined") {
       renderMarkdownInto(document.getElementById("overview-md"), window.__overviewMarkdown);
     }
@@ -129,7 +129,7 @@
   }
 
   function restoreTheme() {
-    var saved = localStorage.getItem("planview-theme");
+    var saved = localStorage.getItem("jidoka-theme");
     if (saved) {
       document.documentElement.setAttribute("data-theme", saved);
     }
@@ -137,7 +137,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     restoreTheme();
-    initPlanViewRendering();
+    initJidokaRendering();
     preserveMermaidSource();
     initMermaid();
     initThemeToggle();

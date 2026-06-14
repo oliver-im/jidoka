@@ -4,7 +4,7 @@ Research date: 2026-03-22
 
 ## Context
 
-planview renders self-contained HTML files (Mermaid diagrams, CSS layout, client-side JS). We need a way to debug these from Claude Code — verify rendering, check console errors, inspect layout, confirm Mermaid initialization.
+jidoka renders self-contained HTML files (Mermaid diagrams, CSS layout, client-side JS). We need a way to debug these from Claude Code — verify rendering, check console errors, inspect layout, confirm Mermaid initialization.
 
 ## Contenders
 

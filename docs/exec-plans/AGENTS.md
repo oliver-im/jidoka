@@ -14,13 +14,13 @@ docs/exec-plans/
 ```
 
 - `YYMMDD` — date the plan was bootstrapped (local time). `N` — daily counter, **shared with `../ideas/`** (scan the live entries — `ideas/`, `active/`, and any in-flight `worktrees/<id>` — for `^<today>-(\d+)-` → max+1; `completed/` isn't rescanned, so an archived id can recur). `slug` — kebab-case, ≤ 60 chars. Unit ids are `^[0-9]{2}-[a-z0-9-]+$`; the unit filename is exactly `<id>.md`.
-- New plans are produced by `/planview` and materialized by the ExitPlanMode hook — nothing here is hand-edited except `progress.md` as work proceeds (and plan refinement right after materialization).
+- New plans are produced by `/jidoka` and materialized by the ExitPlanMode hook — nothing here is hand-edited except `progress.md` as work proceeds (and plan refinement right after materialization).
 
 ## Git workflow (pure-worktree)
 
 A plan is **worked in its own git worktree**, and each **unit is a branch**. The result: `active/` on `main` stays empty, `git worktree list` is the live index of in-flight plans, and `main` only ever gains plans under `completed/` (via merge).
 
-- **Per plan:** `worktrees/<plan-id>/` on branch `plan/<plan-id>`, off `main`. The plan dir lives in `active/<plan-id>/` *inside that worktree*. (Create it by hand with `git worktree add worktrees/<plan-id> -b plan/<plan-id>`; planview can also scaffold it automatically when its `git_workflow` flag is enabled. `worktrees/` is gitignored.)
+- **Per plan:** `worktrees/<plan-id>/` on branch `plan/<plan-id>`, off `main`. The plan dir lives in `active/<plan-id>/` *inside that worktree*. (Create it by hand with `git worktree add worktrees/<plan-id> -b plan/<plan-id>`; jidoka can also scaffold it automatically when its `git_workflow` flag is enabled. `worktrees/` is gitignored.)
 - **Per unit:** branch `unit/NN-slug` off the plan branch. Do the unit's work there, run the unit review (below) on the branch diff, fix flags, commit freely. Then **squash-merge** into the plan branch as one `Unit NN: <title>` commit (`git merge --squash unit/NN-slug` → commit), delete the unit branch (`git branch -D unit/NN-slug`), and advance the cursor. The squash absorbs the review→fix rounds, so the plan branch carries exactly one clean commit per unit.
 - **At the end (archive + merge):** `git mv active/<plan-id> completed/<plan-id>`, prepend the provenance stamp to its `progress.md`, commit on the plan branch; then `git checkout main && git merge --no-ff plan/<plan-id>` and `git worktree remove worktrees/<plan-id>`. `main` gains the plan under `completed/`, never under `active/`.
 
@@ -34,7 +34,7 @@ When asked to resume a plan:
 4. **Don't read other unit mds** unless the cursor unit references them or you need to verify a `blocked_by` claim.
 5. **Work inside the plan's worktree** (`worktrees/<plan-id>/`), on a `unit/NN-slug` branch. If the worktree doesn't exist yet (hand-bootstrapped plan), the `## Git workflow` block in `progress.md` has the bootstrap steps.
 
-**On your first session on the plan** (cursor still at the first unit, nothing in Done), before starting Unit 01: work through the `## Pre-execution review` step(s) from `progress.md` against the freshly materialized plan dir, then **stop** for the user's go-ahead. Route by step: **auto-run** the agent-invocable ones — the default `/planview:pre-plan-review` (read-only, no diff) or an `exec` template — and surface their findings; for a `print` template or an operator-run slash command, **surface the command and stop** for the user to run (don't execute it). **Surface, don't auto-revise** — auto-*invoke* ≠ auto-*apply*: the user reads the findings and decides whether to revise the plan before Unit 01. (If `pre_review` is `[]`, there's nothing to run — proceed to Unit 01.)
+**On your first session on the plan** (cursor still at the first unit, nothing in Done), before starting Unit 01: work through the `## Pre-execution review` step(s) from `progress.md` against the freshly materialized plan dir, then **stop** for the user's go-ahead. Route by step: **auto-run** the agent-invocable ones — the default `/jidoka:pre-plan-review` (read-only, no diff) or an `exec` template — and surface their findings; for a `print` template or an operator-run slash command, **surface the command and stop** for the user to run (don't execute it). **Surface, don't auto-revise** — auto-*invoke* ≠ auto-*apply*: the user reads the findings and decides whether to revise the plan before Unit 01. (If `pre_review` is `[]`, there's nothing to run — proceed to Unit 01.)
 
 After completing the cursor unit:
 
@@ -45,7 +45,7 @@ After completing the cursor unit:
 
 When the cursor unit was the **last** one:
 
-- After its review + squash-merge, walk `progress.md`'s `## Plan-level review` against the cumulative (committed) plan diff. Run the bundled **`/planview:plan-review-prompt`** composer (agent-invocable): it reads the plan + diff, composes a cross-unit focus, and **drives whatever `plan_review` configures** — tool-agnostically. For a `{ run, mode }` **template** (e.g. `codex exec`), it injects planview's own plan-level review prompt, then either surfaces the ready-to-run command (`print`) or runs it itself via **Bash** (`exec`). For a slash command like `/codex:adversarial-review`, it composes the focus into the command and surfaces it for you — codex review sets `disable-model-invocation` so you run it (needs `/codex:setup` + `codex login`). In short: `print`/slash-with-`disable-model-invocation` → surface and wait; `exec` template → the agent runs it and relays findings.
+- After its review + squash-merge, walk `progress.md`'s `## Plan-level review` against the cumulative (committed) plan diff. Run the bundled **`/jidoka:plan-review-prompt`** composer (agent-invocable): it reads the plan + diff, composes a cross-unit focus, and **drives whatever `plan_review` configures** — tool-agnostically. For a `{ run, mode }` **template** (e.g. `codex exec`), it injects jidoka's own plan-level review prompt, then either surfaces the ready-to-run command (`print`) or runs it itself via **Bash** (`exec`). For a slash command like `/codex:adversarial-review`, it composes the focus into the command and surfaces it for you — codex review sets `disable-model-invocation` so you run it (needs `/codex:setup` + `codex login`). In short: `print`/slash-with-`disable-model-invocation` → surface and wait; `exec` template → the agent runs it and relays findings.
 - On approval, **archive + merge** per the git workflow above (`git mv` to `completed/`, stamp, `--no-ff` merge to `main`, remove the worktree). Don't archive before sign-off, even if `## Plan-level review` is empty.
 
 ## Provenance stamp (on archive)
@@ -62,5 +62,5 @@ Optionally add one line of context if the code has since evolved past the plan's
 
 - `../CONVENTION.md` — the portable three-kind lifecycle (ideas / exec-plans / design-docs) and its two rules.
 - `index.md` (this dir) and `../{ideas,design-docs}/index.md` — what each kind holds and its drift rule.
-- `../agent-guide.md` — what `/planview` emits and the heuristics it follows.
+- `../agent-guide.md` — what `/jidoka` emits and the heuristics it follows.
 - `../data-model.md` — Plan and Unit schema, plus the per-unit Topology shape.
