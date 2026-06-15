@@ -23,9 +23,6 @@ function makeTempDir(label: string): string {
 describe("defaults", () => {
   it("match spec", () => {
     expect(defaultConfig.plan_dir_root).toBe("docs/exec-plans/active");
-    expect(defaultConfig.auto_open_browser).toBe(false);
-    expect(defaultConfig.html_output).toBe(false);
-    expect(defaultConfig.plan_level_topology).toBe(false);
     expect(defaultConfig.git_workflow).toBe(false);
   });
 
@@ -51,26 +48,21 @@ describe("loadFromPaths", () => {
     writeFileSync(path, JSON.stringify({ plan_dir_root: "custom/plans" }));
     const cfg = loadFromPaths(path, undefined);
     expect(cfg.plan_dir_root).toBe("custom/plans");
-    expect(cfg.auto_open_browser).toBe(false);
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("project override accepts plan_dir_root, auto_open_browser, html_output, git_workflow", () => {
+  it("project override accepts plan_dir_root, git_workflow", () => {
     const dir = makeTempDir("proj");
     const path = join(dir, ".jidoka.json");
     writeFileSync(
       path,
       JSON.stringify({
         plan_dir_root: "docs/plans",
-        auto_open_browser: true,
-        html_output: true,
         git_workflow: true,
       }),
     );
     const cfg = loadFromPaths(undefined, path);
     expect(cfg.plan_dir_root).toBe("docs/plans");
-    expect(cfg.auto_open_browser).toBe(true);
-    expect(cfg.html_output).toBe(true);
     expect(cfg.git_workflow).toBe(true);
     rmSync(dir, { recursive: true, force: true });
   });
@@ -87,22 +79,6 @@ describe("loadFromPaths", () => {
     );
     const cfg = loadFromPaths(undefined, path);
     expect(cfg).toEqual(defaultConfig);
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("project override rejects non-boolean for auto_open_browser/html_output", () => {
-    const dir = makeTempDir("nonbool");
-    const path = join(dir, ".jidoka.json");
-    writeFileSync(
-      path,
-      JSON.stringify({
-        auto_open_browser: "yes",
-        html_output: 1,
-      }),
-    );
-    const cfg = loadFromPaths(undefined, path);
-    expect(cfg.auto_open_browser).toBe(false);
-    expect(cfg.html_output).toBe(false);
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -152,14 +128,14 @@ describe("loadFromPaths", () => {
         "plan_dir_root": "commented/plans",
         /* Block comment
            spanning multiple lines. */
-        "auto_open_browser": true,
+        "git_workflow": true,
         // Inline comment near a string with a slash inside.
         "unit_review": [ "/code-review:code-review" ]  // not a comment-in-string
       }`,
     );
     const cfg = loadFromPaths(path, undefined);
     expect(cfg.plan_dir_root).toBe("commented/plans");
-    expect(cfg.auto_open_browser).toBe(true);
+    expect(cfg.git_workflow).toBe(true);
     expect(cfg.unit_review).toEqual(["/code-review:code-review"]);
     rmSync(dir, { recursive: true, force: true });
   });
@@ -274,7 +250,6 @@ describe("mergeForWrite", () => {
     const merged = mergeForWrite(base, cfg);
     expect(merged.plan_dir_root).toBe("new");
     expect(merged.experimental_feature).toBe("preserve-me");
-    expect(merged.auto_open_browser).toBe(false);
   });
 
   it("starts from empty when base undefined", () => {

@@ -14,7 +14,6 @@ import {
   materializeAt,
   resolveTargetDir,
   todayYymmddLocal,
-  writePlanHtml,
 } from "../materialize.js";
 import type { Agent, Plan, Topology, Unit } from "../types.js";
 
@@ -311,20 +310,6 @@ describe("materialize", () => {
       expect(e).toBeInstanceOf(MaterializeError);
       expect((e as MaterializeError).kind).toBe("target_dir_exists");
     }
-    rmSync(base, { recursive: true, force: true });
-  });
-});
-
-describe("writePlanHtml", () => {
-  it("writes overview.html in the target dir", () => {
-    const base = makeTempDir("html");
-    const plansRoot = join(base, "plan");
-    mkdirSync(plansRoot, { recursive: true });
-    const target = materialize(samplePlan(), plansRoot, "260505", defaultConfig);
-    writePlanHtml(samplePlan(), target);
-    const html = readFileSync(join(target, "overview.html"), "utf8");
-    expect(html).toContain("<!DOCTYPE html>");
-    expect(html).toContain("Plan: Pivot the renderer");
     rmSync(base, { recursive: true, force: true });
   });
 });
