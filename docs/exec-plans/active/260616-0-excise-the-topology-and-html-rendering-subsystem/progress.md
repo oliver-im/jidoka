@@ -1,6 +1,6 @@
 # 260616-0-excise-the-topology-and-html-rendering-subsystem — Progress
 
-**Cursor:** 01-remove-the-html-browser-output-and-topology-cli-command (not started).
+**Cursor:** 02-excise-the-topology-data-model-and-mermaid-renderer (not started).
 
 ## Pre-execution review
 
@@ -18,7 +18,7 @@ This plan is worked in its own git worktree, one branch per unit. Full steps: `d
 
 ## Done
 
-_Nothing yet._
+- **Unit 01 — Remove the HTML/browser output and topology CLI command** ✅ Deleted `html.ts`/`output.ts`/`schema.ts`/`describe.ts`/`example.ts` + their tests; removed the standalone topology-render CLI command, the HTML render + browser-open path, and the `html_output`/`auto_open_browser`/`plan_level_topology` config flags. Markdown materialize path, hook exit-0 contract, and `isValidId` preserved. Build + 293 tests + typecheck green; `dist/cli.js` rebuilt. Reviews (`/code-review` + codex exec) clean. Squash: `39b1fec`.
 
 ## Blockers
 
