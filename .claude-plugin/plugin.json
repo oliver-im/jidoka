@@ -1,6 +1,6 @@
 {
   "name": "jidoka",
-  "description": "Materialize multi-unit plans (with optional per-unit topology) as a <YYMMDD-N-slug>/ dir under your configured plan_dir_root on ExitPlanMode. The /jidoka slash command produces a Plan; the ExitPlanMode hook writes the dir and opens overview.html in the browser.",
+  "description": "Materialize multi-unit plans as a <YYMMDD-N-slug>/ dir of reviewable markdown units under your configured plan_dir_root on ExitPlanMode. The /jidoka slash command produces the plan markdown; the ExitPlanMode hook validates it and writes the dir (overview.md + progress.md + per-unit files).",
   "version": "0.3.0",
   "author": {
     "name": "Oliver Im"
@@ -11,8 +11,6 @@
     "plan-mode",
     "planning",
     "agents",
-    "topology",
-    "mermaid",
     "notes",
     "claude-code"
   ]

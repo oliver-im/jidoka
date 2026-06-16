@@ -1,16 +1,15 @@
 # jidoka
 
-A Claude Code plugin that materializes plan-mode output as a structured directory of markdown files (`docs/exec-plans/active/<YYMMDD-N-slug>/` with `overview.md`, `progress.md`, and per-unit `0N-*.md`). HTML rendering is opt-in via config. When a unit dispatches multiple agents, an optional per-unit topology is embedded as a Mermaid diagram.
+A Claude Code plugin that materializes plan-mode output as a structured directory of markdown files (`docs/exec-plans/active/<YYMMDD-N-slug>/` with `overview.md`, `progress.md`, and per-unit `0N-*.md`).
 
 ### The Problem
 
-Plan mode gives you approval before execution, but the plan lands in a random file under `~/.claude/plans/` and is reviewed in the terminal — fine for small tasks, painful for multi-step work that benefits from a directory of reviewable units. Separately, multi-agent topology is invisible: the main agent decides how to decompose a task into subagents or teams, but you never see that structure before it starts consuming tokens.
+Plan mode gives you approval before execution, but the plan lands in a random file under `~/.claude/plans/` and is reviewed in the terminal — fine for small tasks, painful for multi-step work that benefits from a directory of reviewable units.
 
 ### What jidoka Does
 
-1. **Plan-mode dir materialization (primary):** the ExitPlanMode hook reads the plan markdown straight out of `tool_input.plan` (PreToolUse stdin), parses it, validates it, and writes `overview.md` + `progress.md` + `0N-<unit-slug>.md` files into `<plan_dir_root>/<YYMMDD-N-slug>/` (default `docs/exec-plans/active/`). `overview.html` and the browser pop are opt-in via config.
-2. **Per-unit topology (optional):** when a unit body contains a ` ```topology ` fenced JSON block, it's extracted, validated, and rendered as a Mermaid diagram inside the unit md (and HTML if enabled) — showing roles, models, tools, and dependencies.
-3. **Silent on empty/missing plan:** if `tool_input.plan` is empty, the hook exits 0 without doing anything. Parse or validation failure surfaces a deny payload with the reason so the agent can fix it and retry.
+1. **Plan-mode dir materialization (primary):** the ExitPlanMode hook reads the plan markdown straight out of `tool_input.plan` (PreToolUse stdin), parses it, validates it, and writes `overview.md` + `progress.md` + `0N-<unit-slug>.md` files into `<plan_dir_root>/<YYMMDD-N-slug>/` (default `docs/exec-plans/active/`).
+2. **Silent on empty/missing plan:** if `tool_input.plan` is empty, the hook exits 0 without doing anything. Parse or validation failure surfaces a deny payload with the reason so the agent can fix it and retry.
 
 ## Installation
 
@@ -29,7 +28,7 @@ Enabling the plugin auto-loads the skills under `skills/` and the ExitPlanMode h
 
 ### Standalone CLI (optional)
 
-To run the topology renderer outside the plugin (e.g. `echo '<topology>' | jidoka` for one-off diagrams), symlink the bundled CLI:
+To run `jidoka materialize` outside the plugin (e.g. to materialize a hand-written plan markdown), symlink the bundled CLI:
 
 ```bash
 ln -sf "$(pwd)/dist/cli.js" /usr/local/bin/jidoka
@@ -39,7 +38,7 @@ Verify:
 
 ```bash
 jidoka --version
-jidoka --example    # opens a showcase diagram in the browser
+jidoka --help       # lists the materialize and hook subcommands
 ```
 
 ### Hook Setup
@@ -65,9 +64,7 @@ The plugin's `hooks/hooks.json` already wires the PreToolUse hook. To add the ho
 
 | Variable | Effect |
 |---|---|
-| `JIDOKA_NO_OPEN` | Don't open the browser (just write the HTML and print the path) |
 | `CLAUDE_PROJECT_DIR` | Project root used to resolve `<project>/<plan_dir_root>/`. PWD fallback with a stderr warning when unset. |
-| `TMPDIR` | Override default `/tmp` for the topology renderer's HTML output |
 
 ## Configuration
 
@@ -76,9 +73,6 @@ jidoka reads a layered config: built-in defaults < `~/.claude/plugins/jidoka/con
 | Key | Default | Project-overridable? | What it does |
 |---|---|---|---|
 | `plan_dir_root` | `docs/exec-plans/active` | ✓ (relative paths only) | Where plan dirs land, resolved against the project root. |
-| `auto_open_browser` | `false` | ✓ | Open `overview.html` in the browser after materialize. |
-| `html_output` | `false` | ✓ | Render `overview.html` alongside the markdown files. |
-| `plan_level_topology` | `false` | — | Reserved for v2; currently always false. |
 | `git_workflow` | `false` | ✓ | Opt into the worktree-per-plan / branch-per-unit workflow. When on, jidoka renders a `## Git workflow` reminder into each `progress.md`. Shipped off (OSS opt-in); a committed `.jidoka.json` can turn it on for a whole repo. |
 | `pre_review` | `["/jidoka:pre-plan-review"]` | — | Review steps to run **before** Unit 01, against the freshly materialized plan dir. On the first session the resuming agent auto-runs the agent-invocable steps (default `/jidoka:pre-plan-review`) and surfaces any `print`/operator-run step for you, then stops. Rendered as `## Pre-execution review` in `progress.md`. Reviews the plan *as a plan* — no diff exists yet. |
 | `unit_review` | `["/code-review"]` | — | Review steps to run after each Unit lands, on the unit's local working-tree diff. The built-in **`/code-review`** (correctness bugs + reuse/simplification/efficiency cleanups) — **not** `/code-review:code-review`, which is the code-review *plugin* and reviews a GitHub PR. No `--fix` (findings are triaged against plan context, not auto-applied). Rendered as a checklist in the Unit md. |
@@ -86,7 +80,7 @@ jidoka reads a layered config: built-in defaults < `~/.claude/plugins/jidoka/con
 
 Each entry in the three review arrays is a **review step**: a slash command (`/code-review`, `/codex:adversarial-review`) **or** a `{ run, mode }` bash template for any tool — e.g. `{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }`. `mode` is `print` (default — surface the command for you to run) or `exec` (the resuming agent runs it via Bash). Templates may use the placeholders `{plan_dir}`/`{base}`/`{diff_range}`/`{focus}`. Review steps are **global-config-only** (not settable in a per-repo `.jidoka.json`) — the security boundary that makes `exec` safe.
 
-Defaults assume "files-on-disk is the value, the browser is opt-in" — most users view plan dirs in their editor (Obsidian, VS Code, iA Writer). Flip `auto_open_browser=true` and/or `html_output=true` if you want the rendered HTML view too.
+Plan dirs are plain files on disk — view and review them in your editor (Obsidian, VS Code, iA Writer).
 
 ### First-time setup
 
@@ -138,7 +132,7 @@ Each entry is a review step — a slash command or a `{ run, mode }` template �
 
 | Document | Audience | Contents |
 |---|---|---|
-| [Data Model](docs/data-model.md) | Both | JSON schema, field semantics, execution modes, terminology |
+| [Data Model](docs/data-model.md) | Both | JSON schema, field semantics, review-step model, terminology |
 | [Agent Guide](docs/agent-guide.md) | LLM agents | Skill configuration, process steps, heuristics, hard rules |
 | [Developer Guide](docs/developer-guide.md) | Developers | Architecture, algorithms, validation, CLI, hooks, design decisions |
 
@@ -149,24 +143,12 @@ Each entry is a review step — a slash command or a `{ run, mode }` template �
 1. User enters plan mode with a task
 2. Claude explores the codebase, asks clarifying questions, drafts the plan
 3. Claude invokes `/jidoka` from within plan mode
-4. The forked subagent decomposes the work into units, optionally attaches a ` ```topology ` fenced block to any unit that dispatches multiple agents, returns the plan markdown to the caller
+4. The forked subagent decomposes the work into units and returns the plan markdown to the caller
 5. User reviews the proposed plan — if adjustments needed, tells the main agent
 6. Main agent re-invokes `/jidoka` with adjustments (repeat until satisfied)
-7. Main agent calls `ExitPlanMode` with the markdown as the `plan` argument → PreToolUse hook reads `tool_input.plan`, materializes `<plan_dir_root>/<YYMMDD-N-slug>/` (and renders/opens `overview.html` if those config knobs are on)
-8. User reviews the rendered plan alongside the approval dialog in the CLI
+7. Main agent calls `ExitPlanMode` with the markdown as the `plan` argument → PreToolUse hook reads `tool_input.plan`, materializes `<plan_dir_root>/<YYMMDD-N-slug>/`
+8. User reviews the materialized plan alongside the approval dialog in the CLI
 9. User approves or rejects → execution begins from the materialized unit files
-
-### Direct Topology Rendering (advanced)
-
-The `/jidoka` slash command emits a plan markdown, not a bare topology. If you have a topology JSON in hand and want to render it on its own (for testing, exploration, or one-off diagrams), the standalone CLI still accepts topology input:
-
-```
-echo '<topology-json>' | jidoka
-jidoka <topology.json>
-jidoka --example          # built-in showcase
-```
-
-This path writes a single HTML to `$TMPDIR` and opens the browser. It does not materialize a plan dir and is unaffected by the hook.
 
 ### Materialize a plan markdown without ExitPlanMode
 
