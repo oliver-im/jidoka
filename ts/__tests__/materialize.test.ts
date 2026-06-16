@@ -15,7 +15,7 @@ import {
   resolveTargetDir,
   todayYymmddLocal,
 } from "../materialize.js";
-import type { Agent, Plan, Topology, Unit } from "../types.js";
+import type { Plan, Unit } from "../types.js";
 
 let tempDirCounter = 0;
 function makeTempDir(label: string): string {
@@ -27,7 +27,7 @@ function makeTempDir(label: string): string {
   return path;
 }
 
-const unitNoTopology = (id: string, blockedBy: string[] = []): Unit => ({
+const minimalUnit = (id: string, blockedBy: string[] = []): Unit => ({
   id,
   title: `Title for ${id}`,
   summary: `Summary for ${id}.`,
@@ -54,8 +54,8 @@ const samplePlan = (): Plan => ({
   task_summary: "Pivot the renderer",
   slug: "pivot-renderer",
   units: [
-    unitNoTopology("01-prep"),
-    unitNoTopology("02-implement", ["01-prep"]),
+    minimalUnit("01-prep"),
+    minimalUnit("02-implement", ["01-prep"]),
   ],
 });
 
@@ -129,7 +129,6 @@ describe("materialize", () => {
     expect(u01.startsWith("# Unit 01 — Title for 01-prep")).toBe(true);
     expect(u01).toContain("**Blocked by:** none");
     expect(u01).toContain("**Agents involved:** main only");
-    expect(u01).toContain("**Topology:** none");
     expect(u01).toContain("## Review pipeline");
     expect(u01).toContain("- [ ] `/code-review`");
 
@@ -251,49 +250,6 @@ describe("materialize", () => {
     expect(preIdx).toBeGreaterThan(-1);
     expect(planIdx).toBeGreaterThan(-1);
     expect(preIdx).toBeLessThan(planIdx);
-    rmSync(base, { recursive: true, force: true });
-  });
-
-  it("emits mermaid block for unit with topology", () => {
-    const base = makeTempDir("topo");
-    const plansRoot = join(base, "plan");
-    mkdirSync(plansRoot, { recursive: true });
-
-    const writer: Agent = {
-      id: "writer",
-      role: "Write",
-      model: "sonnet",
-      tools: [],
-      blocked_by: [],
-      background: false,
-      output: { kind: "inline" },
-    };
-    const reviewer: Agent = { ...writer, id: "reviewer", model: "opus", blocked_by: ["writer"] };
-    const topology: Topology = {
-      task_summary: "Two writers",
-      execution_mode: "team",
-      agents: [writer, reviewer],
-    };
-    const unit: Unit = {
-      ...unitNoTopology("01-team"),
-      agents_involved: ["writer", "reviewer"],
-      topology,
-    };
-    const plan: Plan = {
-      task_summary: "Plan with topology",
-      slug: "with-topology",
-      units: [unit],
-    };
-
-    const target = materialize(plan, plansRoot, "260505", defaultConfig);
-    const md = readFileSync(join(target, "01-team.md"), "utf8");
-    expect(md).toContain("**Topology:** present");
-    expect(md).toContain("**Agents involved:** writer, reviewer");
-    expect(md).toContain("```mermaid");
-    expect(md).toContain("graph TD");
-    expect(md).toContain("writer");
-    expect(md).toContain("reviewer");
-
     rmSync(base, { recursive: true, force: true });
   });
 

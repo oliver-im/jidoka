@@ -8,13 +8,7 @@ import {
   buildUnitMd,
   unitIdPrefix,
 } from "../render-md.js";
-import {
-  parsePlanJson,
-  type Agent,
-  type Plan,
-  type Topology,
-  type Unit,
-} from "../types.js";
+import { parsePlanJson, type Plan, type Unit } from "../types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const loadPlan = (name: string): Plan => {
@@ -303,12 +297,11 @@ describe("buildProgressMd", () => {
 });
 
 describe("buildUnitMd", () => {
-  it("renders title, blocked_by, agents, topology=none", () => {
+  it("renders title, blocked_by, agents", () => {
     const md = buildUnitMd(minimalUnit("01-foo"));
     expect(md).toContain("# Unit 01 — Title for 01-foo");
     expect(md).toContain("**Blocked by:** none");
     expect(md).toContain("**Agents involved:** main only");
-    expect(md).toContain("**Topology:** none");
     expect(md).toContain("## Summary");
     expect(md).toContain("Summary for 01-foo.");
     expect(md).toContain("## Tasks");
@@ -340,41 +333,7 @@ describe("buildUnitMd", () => {
     delete u.review;
     expect(buildUnitMd(u)).toContain("- [ ] _No review steps configured._");
   });
-
-  it("embeds mermaid block when unit has topology", () => {
-    const topology: Topology = {
-      task_summary: "Two writers",
-      execution_mode: "team",
-      agents: [
-        agent("writer"),
-        { ...agent("reviewer"), blocked_by: ["writer"] },
-      ],
-    };
-    const u: Unit = {
-      ...minimalUnit("01-team"),
-      agents_involved: ["writer", "reviewer"],
-      topology,
-    };
-    const md = buildUnitMd(u);
-    expect(md).toContain("**Topology:** present");
-    expect(md).toContain("```mermaid");
-    expect(md).toContain("graph TD");
-    expect(md).toContain("writer");
-    expect(md).toContain("reviewer");
-  });
 });
-
-function agent(id: string): Agent {
-  return {
-    id,
-    role: "does",
-    model: "sonnet",
-    tools: [],
-    blocked_by: [],
-    background: false,
-    output: { kind: "inline" },
-  };
-}
 
 describe("buildOverviewMd from real fixtures", () => {
   it("valid_plan_minimal renders", () => {

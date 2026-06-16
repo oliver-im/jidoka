@@ -18093,33 +18093,6 @@ function date4(params) {
 config(en_default());
 
 // ts/types.ts
-var outputSchema = external_exports.union([
-  external_exports.literal("inline").transform(() => ({ kind: "inline" })),
-  external_exports.strictObject({
-    file: external_exports.string().min(1, "output.file must be a non-empty string")
-  }).transform(({ file: file2 }) => ({ kind: "file", path: file2 }))
-]);
-var modelSchema = external_exports.enum(["haiku", "sonnet", "opus"]);
-var executionModeSchema = external_exports.enum(["team", "subagents"]);
-var baseAgentSchema = external_exports.object({
-  id: external_exports.string(),
-  role: external_exports.string(),
-  model: modelSchema,
-  tools: external_exports.array(external_exports.string()),
-  blocked_by: external_exports.array(external_exports.string()),
-  background: external_exports.boolean(),
-  output: outputSchema.optional().transform((v) => v ?? { kind: "inline" }),
-  produces: external_exports.string().optional(),
-  execution_mode: executionModeSchema.optional()
-});
-var agentSchema = baseAgentSchema.extend({
-  agents: external_exports.lazy(() => external_exports.array(agentSchema)).optional()
-});
-var topologySchema = external_exports.object({
-  task_summary: external_exports.string(),
-  execution_mode: executionModeSchema,
-  agents: external_exports.array(agentSchema)
-});
 var reviewStepModeSchema = external_exports.enum(["print", "exec"]);
 var reviewTemplateStepSchema = external_exports.strictObject({
   run: external_exports.string().min(1, "review template 'run' must be a non-empty string"),
@@ -18144,10 +18117,7 @@ var unitSchema = external_exports.object({
   summary: external_exports.string(),
   blocked_by: external_exports.array(external_exports.string()),
   agents_involved: external_exports.array(external_exports.string()).optional(),
-  body_markdown: external_exports.string(),
-  // `topology: null` is the producer-contract sentinel for "no embedded
-  // topology"; both omission and explicit null normalize to undefined.
-  topology: external_exports.union([external_exports.null(), topologySchema]).optional().transform((v) => v == null ? void 0 : v)
+  body_markdown: external_exports.string()
 });
 var planSchema = external_exports.object({
   task_summary: external_exports.string(),
@@ -18161,13 +18131,6 @@ function formatZodError(e) {
   });
   return issues.join("; ");
 }
-function parseTopology(input) {
-  const result = topologySchema.safeParse(input);
-  if (!result.success) {
-    return { ok: false, error: formatZodError(result.error) };
-  }
-  return { ok: true, value: result.data };
-}
 function parsePlan(input) {
   const result = planSchema.safeParse(input);
   if (!result.success) {
@@ -18177,15 +18140,6 @@ function parsePlan(input) {
 }
 function stripBom(s) {
   return s.charCodeAt(0) === 65279 ? s.slice(1) : s;
-}
-function parseTopologyJson(json2) {
-  let raw;
-  try {
-    raw = JSON.parse(stripBom(json2));
-  } catch (e) {
-    return { ok: false, error: `JSON parse error: ${e.message}` };
-  }
-  return parseTopology(raw);
 }
 function parsePlanJson(json2) {
   let raw;
@@ -18796,127 +18750,6 @@ var Eta = class extends Eta$1 {
 // ts/render-md.ts
 import { fileURLToPath } from "node:url";
 import { dirname as dirname2, join as join3 } from "node:path";
-
-// ts/graph.ts
-function assignSteps(agents) {
-  const byId = new Map(agents.map((a) => [a.id, a]));
-  const depths = /* @__PURE__ */ new Map();
-  const getDepth = (id) => {
-    const cached2 = depths.get(id);
-    if (cached2 !== void 0) return cached2;
-    const agent = byId.get(id);
-    const depth = agent.blocked_by.length === 0 ? 1 : Math.max(...agent.blocked_by.map(getDepth)) + 1;
-    depths.set(id, depth);
-    return depth;
-  };
-  for (const agent of agents) {
-    getDepth(agent.id);
-  }
-  return depths;
-}
-function groupByStep(agents) {
-  const stepMap = assignSteps(agents);
-  const buckets = /* @__PURE__ */ new Map();
-  for (const agent of agents) {
-    const step = stepMap.get(agent.id);
-    const bucket = buckets.get(step);
-    if (bucket) bucket.push(agent);
-    else buckets.set(step, [agent]);
-  }
-  const steps = new Map(
-    [...buckets.entries()].sort(([a], [b]) => a - b)
-  );
-  return { steps };
-}
-
-// ts/mermaid.ts
-function mermaid(topology) {
-  return topology.execution_mode === "subagents" ? generateSubagents(topology) : generateTeam(topology);
-}
-function generateSubagents(topology) {
-  const plan = groupByStep(topology.agents);
-  const graphs = [];
-  for (const [, agents] of plan.steps) {
-    const lines = ["graph TD", emitClassDefs(), mainNodeDef()];
-    const nodes = [];
-    const edges = [];
-    for (const agent of agents) {
-      renderAgentTree(agent, nodes, edges);
-      edges.push(`    main --> ${escapeId(agent.id)}`);
-    }
-    lines.push(...nodes, ...edges);
-    graphs.push(lines.join("\n"));
-  }
-  return graphs;
-}
-function generateTeam(topology) {
-  const lines = ["graph TD", emitClassDefs(), mainNodeDef()];
-  const nodes = [];
-  const edges = [];
-  nodes.push('    subgraph team["team"]');
-  for (const agent of topology.agents) {
-    renderAgentTree(agent, nodes, edges);
-  }
-  nodes.push("    end");
-  for (const agent of topology.agents) {
-    if (agent.blocked_by.length === 0) {
-      edges.push(`    main --> ${escapeId(agent.id)}`);
-    }
-  }
-  for (const agent of topology.agents) {
-    for (const blocker of agent.blocked_by) {
-      edges.push(`    ${escapeId(blocker)} --> ${escapeId(agent.id)}`);
-    }
-  }
-  lines.push(...nodes, ...edges);
-  return [lines.join("\n")];
-}
-function renderAgentTree(agent, nodes, edges) {
-  nodes.push(nodeDef(agent));
-  if (agent.agents === void 0) return;
-  const isTeam = agent.execution_mode === "team";
-  if (isTeam) {
-    nodes.push(
-      `    subgraph ${escapeId(agent.id)}_team["${agent.id} team"]`
-    );
-  }
-  for (const child of agent.agents) {
-    renderAgentTree(child, nodes, edges);
-  }
-  if (isTeam) {
-    nodes.push("    end");
-  }
-  for (const child of agent.agents) {
-    if (child.blocked_by.length === 0) {
-      edges.push(`    ${escapeId(agent.id)} --> ${escapeId(child.id)}`);
-    }
-    for (const blocker of child.blocked_by) {
-      edges.push(`    ${escapeId(blocker)} --> ${escapeId(child.id)}`);
-    }
-  }
-}
-function escapeId(id) {
-  return id.replaceAll("-", "_");
-}
-function nodeDef(agent) {
-  const esc2 = escapeId(agent.id);
-  const cls = agent.model;
-  const label = `${agent.id} (${cls})`;
-  return agent.output.kind === "inline" ? `    ${esc2}["${label}"]:::${cls}` : `    ${esc2}(["${label}"]):::${cls}`;
-}
-function mainNodeDef() {
-  return '    main(("main agent")):::main';
-}
-function emitClassDefs() {
-  return [
-    "    classDef haiku fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f",
-    "    classDef sonnet fill:#dcfce7,stroke:#22c55e,color:#14532d",
-    "    classDef opus fill:#ede9fe,stroke:#8b5cf6,color:#3b0764",
-    "    classDef main fill:#fef3c7,stroke:#f59e0b,color:#78350f"
-  ].join("\n");
-}
-
-// ts/render-md.ts
 var here = dirname2(fileURLToPath(import.meta.url));
 var templatesDir = join3(here, "..", "templates");
 var eta = new Eta({ views: templatesDir, autoEscape: false, cache: false });
@@ -18962,7 +18795,6 @@ function buildUnitMd(unit) {
   const prefix = unitIdPrefix(unit.id) ?? unit.id;
   const blockedBy = unit.blocked_by.length === 0 ? "none" : unit.blocked_by.join(", ");
   const agents = unit.agents_involved && unit.agents_involved.length > 0 ? unit.agents_involved.join(", ") : "main only";
-  const topologyLabel = unit.topology !== void 0 ? "present" : "none";
   let summaryBlock = unit.summary;
   if (summaryBlock.length > 0 && !summaryBlock.endsWith("\n")) {
     summaryBlock += "\n";
@@ -18974,17 +18806,14 @@ function buildUnitMd(unit) {
     if (!bodyBlock.endsWith("\n")) bodyBlock += "\n";
     bodyBlock += "\n";
   }
-  const topologyBlock = unit.topology !== void 0 ? unitTopologyBlock(unit.topology) + "\n\n" : "";
   const reviewItems = renderPipelineChecklist(unit.review);
   return eta.render("unit.md.eta", {
     prefix,
     title: unit.title,
     blockedBy,
     agents,
-    topologyLabel,
     summaryBlock,
     bodyBlock,
-    topologyBlock,
     reviewItems
   });
 }
@@ -19050,11 +18879,6 @@ function renderPlanReviewBlock(steps) {
 function overviewReviewsCell(steps) {
   if (steps === void 0 || steps.length === 0) return "\u2014";
   return steps.map(reviewStepLabel).map((label) => label.replaceAll("|", "\\|")).join(" + ");
-}
-function unitTopologyBlock(topology) {
-  return mermaid(topology).map((g) => `\`\`\`mermaid
-${g}
-\`\`\``).join("\n\n");
 }
 
 // ts/materialize.ts
@@ -19335,21 +19159,13 @@ function parsePlanMarkdown(md) {
     const seq = String(k + 1).padStart(2, "0");
     const titleSlug = slugify2(cur.title, 57);
     const id = titleSlug.length > 0 ? `${seq}-${titleSlug}` : `${seq}-unit`;
-    const fence = extractTopologyFence(bodyMarkdown);
-    if (!fence.ok) {
-      return { ok: false, error: `units[${k}].topology: ${fence.error}` };
-    }
-    const unit = {
+    units.push({
       id,
       title: cur.title,
       summary,
       blocked_by: k === 0 ? [] : [units[k - 1].id],
-      body_markdown: fence.value.bodyWithoutFence
-    };
-    if (fence.value.topology !== void 0) {
-      unit.topology = fence.value.topology;
-    }
-    units.push(unit);
+      body_markdown: bodyMarkdown
+    });
   }
   return {
     ok: true,
@@ -19402,89 +19218,12 @@ function splitSummaryAndBody(lines) {
   const bodyMarkdown = lines.slice(i).join("\n").replace(/\s+$/, "");
   return { summary, bodyMarkdown };
 }
-var FENCE_LINE_RE = /^(`{3,})(.*)$/;
-function extractTopologyFence(bodyMarkdown) {
-  if (bodyMarkdown.length === 0) {
-    return { ok: true, value: { bodyWithoutFence: "", topology: void 0 } };
-  }
-  const lines = bodyMarkdown.split("\n");
-  let state = { kind: "outside" };
-  let openIdx = -1;
-  let closeIdx = -1;
-  let secondTopologyAt = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const m = FENCE_LINE_RE.exec(line);
-    if (!m) continue;
-    const ticks = m[1].length;
-    const info = m[2].trim();
-    if (state.kind === "outside") {
-      if (info === "topology") {
-        if (openIdx >= 0) {
-          secondTopologyAt = i;
-          break;
-        }
-        state = { kind: "inside", topology: true, ticks };
-        openIdx = i;
-      } else {
-        state = { kind: "inside", topology: false, ticks };
-      }
-    } else if (info === "" && ticks >= state.ticks) {
-      if (state.topology) closeIdx = i;
-      state = { kind: "outside" };
-    }
-  }
-  if (openIdx < 0) {
-    return { ok: true, value: { bodyWithoutFence: bodyMarkdown, topology: void 0 } };
-  }
-  if (closeIdx < 0) {
-    return { ok: false, error: "unterminated topology fence (missing closing ```)" };
-  }
-  if (secondTopologyAt >= 0) {
-    return { ok: false, error: "multiple topology fences in one unit (only one allowed)" };
-  }
-  const jsonContent = lines.slice(openIdx + 1, closeIdx).join("\n");
-  const parsed = parseTopologyJson(jsonContent);
-  if (!parsed.ok) {
-    return { ok: false, error: parsed.error };
-  }
-  const before = lines.slice(0, openIdx);
-  const after = lines.slice(closeIdx + 1);
-  let beforeEnd = before.length;
-  while (beforeEnd > 0 && before[beforeEnd - 1].trim().length === 0) beforeEnd--;
-  let afterStart = 0;
-  while (afterStart < after.length && after[afterStart].trim().length === 0) afterStart++;
-  const beforeKept = before.slice(0, beforeEnd);
-  const afterKept = after.slice(afterStart);
-  const bodyWithoutFence = beforeKept.length === 0 ? afterKept.join("\n") : afterKept.length === 0 ? beforeKept.join("\n") : `${beforeKept.join("\n")}
-
-${afterKept.join("\n")}`;
-  return { ok: true, value: { bodyWithoutFence, topology: parsed.value } };
-}
 
 // ts/validate.ts
 function formatError2(e) {
   switch (e.kind) {
     case "empty_task_summary":
       return "task_summary must be a non-empty string";
-    case "empty_agents":
-      return "agents must be a non-empty array";
-    case "invalid_agent_id":
-      return `invalid agent id '${e.id}' at ${e.path}: must match [a-zA-Z0-9_-]+`;
-    case "duplicate_agent_id":
-      return `duplicate agent id '${e.id}' at ${e.first_path} and ${e.second_path}`;
-    case "empty_role":
-      return `agent '${e.agent_id}' at ${e.path} has an empty role`;
-    case "empty_nested_agents":
-      return `agent '${e.agent_id}' at ${e.path} has an empty agents array`;
-    case "blocked_by_not_found":
-      return `agent '${e.agent_id}' at ${e.path} references unknown blocked_by id '${e.referenced_id}'`;
-    case "self_dependency":
-      return `agent '${e.agent_id}' at ${e.path} blocks itself`;
-    case "cyclic_dependency":
-      return `cyclic dependency at ${e.path}: ${e.cycle.join(" -> ")}`;
-    case "mermaid_id_collision":
-      return `agent ids '${e.id_a}' (${e.path_a}) and '${e.id_b}' (${e.path_b}) collide in Mermaid output: hyphens become underscores, so they would render as the same node`;
     case "empty_units":
       return "units must be a non-empty array";
     case "invalid_slug":
@@ -19573,161 +19312,7 @@ function validatePlan(plan) {
     }
   }
   detectUnitCycles(plan.units, errors);
-  for (let i = 0; i < plan.units.length; i++) {
-    const unit = plan.units[i];
-    if (unit.topology) {
-      validateTopologyInto(
-        unit.topology,
-        `units[${i}].topology.agents`,
-        errors
-      );
-    }
-  }
   return errors;
-}
-function validateTopologyInto(topology, rootPath, errors) {
-  if (topology.task_summary.length === 0) {
-    errors.push({ kind: "empty_task_summary" });
-  }
-  if (topology.agents.length === 0) {
-    errors.push({ kind: "empty_agents" });
-  }
-  const seen = /* @__PURE__ */ new Map();
-  const seenEscaped = /* @__PURE__ */ new Map();
-  collectAndValidateIds(topology.agents, rootPath, seen, seenEscaped, errors);
-  validateAgentFields(topology.agents, rootPath, errors);
-  validateDependenciesInScope(topology.agents, rootPath, errors);
-}
-function collectAndValidateIds(agents, path2, seen, seenEscaped, errors) {
-  for (let i = 0; i < agents.length; i++) {
-    const agent = agents[i];
-    const agentPath = `${path2}[${i}]`;
-    if (!isValidId(agent.id)) {
-      errors.push({ kind: "invalid_agent_id", id: agent.id, path: agentPath });
-    }
-    const firstPath = seen.get(agent.id);
-    if (firstPath !== void 0) {
-      errors.push({
-        kind: "duplicate_agent_id",
-        id: agent.id,
-        first_path: firstPath,
-        second_path: agentPath
-      });
-    } else {
-      seen.set(agent.id, agentPath);
-      const escaped = escapeId(agent.id);
-      const prior = seenEscaped.get(escaped);
-      if (prior !== void 0 && prior.id !== agent.id) {
-        errors.push({
-          kind: "mermaid_id_collision",
-          id_a: prior.id,
-          id_b: agent.id,
-          path_a: prior.path,
-          path_b: agentPath
-        });
-      } else if (prior === void 0) {
-        seenEscaped.set(escaped, { id: agent.id, path: agentPath });
-      }
-    }
-    if (agent.agents !== void 0) {
-      collectAndValidateIds(
-        agent.agents,
-        `${agentPath}.agents`,
-        seen,
-        seenEscaped,
-        errors
-      );
-    }
-  }
-}
-function validateAgentFields(agents, path2, errors) {
-  for (let i = 0; i < agents.length; i++) {
-    const agent = agents[i];
-    const agentPath = `${path2}[${i}]`;
-    if (agent.role.length === 0) {
-      errors.push({ kind: "empty_role", agent_id: agent.id, path: agentPath });
-    }
-    if (agent.agents !== void 0) {
-      if (agent.agents.length === 0) {
-        errors.push({
-          kind: "empty_nested_agents",
-          agent_id: agent.id,
-          path: agentPath
-        });
-      } else {
-        validateAgentFields(agent.agents, `${agentPath}.agents`, errors);
-      }
-    }
-  }
-}
-function validateDependenciesInScope(agents, path2, errors) {
-  const idsInScope = new Set(agents.map((a) => a.id));
-  for (let i = 0; i < agents.length; i++) {
-    const agent = agents[i];
-    const agentPath = `${path2}[${i}]`;
-    for (const blocker of agent.blocked_by) {
-      if (blocker === agent.id) {
-        errors.push({
-          kind: "self_dependency",
-          agent_id: agent.id,
-          path: agentPath
-        });
-      } else if (!idsInScope.has(blocker)) {
-        errors.push({
-          kind: "blocked_by_not_found",
-          agent_id: agent.id,
-          referenced_id: blocker,
-          path: agentPath
-        });
-      }
-    }
-  }
-  detectAgentCycles(agents, path2, errors);
-  for (let i = 0; i < agents.length; i++) {
-    const agent = agents[i];
-    if (agent.agents !== void 0 && agent.agents.length > 0) {
-      validateDependenciesInScope(
-        agent.agents,
-        `${path2}[${i}].agents`,
-        errors
-      );
-    }
-  }
-}
-function detectAgentCycles(agents, path2, errors) {
-  const agentMap = new Map(agents.map((a) => [a.id, a]));
-  const color = new Map(
-    agents.map((a) => [a.id, "white"])
-  );
-  const dfs = (node, stack) => {
-    color.set(node, "gray");
-    stack.push(node);
-    const agent = agentMap.get(node);
-    if (agent) {
-      for (const dep of agent.blocked_by) {
-        const depColor = color.get(dep);
-        if (depColor === "gray") {
-          const cycleStart = stack.indexOf(dep);
-          if (cycleStart >= 0) {
-            errors.push({
-              kind: "cyclic_dependency",
-              cycle: stack.slice(cycleStart),
-              path: path2
-            });
-          }
-        } else if (depColor === "white" && agentMap.has(dep)) {
-          dfs(dep, stack);
-        }
-      }
-    }
-    stack.pop();
-    color.set(node, "black");
-  };
-  for (const agent of agents) {
-    if (color.get(agent.id) === "white") {
-      dfs(agent.id, []);
-    }
-  }
 }
 function detectUnitCycles(units, errors) {
   const unitMap = new Map(units.map((u) => [u.id, u]));
