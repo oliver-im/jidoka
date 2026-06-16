@@ -41,6 +41,8 @@ For jidoka, this supports the existing direction toward:
 - `jidoka --validate`
 - `jidoka --example --json`
 
+> **Update (2026-06):** these specific flags were not built — jidoka's shipped surface is `jidoka materialize <file>` (plan markdown in, a directory of markdown units out) plus the `hook` mode. The lesson (a self-describing, introspectable CLI) carried over; the concrete flag names are kept as the direction at the time.
+
 The general lesson: agent-friendly tools should explain themselves at the command line, not only in documentation.
 
 ### 3. Human DX and agent DX can be aligned
@@ -106,7 +108,7 @@ The more deterministic the command contract, the easier it is to reuse from skil
    The renderer binary should be treated as the primary product surface.
 
 2. **Self-describing flags**
-   Keep `--schema`, `--validate`, and `--example --json` in scope.
+   Keep self-describing introspection (schema/validate-style ergonomics) in scope. *(2026-06: the concrete `--schema`/`--validate`/`--example --json` flags were not shipped — see §2 above; the principle stands.)*
 
 3. **Stable command contract**
    Document stdout, stderr, and exit-code behavior before implementation drifts.

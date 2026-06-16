@@ -1,5 +1,7 @@
 # Strategic Review (March 2026)
 
+> **Update (2026-06):** jidoka no longer renders visualizations — the topology/Mermaid/HTML subsystem was excised; it is now a pure plan-markdown → reviewable-markdown-units materializer. §1 (differentiation from a *visualization* tool) and §2 (native-visualization risk) assess a risk that no longer applies to the product; they're kept for the decision history. The live verdicts still stand: §3 (plan-mode longevity), §4 (the renderer is the portable asset; skills are platform adapters), and the Recommendations (proceed; defer MCP per [cli-over-mcp.md](cli-over-mcp.md); keep the skill Claude-specific; don't over-invest in aesthetics).
+
 Pre-implementation review of four strategic risks before investing in building jidoka.
 
 ## 1. Differentiation from visual-explainer
@@ -63,7 +65,7 @@ Plan mode is being treated as core infrastructure across the industry, not an ex
 2. **Hook** — PreToolUse on ExitPlanMode (Claude Code hook system)
 3. **Terminology** — "agents" aligns with Claude Code's Agent tool (though this is industry-standard)
 
-The renderer binary (`echo JSON | jidoka` → HTML) has zero Claude dependency.
+The renderer binary (`jidoka materialize` — plan markdown in, a directory of markdown units out) has zero Claude dependency.
 
 ### Integration paths per agent
 

@@ -40,15 +40,15 @@ jidoka's renderer already matches the CLI-first pattern both articles advocate:
 
 | Property | jidoka renderer | MCP requirement? |
 |---|---|---|
-| Input | JSON on stdin | No — already structured, no escaping ambiguity |
+| Input | plan markdown (or legacy Plan JSON) on stdin | No — piped text, no escaping ambiguity |
 | Output | File path on stdout, exit code | No — already machine-readable |
 | State | Stateless, single invocation | No — nothing to keep alive |
 | Auth | None | No — no credentials involved |
-| Composability | `echo JSON \| jidoka`, `jidoka file.json --mermaid \| pbcopy` | MCP would lose this |
+| Composability | `cat plan.md \| jidoka materialize -`, plan-dir path piped onward | MCP would lose this |
 | Background process | None — runs and exits | MCP would require one |
-| Debugging | `echo JSON \| jidoka` reproduces any issue | MCP adds transport layer to debug through |
+| Debugging | `cat plan.md \| jidoka materialize -` reproduces any issue | MCP adds transport layer to debug through |
 
-Every coding agent that can run shell commands (Cursor, Cline, Copilot, OpenHands — all of them) can call `echo '<json>' | jidoka` today. The CLI binary **is** the agent-agnostic interface.
+Every coding agent that can run shell commands (Cursor, Cline, Copilot, OpenHands — all of them) can pipe a plan into `jidoka materialize -` today. The CLI binary **is** the agent-agnostic interface.
 
 ## What an MCP wrapper would add
 
@@ -61,6 +61,8 @@ An MCP server wrapping jidoka would:
 This adds a process lifecycle, transport layer, and initialization sequence — all to avoid shell-invoking a binary that already takes JSON on stdin. The only benefit is standardized tool discovery (agents auto-discover MCP tools), but jidoka is invoked by a skill prompt that already knows the binary exists.
 
 ## What the CLI already needs (and doesn't have)
+
+> **Update (2026-06):** none of the specific flags below were built, and the I/O model changed — jidoka now takes plan *markdown* (legacy Plan JSON still accepted) on stdin or a file via `jidoka materialize`, and writes a directory of markdown units (the Mermaid/HTML/`--mermaid` output referenced here was later excised). The underlying point — a self-describing, pipe-friendly CLI beats an MCP wrapper — still stands; the concrete flag list is kept as the thinking at the time.
 
 Both articles identify patterns jidoka should adopt regardless of MCP:
 
@@ -76,7 +78,7 @@ These are CLI-level improvements that make the binary more agent-friendly withou
 The [strategic review](strategic-review.md) recommendation #2 ("MCP server from day one") should be downgraded:
 
 1. **Build the CLI binary first.** It is already the agent-agnostic interface.
-2. **Add agent-friendly CLI flags** (`--schema`, `--validate`) that make the binary self-describing.
+2. **Add agent-friendly CLI flags** (`--schema`, `--validate`) that make the binary self-describing. *(2026-06: not built — `materialize` validates on parse and exits non-zero on errors; the rest stayed unshipped. See the note under "What the CLI already needs" above.)*
 3. **Defer MCP to post-v1** — if demand materializes from non-Claude Code agents that prefer MCP over shell invocation. A thin MCP wrapper around the binary is trivial to add later in any language.
 
 ## Impact on tech stack
