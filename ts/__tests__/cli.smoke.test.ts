@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,79 +51,8 @@ describe("dist/cli.js bundle", () => {
   });
 });
 
-describe("--schema", () => {
-  it("returns valid JSON Schema for Topology", () => {
-    const r = run(["--schema"]);
-    expect(r.status).toBe(0);
-    const schema = JSON.parse(r.stdout);
-    expect(schema.title).toBe("Topology");
-    expect(schema.required).toEqual(["task_summary", "execution_mode", "agents"]);
-    expect(schema.$defs?.Agent).toBeDefined();
-    expect(schema.$defs.Agent.properties.id.pattern).toBe("^[a-zA-Z0-9_-]+$");
-  });
-});
-
-describe("--example", () => {
-  it("with --json prints showcase JSON", () => {
-    const r = run(["--example", "--json"]);
-    expect(r.status).toBe(0);
-    const obj = JSON.parse(r.stdout);
-    expect(typeof obj.task_summary).toBe("string");
-    expect(Array.isArray(obj.agents)).toBe(true);
-    expect(obj.agents.length).toBeGreaterThan(0);
-  });
-
-  it("renders an HTML file path on stdout", () => {
-    const r = run(["--example"]);
-    expect(r.status).toBe(0);
-    const path = r.stdout.trim();
-    expect(path).toMatch(/\.html$/);
-    expect(existsSync(path)).toBe(true);
-    const html = readFileSync(path, "utf8");
-    expect(html).toContain("--haiku-fill");
-    expect(html).toContain("jidoka-topology");
-  });
-
-  it("survives a missing browser opener (PATH stripped)", () => {
-    // Without an error handler on the opener spawn, a missing
-    // open/xdg-open/cmd would crash the parent with an unhandled async
-    // ENOENT after rendering. Build env manually so JIDOKA_NO_OPEN is
-    // genuinely absent and the opener actually runs. Use process.execPath
-    // so we can still locate node — the child inherits the empty PATH and
-    // therefore can't locate open/xdg-open.
-    const env: NodeJS.ProcessEnv = { ...process.env, PATH: "" };
-    delete env.JIDOKA_NO_OPEN;
-    const result = spawnSync(process.execPath, [cli, "--example"], {
-      env,
-      encoding: "utf8",
-    });
-    expect(result.status).toBe(0);
-    expect(result.stderr ?? "").toMatch(/could not open browser/);
-  });
-});
-
-describe("--validate", () => {
-  it("exits 0 on valid Topology via stdin", () => {
-    const json = readFileSync(join(fixtures, "valid_minimal.json"), "utf8");
-    const r = run(["--validate"], { stdin: json });
-    expect(r.status).toBe(0);
-  });
-
-  it("exits 0 on valid Plan via stdin", () => {
-    const json = readFileSync(join(fixtures, "valid_plan_minimal.json"), "utf8");
-    const r = run(["--validate"], { stdin: json });
-    expect(r.status).toBe(0);
-  });
-
-  it("exits 1 on a Topology with a cycle", () => {
-    const json = readFileSync(join(fixtures, "invalid_cycle.json"), "utf8");
-    const r = run(["--validate"], { stdin: json });
-    expect(r.status).toBe(1);
-  });
-});
-
 describe("materialize", () => {
-  it("accepts a file path and writes the plan dir (no overview.html by default)", () => {
+  it("accepts a file path and writes the plan dir", () => {
     const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-mat-"));
     try {
       const fixture = join(fixtures, "valid_plan_minimal.json");
@@ -136,7 +65,6 @@ describe("materialize", () => {
       expect(target.startsWith(tmp)).toBe(true);
       expect(existsSync(join(target, "overview.md"))).toBe(true);
       expect(existsSync(join(target, "progress.md"))).toBe(true);
-      expect(existsSync(join(target, "overview.html"))).toBe(false);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
@@ -189,28 +117,6 @@ describe("materialize", () => {
       expect(existsSync(join(target, "01-only.md"))).toBe(true);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
-    }
-  });
-
-  it("writes overview.html when project .jidoka.json sets html_output=true", () => {
-    const project = mkdtempSync(join(tmpdir(), "jidoka-smoke-html-"));
-    const plansRoot = mkdtempSync(join(tmpdir(), "jidoka-smoke-html-pr-"));
-    try {
-      writeFileSync(
-        join(project, ".jidoka.json"),
-        JSON.stringify({ html_output: true }),
-      );
-      const fixture = join(fixtures, "valid_plan_minimal.json");
-      const r = run(
-        ["materialize", fixture, "--plans-root", plansRoot, "--today", "260101"],
-        { env: { CLAUDE_PROJECT_DIR: project, JIDOKA_NO_OPEN: "1" } },
-      );
-      expect(r.status).toBe(0);
-      const target = r.stdout.trim();
-      expect(existsSync(join(target, "overview.html"))).toBe(true);
-    } finally {
-      rmSync(project, { recursive: true, force: true });
-      rmSync(plansRoot, { recursive: true, force: true });
     }
   });
 

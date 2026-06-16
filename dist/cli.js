@@ -8,7 +8,7 @@ var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a2, b) => (typeof require !== "undefined" ? require : a2)[b]
+  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
 }) : x)(function(x) {
   if (typeof require !== "undefined") return require.apply(this, arguments);
   throw Error('Dynamic require of "' + x + '" is not supported');
@@ -37,9 +37,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/commander/lib/error.js
+// ../../node_modules/commander/lib/error.js
 var require_error = __commonJS({
-  "node_modules/commander/lib/error.js"(exports) {
+  "../../node_modules/commander/lib/error.js"(exports) {
     var CommanderError2 = class extends Error {
       /**
        * Constructs the CommanderError class
@@ -72,9 +72,9 @@ var require_error = __commonJS({
   }
 });
 
-// node_modules/commander/lib/argument.js
+// ../../node_modules/commander/lib/argument.js
 var require_argument = __commonJS({
-  "node_modules/commander/lib/argument.js"(exports) {
+  "../../node_modules/commander/lib/argument.js"(exports) {
     var { InvalidArgumentError: InvalidArgumentError2 } = require_error();
     var Argument2 = class {
       /**
@@ -200,9 +200,9 @@ var require_argument = __commonJS({
   }
 });
 
-// node_modules/commander/lib/help.js
+// ../../node_modules/commander/lib/help.js
 var require_help = __commonJS({
-  "node_modules/commander/lib/help.js"(exports) {
+  "../../node_modules/commander/lib/help.js"(exports) {
     var { humanReadableArgName } = require_argument();
     var Help2 = class {
       constructor() {
@@ -236,8 +236,8 @@ var require_help = __commonJS({
           visibleCommands.push(helpCommand);
         }
         if (this.sortSubcommands) {
-          visibleCommands.sort((a2, b) => {
-            return a2.name().localeCompare(b.name());
+          visibleCommands.sort((a, b) => {
+            return a.name().localeCompare(b.name());
           });
         }
         return visibleCommands;
@@ -249,11 +249,11 @@ var require_help = __commonJS({
        * @param {Option} b
        * @returns {number}
        */
-      compareOptions(a2, b) {
+      compareOptions(a, b) {
         const getSortKey = (option) => {
           return option.short ? option.short.replace(/^-/, "") : option.long.replace(/^--/, "");
         };
-        return getSortKey(a2).localeCompare(getSortKey(b));
+        return getSortKey(a).localeCompare(getSortKey(b));
       }
       /**
        * Get an array of the visible options. Includes a placeholder for the implicit help option, if there is one.
@@ -802,9 +802,9 @@ ${itemIndentStr}`);
   }
 });
 
-// node_modules/commander/lib/option.js
+// ../../node_modules/commander/lib/option.js
 var require_option = __commonJS({
-  "node_modules/commander/lib/option.js"(exports) {
+  "../../node_modules/commander/lib/option.js"(exports) {
     var { InvalidArgumentError: InvalidArgumentError2 } = require_error();
     var Option2 = class {
       /**
@@ -1115,24 +1115,24 @@ var require_option = __commonJS({
   }
 });
 
-// node_modules/commander/lib/suggestSimilar.js
+// ../../node_modules/commander/lib/suggestSimilar.js
 var require_suggestSimilar = __commonJS({
-  "node_modules/commander/lib/suggestSimilar.js"(exports) {
+  "../../node_modules/commander/lib/suggestSimilar.js"(exports) {
     var maxDistance = 3;
-    function editDistance(a2, b) {
-      if (Math.abs(a2.length - b.length) > maxDistance)
-        return Math.max(a2.length, b.length);
+    function editDistance(a, b) {
+      if (Math.abs(a.length - b.length) > maxDistance)
+        return Math.max(a.length, b.length);
       const d = [];
-      for (let i = 0; i <= a2.length; i++) {
+      for (let i = 0; i <= a.length; i++) {
         d[i] = [i];
       }
       for (let j = 0; j <= b.length; j++) {
         d[0][j] = j;
       }
       for (let j = 1; j <= b.length; j++) {
-        for (let i = 1; i <= a2.length; i++) {
+        for (let i = 1; i <= a.length; i++) {
           let cost = 1;
-          if (a2[i - 1] === b[j - 1]) {
+          if (a[i - 1] === b[j - 1]) {
             cost = 0;
           } else {
             cost = 1;
@@ -1145,12 +1145,12 @@ var require_suggestSimilar = __commonJS({
             d[i - 1][j - 1] + cost
             // substitution
           );
-          if (i > 1 && j > 1 && a2[i - 1] === b[j - 2] && a2[i - 2] === b[j - 1]) {
+          if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
             d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
           }
         }
       }
-      return d[a2.length][b.length];
+      return d[a.length][b.length];
     }
     function suggestSimilar(word, candidates) {
       if (!candidates || candidates.length === 0) return "";
@@ -1177,7 +1177,7 @@ var require_suggestSimilar = __commonJS({
           }
         }
       });
-      similar.sort((a2, b) => a2.localeCompare(b));
+      similar.sort((a, b) => a.localeCompare(b));
       if (searchingOptions) {
         similar = similar.map((candidate) => `--${candidate}`);
       }
@@ -1195,9 +1195,9 @@ var require_suggestSimilar = __commonJS({
   }
 });
 
-// node_modules/commander/lib/command.js
+// ../../node_modules/commander/lib/command.js
 var require_command = __commonJS({
-  "node_modules/commander/lib/command.js"(exports) {
+  "../../node_modules/commander/lib/command.js"(exports) {
     var EventEmitter = __require("node:events").EventEmitter;
     var childProcess = __require("node:child_process");
     var path2 = __require("node:path");
@@ -3441,9 +3441,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
   }
 });
 
-// node_modules/commander/index.js
+// ../../node_modules/commander/index.js
 var require_commander = __commonJS({
-  "node_modules/commander/index.js"(exports) {
+  "../../node_modules/commander/index.js"(exports) {
     var { Argument: Argument2 } = require_argument();
     var { Command: Command2 } = require_command();
     var { CommanderError: CommanderError2, InvalidArgumentError: InvalidArgumentError2 } = require_error();
@@ -3465,9 +3465,9 @@ var require_commander = __commonJS({
 
 // ts/cli.ts
 import { readFileSync as readFileSync4 } from "node:fs";
-import { isAbsolute as isAbsolute5, join as join7 } from "node:path";
+import { isAbsolute as isAbsolute5, join as join6 } from "node:path";
 
-// node_modules/commander/esm.mjs
+// ../../node_modules/commander/esm.mjs
 var import_index = __toESM(require_commander(), 1);
 var {
   program,
@@ -3489,7 +3489,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 
-// node_modules/strip-json-comments/index.js
+// ../../node_modules/strip-json-comments/index.js
 var singleComment = /* @__PURE__ */ Symbol("singleComment");
 var multiComment = /* @__PURE__ */ Symbol("multiComment");
 var stripWithoutWhitespace = () => "";
@@ -3578,7 +3578,7 @@ function stripJsonComments(jsonString, { whitespace = true, trailingCommas = fal
   return result + buffer + remaining;
 }
 
-// node_modules/zod/v4/classic/external.js
+// ../../node_modules/zod/v4/classic/external.js
 var external_exports = {};
 __export(external_exports, {
   $brand: () => $brand,
@@ -3821,7 +3821,7 @@ __export(external_exports, {
   xor: () => xor
 });
 
-// node_modules/zod/v4/core/index.js
+// ../../node_modules/zod/v4/core/index.js
 var core_exports2 = {};
 __export(core_exports2, {
   $ZodAny: () => $ZodAny,
@@ -4100,7 +4100,7 @@ __export(core_exports2, {
   version: () => version
 });
 
-// node_modules/zod/v4/core/core.js
+// ../../node_modules/zod/v4/core/core.js
 var _a;
 var NEVER = /* @__PURE__ */ Object.freeze({
   status: "aborted"
@@ -4177,7 +4177,7 @@ function config(newConfig) {
   return globalConfig;
 }
 
-// node_modules/zod/v4/core/util.js
+// ../../node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -4650,13 +4650,13 @@ function safeExtend(schema, shape) {
   });
   return clone(schema, def);
 }
-function merge(a2, b) {
-  if (a2._zod.def.checks?.length) {
+function merge(a, b) {
+  if (a._zod.def.checks?.length) {
     throw new Error(".merge() cannot be used on object schemas containing refinements. Use .safeExtend() instead.");
   }
-  const def = mergeDefs(a2._zod.def, {
+  const def = mergeDefs(a._zod.def, {
     get shape() {
-      const _shape = { ...a2._zod.def.shape, ...b._zod.def.shape };
+      const _shape = { ...a._zod.def.shape, ...b._zod.def.shape };
       assignProp(this, "shape", _shape);
       return _shape;
     },
@@ -4665,7 +4665,7 @@ function merge(a2, b) {
     },
     checks: b._zod.def.checks ?? []
   });
-  return clone(a2, def);
+  return clone(a, def);
 }
 function partial(Class2, schema, mask) {
   const currDef = schema._zod.def;
@@ -4873,7 +4873,7 @@ var Class = class {
   }
 };
 
-// node_modules/zod/v4/core/errors.js
+// ../../node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -5003,7 +5003,7 @@ function toDotPath(_path) {
 }
 function prettifyError(error51) {
   const lines = [];
-  const issues = [...error51.issues].sort((a2, b) => (a2.path ?? []).length - (b.path ?? []).length);
+  const issues = [...error51.issues].sort((a, b) => (a.path ?? []).length - (b.path ?? []).length);
   for (const issue2 of issues) {
     lines.push(`\u2716 ${issue2.message}`);
     if (issue2.path?.length)
@@ -5012,7 +5012,7 @@ function prettifyError(error51) {
   return lines.join("\n");
 }
 
-// node_modules/zod/v4/core/parse.js
+// ../../node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -5100,7 +5100,7 @@ var _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
 };
 var safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync($ZodRealError);
 
-// node_modules/zod/v4/core/regexes.js
+// ../../node_modules/zod/v4/core/regexes.js
 var regexes_exports = {};
 __export(regexes_exports, {
   base64: () => base64,
@@ -5259,7 +5259,7 @@ var sha512_hex = /^[0-9a-fA-F]{128}$/;
 var sha512_base64 = /* @__PURE__ */ fixedBase64(86, "==");
 var sha512_base64url = /* @__PURE__ */ fixedBase64url(86);
 
-// node_modules/zod/v4/core/checks.js
+// ../../node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a3;
   inst._zod ?? (inst._zod = {});
@@ -5807,7 +5807,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// node_modules/zod/v4/core/doc.js
+// ../../node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -5843,14 +5843,14 @@ var Doc = class {
   }
 };
 
-// node_modules/zod/v4/core/versions.js
+// ../../node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 4,
   patch: 3
 };
 
-// node_modules/zod/v4/core/schemas.js
+// ../../node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a3;
   inst ?? (inst = {});
@@ -6978,19 +6978,19 @@ var $ZodIntersection = /* @__PURE__ */ $constructor("$ZodIntersection", (inst, d
     return handleIntersectionResults(payload, left, right);
   };
 });
-function mergeValues(a2, b) {
-  if (a2 === b) {
-    return { valid: true, data: a2 };
+function mergeValues(a, b) {
+  if (a === b) {
+    return { valid: true, data: a };
   }
-  if (a2 instanceof Date && b instanceof Date && +a2 === +b) {
-    return { valid: true, data: a2 };
+  if (a instanceof Date && b instanceof Date && +a === +b) {
+    return { valid: true, data: a };
   }
-  if (isPlainObject(a2) && isPlainObject(b)) {
+  if (isPlainObject(a) && isPlainObject(b)) {
     const bKeys = Object.keys(b);
-    const sharedKeys = Object.keys(a2).filter((key) => bKeys.indexOf(key) !== -1);
-    const newObj = { ...a2, ...b };
+    const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
+    const newObj = { ...a, ...b };
     for (const key of sharedKeys) {
-      const sharedValue = mergeValues(a2[key], b[key]);
+      const sharedValue = mergeValues(a[key], b[key]);
       if (!sharedValue.valid) {
         return {
           valid: false,
@@ -7001,13 +7001,13 @@ function mergeValues(a2, b) {
     }
     return { valid: true, data: newObj };
   }
-  if (Array.isArray(a2) && Array.isArray(b)) {
-    if (a2.length !== b.length) {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) {
       return { valid: false, mergeErrorPath: [] };
     }
     const newArray = [];
-    for (let index = 0; index < a2.length; index++) {
-      const itemA = a2[index];
+    for (let index = 0; index < a.length; index++) {
+      const itemA = a[index];
       const itemB = b[index];
       const sharedValue = mergeValues(itemA, itemB);
       if (!sharedValue.valid) {
@@ -7943,7 +7943,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// node_modules/zod/v4/locales/index.js
+// ../../node_modules/zod/v4/locales/index.js
 var locales_exports = {};
 __export(locales_exports, {
   ar: () => ar_default,
@@ -8000,7 +8000,7 @@ __export(locales_exports, {
   zhTW: () => zh_TW_default
 });
 
-// node_modules/zod/v4/locales/ar.js
+// ../../node_modules/zod/v4/locales/ar.js
 var error = () => {
   const Sizable = {
     string: { unit: "\u062D\u0631\u0641", verb: "\u0623\u0646 \u064A\u062D\u0648\u064A" },
@@ -8107,7 +8107,7 @@ function ar_default() {
   };
 }
 
-// node_modules/zod/v4/locales/az.js
+// ../../node_modules/zod/v4/locales/az.js
 var error2 = () => {
   const Sizable = {
     string: { unit: "simvol", verb: "olmal\u0131d\u0131r" },
@@ -8213,7 +8213,7 @@ function az_default() {
   };
 }
 
-// node_modules/zod/v4/locales/be.js
+// ../../node_modules/zod/v4/locales/be.js
 function getBelarusianPlural(count, one, few, many) {
   const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
@@ -8370,7 +8370,7 @@ function be_default() {
   };
 }
 
-// node_modules/zod/v4/locales/bg.js
+// ../../node_modules/zod/v4/locales/bg.js
 var error4 = () => {
   const Sizable = {
     string: { unit: "\u0441\u0438\u043C\u0432\u043E\u043B\u0430", verb: "\u0434\u0430 \u0441\u044A\u0434\u044A\u0440\u0436\u0430" },
@@ -8491,7 +8491,7 @@ function bg_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ca.js
+// ../../node_modules/zod/v4/locales/ca.js
 var error5 = () => {
   const Sizable = {
     string: { unit: "car\xE0cters", verb: "contenir" },
@@ -8600,7 +8600,7 @@ function ca_default() {
   };
 }
 
-// node_modules/zod/v4/locales/cs.js
+// ../../node_modules/zod/v4/locales/cs.js
 var error6 = () => {
   const Sizable = {
     string: { unit: "znak\u016F", verb: "m\xEDt" },
@@ -8712,7 +8712,7 @@ function cs_default() {
   };
 }
 
-// node_modules/zod/v4/locales/da.js
+// ../../node_modules/zod/v4/locales/da.js
 var error7 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "havde" },
@@ -8828,7 +8828,7 @@ function da_default() {
   };
 }
 
-// node_modules/zod/v4/locales/de.js
+// ../../node_modules/zod/v4/locales/de.js
 var error8 = () => {
   const Sizable = {
     string: { unit: "Zeichen", verb: "zu haben" },
@@ -8937,7 +8937,7 @@ function de_default() {
   };
 }
 
-// node_modules/zod/v4/locales/el.js
+// ../../node_modules/zod/v4/locales/el.js
 var error9 = () => {
   const Sizable = {
     string: { unit: "\u03C7\u03B1\u03C1\u03B1\u03BA\u03C4\u03AE\u03C1\u03B5\u03C2", verb: "\u03BD\u03B1 \u03AD\u03C7\u03B5\u03B9" },
@@ -9047,7 +9047,7 @@ function el_default() {
   };
 }
 
-// node_modules/zod/v4/locales/en.js
+// ../../node_modules/zod/v4/locales/en.js
 var error10 = () => {
   const Sizable = {
     string: { unit: "characters", verb: "to have" },
@@ -9160,7 +9160,7 @@ function en_default() {
   };
 }
 
-// node_modules/zod/v4/locales/eo.js
+// ../../node_modules/zod/v4/locales/eo.js
 var error11 = () => {
   const Sizable = {
     string: { unit: "karaktrojn", verb: "havi" },
@@ -9270,7 +9270,7 @@ function eo_default() {
   };
 }
 
-// node_modules/zod/v4/locales/es.js
+// ../../node_modules/zod/v4/locales/es.js
 var error12 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "tener" },
@@ -9403,7 +9403,7 @@ function es_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fa.js
+// ../../node_modules/zod/v4/locales/fa.js
 var error13 = () => {
   const Sizable = {
     string: { unit: "\u06A9\u0627\u0631\u0627\u06A9\u062A\u0631", verb: "\u062F\u0627\u0634\u062A\u0647 \u0628\u0627\u0634\u062F" },
@@ -9518,7 +9518,7 @@ function fa_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fi.js
+// ../../node_modules/zod/v4/locales/fi.js
 var error14 = () => {
   const Sizable = {
     string: { unit: "merkki\xE4", subject: "merkkijonon" },
@@ -9631,7 +9631,7 @@ function fi_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fr.js
+// ../../node_modules/zod/v4/locales/fr.js
 var error15 = () => {
   const Sizable = {
     string: { unit: "caract\xE8res", verb: "avoir" },
@@ -9757,7 +9757,7 @@ function fr_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fr-CA.js
+// ../../node_modules/zod/v4/locales/fr-CA.js
 var error16 = () => {
   const Sizable = {
     string: { unit: "caract\xE8res", verb: "avoir" },
@@ -9865,7 +9865,7 @@ function fr_CA_default() {
   };
 }
 
-// node_modules/zod/v4/locales/he.js
+// ../../node_modules/zod/v4/locales/he.js
 var error17 = () => {
   const TypeNames = {
     string: { label: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA", gender: "f" },
@@ -10060,7 +10060,7 @@ function he_default() {
   };
 }
 
-// node_modules/zod/v4/locales/hr.js
+// ../../node_modules/zod/v4/locales/hr.js
 var error18 = () => {
   const Sizable = {
     string: { unit: "znakova", verb: "imati" },
@@ -10183,7 +10183,7 @@ function hr_default() {
   };
 }
 
-// node_modules/zod/v4/locales/hu.js
+// ../../node_modules/zod/v4/locales/hu.js
 var error19 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "legyen" },
@@ -10292,7 +10292,7 @@ function hu_default() {
   };
 }
 
-// node_modules/zod/v4/locales/hy.js
+// ../../node_modules/zod/v4/locales/hy.js
 function getArmenianPlural(count, one, many) {
   return Math.abs(count) === 1 ? one : many;
 }
@@ -10440,7 +10440,7 @@ function hy_default() {
   };
 }
 
-// node_modules/zod/v4/locales/id.js
+// ../../node_modules/zod/v4/locales/id.js
 var error21 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "memiliki" },
@@ -10547,7 +10547,7 @@ function id_default() {
   };
 }
 
-// node_modules/zod/v4/locales/is.js
+// ../../node_modules/zod/v4/locales/is.js
 var error22 = () => {
   const Sizable = {
     string: { unit: "stafi", verb: "a\xF0 hafa" },
@@ -10657,7 +10657,7 @@ function is_default() {
   };
 }
 
-// node_modules/zod/v4/locales/it.js
+// ../../node_modules/zod/v4/locales/it.js
 var error23 = () => {
   const Sizable = {
     string: { unit: "caratteri", verb: "avere" },
@@ -10766,7 +10766,7 @@ function it_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ja.js
+// ../../node_modules/zod/v4/locales/ja.js
 var error24 = () => {
   const Sizable = {
     string: { unit: "\u6587\u5B57", verb: "\u3067\u3042\u308B" },
@@ -10874,7 +10874,7 @@ function ja_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ka.js
+// ../../node_modules/zod/v4/locales/ka.js
 var error25 = () => {
   const Sizable = {
     string: { unit: "\u10E1\u10D8\u10DB\u10D1\u10DD\u10DA\u10DD", verb: "\u10E3\u10DC\u10D3\u10D0 \u10E8\u10D4\u10D8\u10EA\u10D0\u10D5\u10D3\u10D4\u10E1" },
@@ -10987,7 +10987,7 @@ function ka_default() {
   };
 }
 
-// node_modules/zod/v4/locales/km.js
+// ../../node_modules/zod/v4/locales/km.js
 var error26 = () => {
   const Sizable = {
     string: { unit: "\u178F\u17BD\u17A2\u1780\u17D2\u179F\u179A", verb: "\u1782\u17BD\u179A\u1798\u17B6\u1793" },
@@ -11098,12 +11098,12 @@ function km_default() {
   };
 }
 
-// node_modules/zod/v4/locales/kh.js
+// ../../node_modules/zod/v4/locales/kh.js
 function kh_default() {
   return km_default();
 }
 
-// node_modules/zod/v4/locales/ko.js
+// ../../node_modules/zod/v4/locales/ko.js
 var error27 = () => {
   const Sizable = {
     string: { unit: "\uBB38\uC790", verb: "to have" },
@@ -11215,7 +11215,7 @@ function ko_default() {
   };
 }
 
-// node_modules/zod/v4/locales/lt.js
+// ../../node_modules/zod/v4/locales/lt.js
 var capitalizeFirstCharacter = (text) => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
@@ -11419,7 +11419,7 @@ function lt_default() {
   };
 }
 
-// node_modules/zod/v4/locales/mk.js
+// ../../node_modules/zod/v4/locales/mk.js
 var error29 = () => {
   const Sizable = {
     string: { unit: "\u0437\u043D\u0430\u0446\u0438", verb: "\u0434\u0430 \u0438\u043C\u0430\u0430\u0442" },
@@ -11529,7 +11529,7 @@ function mk_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ms.js
+// ../../node_modules/zod/v4/locales/ms.js
 var error30 = () => {
   const Sizable = {
     string: { unit: "aksara", verb: "mempunyai" },
@@ -11637,7 +11637,7 @@ function ms_default() {
   };
 }
 
-// node_modules/zod/v4/locales/nl.js
+// ../../node_modules/zod/v4/locales/nl.js
 var error31 = () => {
   const Sizable = {
     string: { unit: "tekens", verb: "heeft" },
@@ -11748,7 +11748,7 @@ function nl_default() {
   };
 }
 
-// node_modules/zod/v4/locales/no.js
+// ../../node_modules/zod/v4/locales/no.js
 var error32 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "\xE5 ha" },
@@ -11857,7 +11857,7 @@ function no_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ota.js
+// ../../node_modules/zod/v4/locales/ota.js
 var error33 = () => {
   const Sizable = {
     string: { unit: "harf", verb: "olmal\u0131d\u0131r" },
@@ -11967,7 +11967,7 @@ function ota_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ps.js
+// ../../node_modules/zod/v4/locales/ps.js
 var error34 = () => {
   const Sizable = {
     string: { unit: "\u062A\u0648\u06A9\u064A", verb: "\u0648\u0644\u0631\u064A" },
@@ -12082,7 +12082,7 @@ function ps_default() {
   };
 }
 
-// node_modules/zod/v4/locales/pl.js
+// ../../node_modules/zod/v4/locales/pl.js
 var error35 = () => {
   const Sizable = {
     string: { unit: "znak\xF3w", verb: "mie\u0107" },
@@ -12192,7 +12192,7 @@ function pl_default() {
   };
 }
 
-// node_modules/zod/v4/locales/pt.js
+// ../../node_modules/zod/v4/locales/pt.js
 var error36 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "ter" },
@@ -12301,7 +12301,7 @@ function pt_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ro.js
+// ../../node_modules/zod/v4/locales/ro.js
 var error37 = () => {
   const Sizable = {
     string: { unit: "caractere", verb: "s\u0103 aib\u0103" },
@@ -12421,7 +12421,7 @@ function ro_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ru.js
+// ../../node_modules/zod/v4/locales/ru.js
 function getRussianPlural(count, one, few, many) {
   const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
@@ -12578,7 +12578,7 @@ function ru_default() {
   };
 }
 
-// node_modules/zod/v4/locales/sl.js
+// ../../node_modules/zod/v4/locales/sl.js
 var error39 = () => {
   const Sizable = {
     string: { unit: "znakov", verb: "imeti" },
@@ -12688,7 +12688,7 @@ function sl_default() {
   };
 }
 
-// node_modules/zod/v4/locales/sv.js
+// ../../node_modules/zod/v4/locales/sv.js
 var error40 = () => {
   const Sizable = {
     string: { unit: "tecken", verb: "att ha" },
@@ -12799,7 +12799,7 @@ function sv_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ta.js
+// ../../node_modules/zod/v4/locales/ta.js
 var error41 = () => {
   const Sizable = {
     string: { unit: "\u0B8E\u0BB4\u0BC1\u0BA4\u0BCD\u0BA4\u0BC1\u0B95\u0BCD\u0B95\u0BB3\u0BCD", verb: "\u0B95\u0BCA\u0BA3\u0BCD\u0B9F\u0BBF\u0BB0\u0BC1\u0B95\u0BCD\u0B95 \u0BB5\u0BC7\u0BA3\u0BCD\u0B9F\u0BC1\u0BAE\u0BCD" },
@@ -12910,7 +12910,7 @@ function ta_default() {
   };
 }
 
-// node_modules/zod/v4/locales/th.js
+// ../../node_modules/zod/v4/locales/th.js
 var error42 = () => {
   const Sizable = {
     string: { unit: "\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23", verb: "\u0E04\u0E27\u0E23\u0E21\u0E35" },
@@ -13021,7 +13021,7 @@ function th_default() {
   };
 }
 
-// node_modules/zod/v4/locales/tr.js
+// ../../node_modules/zod/v4/locales/tr.js
 var error43 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "olmal\u0131" },
@@ -13127,7 +13127,7 @@ function tr_default() {
   };
 }
 
-// node_modules/zod/v4/locales/uk.js
+// ../../node_modules/zod/v4/locales/uk.js
 var error44 = () => {
   const Sizable = {
     string: { unit: "\u0441\u0438\u043C\u0432\u043E\u043B\u0456\u0432", verb: "\u043C\u0430\u0442\u0438\u043C\u0435" },
@@ -13236,12 +13236,12 @@ function uk_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ua.js
+// ../../node_modules/zod/v4/locales/ua.js
 function ua_default() {
   return uk_default();
 }
 
-// node_modules/zod/v4/locales/ur.js
+// ../../node_modules/zod/v4/locales/ur.js
 var error45 = () => {
   const Sizable = {
     string: { unit: "\u062D\u0631\u0648\u0641", verb: "\u06C1\u0648\u0646\u0627" },
@@ -13352,7 +13352,7 @@ function ur_default() {
   };
 }
 
-// node_modules/zod/v4/locales/uz.js
+// ../../node_modules/zod/v4/locales/uz.js
 var error46 = () => {
   const Sizable = {
     string: { unit: "belgi", verb: "bo\u2018lishi kerak" },
@@ -13463,7 +13463,7 @@ function uz_default() {
   };
 }
 
-// node_modules/zod/v4/locales/vi.js
+// ../../node_modules/zod/v4/locales/vi.js
 var error47 = () => {
   const Sizable = {
     string: { unit: "k\xFD t\u1EF1", verb: "c\xF3" },
@@ -13572,7 +13572,7 @@ function vi_default() {
   };
 }
 
-// node_modules/zod/v4/locales/zh-CN.js
+// ../../node_modules/zod/v4/locales/zh-CN.js
 var error48 = () => {
   const Sizable = {
     string: { unit: "\u5B57\u7B26", verb: "\u5305\u542B" },
@@ -13682,7 +13682,7 @@ function zh_CN_default() {
   };
 }
 
-// node_modules/zod/v4/locales/zh-TW.js
+// ../../node_modules/zod/v4/locales/zh-TW.js
 var error49 = () => {
   const Sizable = {
     string: { unit: "\u5B57\u5143", verb: "\u64C1\u6709" },
@@ -13790,7 +13790,7 @@ function zh_TW_default() {
   };
 }
 
-// node_modules/zod/v4/locales/yo.js
+// ../../node_modules/zod/v4/locales/yo.js
 var error50 = () => {
   const Sizable = {
     string: { unit: "\xE0mi", verb: "n\xED" },
@@ -13898,7 +13898,7 @@ function yo_default() {
   };
 }
 
-// node_modules/zod/v4/core/registries.js
+// ../../node_modules/zod/v4/core/registries.js
 var _a2;
 var $output = /* @__PURE__ */ Symbol("ZodOutput");
 var $input = /* @__PURE__ */ Symbol("ZodInput");
@@ -13948,7 +13948,7 @@ function registry() {
 (_a2 = globalThis).__zod_globalRegistry ?? (_a2.__zod_globalRegistry = registry());
 var globalRegistry = globalThis.__zod_globalRegistry;
 
-// node_modules/zod/v4/core/api.js
+// ../../node_modules/zod/v4/core/api.js
 // @__NO_SIDE_EFFECTS__
 function _string(Class2, params) {
   return new Class2({
@@ -14987,7 +14987,7 @@ function _stringFormat(Class2, format, fnOrRegex, _params = {}) {
   return inst;
 }
 
-// node_modules/zod/v4/core/to-json-schema.js
+// ../../node_modules/zod/v4/core/to-json-schema.js
 function initializeContext(params) {
   let target = params?.target ?? "draft-2020-12";
   if (target === "draft-4")
@@ -15346,7 +15346,7 @@ var createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params) =
   return finalize(ctx, schema);
 };
 
-// node_modules/zod/v4/core/json-schema-processors.js
+// ../../node_modules/zod/v4/core/json-schema-processors.js
 var formatMap = {
   guid: "uuid",
   url: "uri",
@@ -15643,7 +15643,7 @@ var unionProcessor = (schema, ctx, json2, params) => {
 };
 var intersectionProcessor = (schema, ctx, json2, params) => {
   const def = schema._zod.def;
-  const a2 = process2(def.left, ctx, {
+  const a = process2(def.left, ctx, {
     ...params,
     path: [...params.path, "allOf", 0]
   });
@@ -15653,7 +15653,7 @@ var intersectionProcessor = (schema, ctx, json2, params) => {
   });
   const isSimpleIntersection = (val) => "allOf" in val && Object.keys(val).length === 1;
   const allOf = [
-    ...isSimpleIntersection(a2) ? a2.allOf : [a2],
+    ...isSimpleIntersection(a) ? a.allOf : [a],
     ...isSimpleIntersection(b) ? b.allOf : [b]
   ];
   json2.allOf = allOf;
@@ -15890,7 +15890,7 @@ function toJSONSchema(input, params) {
   return finalize(ctx, input);
 }
 
-// node_modules/zod/v4/core/json-schema-generator.js
+// ../../node_modules/zod/v4/core/json-schema-generator.js
 var JSONSchemaGenerator = class {
   /** @deprecated Access via ctx instead */
   get metadataRegistry() {
@@ -15965,10 +15965,10 @@ var JSONSchemaGenerator = class {
   }
 };
 
-// node_modules/zod/v4/core/json-schema.js
+// ../../node_modules/zod/v4/core/json-schema.js
 var json_schema_exports = {};
 
-// node_modules/zod/v4/classic/schemas.js
+// ../../node_modules/zod/v4/classic/schemas.js
 var schemas_exports2 = {};
 __export(schemas_exports2, {
   ZodAny: () => ZodAny,
@@ -16139,7 +16139,7 @@ __export(schemas_exports2, {
   xor: () => xor
 });
 
-// node_modules/zod/v4/classic/checks.js
+// ../../node_modules/zod/v4/classic/checks.js
 var checks_exports2 = {};
 __export(checks_exports2, {
   endsWith: () => _endsWith,
@@ -16173,7 +16173,7 @@ __export(checks_exports2, {
   uppercase: () => _uppercase
 });
 
-// node_modules/zod/v4/classic/iso.js
+// ../../node_modules/zod/v4/classic/iso.js
 var iso_exports = {};
 __export(iso_exports, {
   ZodISODate: () => ZodISODate,
@@ -16214,7 +16214,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// node_modules/zod/v4/classic/errors.js
+// ../../node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -16254,7 +16254,7 @@ var ZodRealError = /* @__PURE__ */ $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// node_modules/zod/v4/classic/parse.js
+// ../../node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
@@ -16268,7 +16268,7 @@ var safeDecode2 = /* @__PURE__ */ _safeDecode(ZodRealError);
 var safeEncodeAsync2 = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 var safeDecodeAsync2 = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-// node_modules/zod/v4/classic/schemas.js
+// ../../node_modules/zod/v4/classic/schemas.js
 var _installedGroups = /* @__PURE__ */ new WeakMap();
 function _installLazyMethods(inst, group, methods) {
   const proto = Object.getPrototypeOf(inst);
@@ -17558,7 +17558,7 @@ function preprocess(fn, schema) {
   });
 }
 
-// node_modules/zod/v4/classic/compat.js
+// ../../node_modules/zod/v4/classic/compat.js
 var ZodIssueCode = {
   invalid_type: "invalid_type",
   too_big: "too_big",
@@ -17584,7 +17584,7 @@ var ZodFirstPartyTypeKind;
 /* @__PURE__ */ (function(ZodFirstPartyTypeKind2) {
 })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
 
-// node_modules/zod/v4/classic/from-json-schema.js
+// ../../node_modules/zod/v4/classic/from-json-schema.js
 var z = {
   ...schemas_exports2,
   ...checks_exports2,
@@ -18064,7 +18064,7 @@ function fromJSONSchema(schema, params) {
   return convertSchema(normalized, ctx);
 }
 
-// node_modules/zod/v4/classic/coerce.js
+// ../../node_modules/zod/v4/classic/coerce.js
 var coerce_exports = {};
 __export(coerce_exports, {
   bigint: () => bigint3,
@@ -18089,62 +18089,10 @@ function date4(params) {
   return _coercedDate(ZodDate, params);
 }
 
-// node_modules/zod/v4/classic/external.js
+// ../../node_modules/zod/v4/classic/external.js
 config(en_default());
 
 // ts/types.ts
-var outputSchema = external_exports.union([
-  external_exports.literal("inline").transform(() => ({ kind: "inline" })),
-  external_exports.strictObject({
-    file: external_exports.string().min(1, "output.file must be a non-empty string")
-  }).transform(({ file: file2 }) => ({ kind: "file", path: file2 }))
-]);
-function serializeOutput(o) {
-  return o.kind === "inline" ? "inline" : { file: o.path };
-}
-function serializeAgent(a2) {
-  const out = {
-    id: a2.id,
-    role: a2.role,
-    model: a2.model,
-    tools: a2.tools,
-    blocked_by: a2.blocked_by,
-    background: a2.background,
-    output: serializeOutput(a2.output)
-  };
-  if (a2.produces !== void 0) out["produces"] = a2.produces;
-  if (a2.execution_mode !== void 0) out["execution_mode"] = a2.execution_mode;
-  if (a2.agents !== void 0) out["agents"] = a2.agents.map(serializeAgent);
-  return out;
-}
-function serializeTopology(t) {
-  return {
-    task_summary: t.task_summary,
-    execution_mode: t.execution_mode,
-    agents: t.agents.map(serializeAgent)
-  };
-}
-var modelSchema = external_exports.enum(["haiku", "sonnet", "opus"]);
-var executionModeSchema = external_exports.enum(["team", "subagents"]);
-var baseAgentSchema = external_exports.object({
-  id: external_exports.string(),
-  role: external_exports.string(),
-  model: modelSchema,
-  tools: external_exports.array(external_exports.string()),
-  blocked_by: external_exports.array(external_exports.string()),
-  background: external_exports.boolean(),
-  output: outputSchema.optional().transform((v) => v ?? { kind: "inline" }),
-  produces: external_exports.string().optional(),
-  execution_mode: executionModeSchema.optional()
-});
-var agentSchema = baseAgentSchema.extend({
-  agents: external_exports.lazy(() => external_exports.array(agentSchema)).optional()
-});
-var topologySchema = external_exports.object({
-  task_summary: external_exports.string(),
-  execution_mode: executionModeSchema,
-  agents: external_exports.array(agentSchema)
-});
 var reviewStepModeSchema = external_exports.enum(["print", "exec"]);
 var reviewTemplateStepSchema = external_exports.strictObject({
   run: external_exports.string().min(1, "review template 'run' must be a non-empty string"),
@@ -18169,10 +18117,7 @@ var unitSchema = external_exports.object({
   summary: external_exports.string(),
   blocked_by: external_exports.array(external_exports.string()),
   agents_involved: external_exports.array(external_exports.string()).optional(),
-  body_markdown: external_exports.string(),
-  // `topology: null` is the producer-contract sentinel for "no embedded
-  // topology"; both omission and explicit null normalize to undefined.
-  topology: external_exports.union([external_exports.null(), topologySchema]).optional().transform((v) => v == null ? void 0 : v)
+  body_markdown: external_exports.string()
 });
 var planSchema = external_exports.object({
   task_summary: external_exports.string(),
@@ -18186,13 +18131,6 @@ function formatZodError(e) {
   });
   return issues.join("; ");
 }
-function parseTopology(input) {
-  const result = topologySchema.safeParse(input);
-  if (!result.success) {
-    return { ok: false, error: formatZodError(result.error) };
-  }
-  return { ok: true, value: result.data };
-}
 function parsePlan(input) {
   const result = planSchema.safeParse(input);
   if (!result.success) {
@@ -18202,15 +18140,6 @@ function parsePlan(input) {
 }
 function stripBom(s) {
   return s.charCodeAt(0) === 65279 ? s.slice(1) : s;
-}
-function parseTopologyJson(json2) {
-  let raw;
-  try {
-    raw = JSON.parse(stripBom(json2));
-  } catch (e) {
-    return { ok: false, error: `JSON parse error: ${e.message}` };
-  }
-  return parseTopology(raw);
 }
 function parsePlanJson(json2) {
   let raw;
@@ -18225,9 +18154,6 @@ function parsePlanJson(json2) {
 // ts/config.ts
 var defaultConfig = {
   plan_dir_root: "docs/exec-plans/active",
-  auto_open_browser: false,
-  html_output: false,
-  plan_level_topology: false,
   git_workflow: false,
   pre_review: ["/jidoka:pre-plan-review"],
   unit_review: ["/code-review"],
@@ -18235,9 +18161,6 @@ var defaultConfig = {
 };
 var configSchema = external_exports.object({
   plan_dir_root: external_exports.string().default(defaultConfig.plan_dir_root),
-  auto_open_browser: external_exports.boolean().default(defaultConfig.auto_open_browser),
-  html_output: external_exports.boolean().default(defaultConfig.html_output),
-  plan_level_topology: external_exports.boolean().default(defaultConfig.plan_level_topology),
   git_workflow: external_exports.boolean().default(defaultConfig.git_workflow),
   pre_review: external_exports.array(reviewStepSchema).default(defaultConfig.pre_review),
   unit_review: external_exports.array(reviewStepSchema).default(defaultConfig.unit_review),
@@ -18299,8 +18222,6 @@ function readJson(path2) {
 }
 var PROJECT_OVERRIDE_KEYS = [
   "plan_dir_root",
-  "auto_open_browser",
-  "html_output",
   "git_workflow"
 ];
 function applyProjectOverrides(cfg, value, path2) {
@@ -18328,22 +18249,6 @@ function applyProjectOverrides(cfg, value, path2) {
         continue;
       }
       cfg.plan_dir_root = val;
-    } else if (key === "auto_open_browser") {
-      if (typeof val !== "boolean") {
-        process.stderr.write(
-          "jidoka: project override 'auto_open_browser' must be a boolean; ignoring\n"
-        );
-        continue;
-      }
-      cfg.auto_open_browser = val;
-    } else if (key === "html_output") {
-      if (typeof val !== "boolean") {
-        process.stderr.write(
-          "jidoka: project override 'html_output' must be a boolean; ignoring\n"
-        );
-        continue;
-      }
-      cfg.html_output = val;
     } else if (key === "git_workflow") {
       if (typeof val !== "boolean") {
         process.stderr.write(
@@ -18368,185 +18273,29 @@ function validateProjectPlanDirRoot(s) {
   return void 0;
 }
 
-// ts/graph.ts
-function assignSteps(agents) {
-  const byId = new Map(agents.map((a2) => [a2.id, a2]));
-  const depths = /* @__PURE__ */ new Map();
-  const getDepth = (id) => {
-    const cached2 = depths.get(id);
-    if (cached2 !== void 0) return cached2;
-    const agent = byId.get(id);
-    const depth = agent.blocked_by.length === 0 ? 1 : Math.max(...agent.blocked_by.map(getDepth)) + 1;
-    depths.set(id, depth);
-    return depth;
-  };
-  for (const agent of agents) {
-    getDepth(agent.id);
-  }
-  return depths;
-}
-function groupByStep(agents) {
-  const stepMap = assignSteps(agents);
-  const buckets = /* @__PURE__ */ new Map();
-  for (const agent of agents) {
-    const step = stepMap.get(agent.id);
-    const bucket = buckets.get(step);
-    if (bucket) bucket.push(agent);
-    else buckets.set(step, [agent]);
-  }
-  const steps = new Map(
-    [...buckets.entries()].sort(([a2], [b]) => a2 - b)
-  );
-  return { steps };
-}
-function isMultiStep(plan) {
-  return plan.steps.size > 1;
-}
-function allAgents(plan) {
-  return [...plan.steps.values()].flat();
-}
+// ts/hook.ts
+import {
+  existsSync as existsSync2,
+  mkdirSync as mkdirSync2,
+  readFileSync as readFileSync3,
+  renameSync as renameSync2,
+  rmSync
+} from "node:fs";
+import { basename as basename2, isAbsolute as isAbsolute4, join as join5 } from "node:path";
 
-// ts/describe.ts
-function describe3(topology) {
-  return render(
-    topology.agents,
-    topology.execution_mode,
-    "the main agent",
-    "",
-    true
-  );
-}
-function render(agents, executionMode, fallbackTarget, indent, showPhaseHeaders) {
-  const plan = groupByStep(agents);
-  const multiPhase = showPhaseHeaders && executionMode === "subagents" && isMultiStep(plan);
-  const flatAgents = allAgents(plan);
-  const lines = [];
-  let phaseNum = 0;
-  for (const [, stepAgents] of plan.steps) {
-    phaseNum += 1;
-    if (multiPhase) {
-      if (phaseNum > 1) lines.push("");
-      lines.push(`${indent}Phase ${phaseNum}`);
-    }
-    const stepNum = multiPhase ? 1 : phaseNum;
-    const parallel = stepAgents.length > 1;
-    for (let i = 0; i < stepAgents.length; i++) {
-      const agent = stepAgents[i];
-      const letter = parallel ? String.fromCharCode("a".charCodeAt(0) + i) : "";
-      lines.push(`${indent}${stepNum}${letter}. ${agent.id} (${agent.model})`);
-      lines.push(`${indent}  tools: ${agent.tools.join(", ")}`);
-      if (agent.agents !== void 0) {
-        const childMode = agent.execution_mode ?? executionMode;
-        const childIndent = `${indent}  `;
-        const nested = render(agent.agents, childMode, agent.id, childIndent, true);
-        lines.push(nested);
-      }
-      const produces = agent.produces ?? "";
-      let context;
-      if (agent.output.kind === "file") {
-        context = `${indent}  writes "${produces}" to ${agent.output.path}`;
-      } else if (executionMode === "team") {
-        const deps = findDependents(agent.id, flatAgents);
-        if (deps.length === 0) {
-          context = `${indent}  returns "${produces}" to ${fallbackTarget}`;
-        } else {
-          context = `${indent}  passes "${produces}" to ${deps.join(", ")}`;
-        }
-      } else {
-        context = `${indent}  returns "${produces}" to ${fallbackTarget}`;
-      }
-      lines.push(context);
-    }
-  }
-  return lines.join("\n");
-}
-function findDependents(agentId, agents) {
-  return agents.filter((a2) => a2.blocked_by.some((b) => b === agentId)).map((a2) => a2.id);
-}
+// ts/materialize.ts
+import { execFileSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  renameSync,
+  statSync,
+  writeFileSync
+} from "node:fs";
+import { basename, isAbsolute as isAbsolute3, join as join4 } from "node:path";
 
-// ts/example.ts
-var a = (overrides) => ({
-  model: "sonnet",
-  tools: [],
-  blocked_by: [],
-  background: false,
-  output: { kind: "inline" },
-  ...overrides
-});
-function showcase() {
-  return {
-    task_summary: "Build and deploy a full-stack dashboard feature",
-    execution_mode: "subagents",
-    agents: [
-      a({
-        id: "research",
-        role: "Analyze existing codebase and identify integration points",
-        model: "sonnet",
-        tools: ["Read", "Grep", "Glob"],
-        produces: "codebase analysis"
-      }),
-      a({
-        id: "design",
-        role: "Design API endpoints and data model",
-        model: "opus",
-        tools: ["Read", "Write"],
-        output: { kind: "file", path: "docs/api-design.md" },
-        produces: "API design doc"
-      }),
-      a({
-        id: "setup-logging",
-        role: "Configure observability and structured logging",
-        model: "haiku",
-        tools: ["Read", "Edit"],
-        background: true
-      }),
-      a({
-        id: "backend",
-        role: "Implement backend API and database layer",
-        model: "sonnet",
-        tools: ["Read", "Write", "Bash"],
-        blocked_by: ["research", "design"],
-        produces: "backend implementation",
-        execution_mode: "team",
-        agents: [
-          a({
-            id: "api-handler",
-            role: "Implement REST endpoint handlers",
-            tools: ["Read", "Write"],
-            output: { kind: "file", path: "src/handlers/dashboard.rs" },
-            produces: "endpoint handlers"
-          }),
-          a({
-            id: "db-migration",
-            role: "Create database schema migration",
-            model: "haiku",
-            tools: ["Write"],
-            blocked_by: ["api-handler"],
-            output: { kind: "file", path: "migrations/003_dashboard.sql" },
-            produces: "schema migration"
-          })
-        ]
-      }),
-      a({
-        id: "frontend",
-        role: "Implement dashboard UI components",
-        tools: ["Read", "Write", "Bash"],
-        blocked_by: ["research", "design"],
-        produces: "dashboard UI"
-      }),
-      a({
-        id: "integration",
-        role: "Run end-to-end tests and verify deployment",
-        model: "opus",
-        tools: ["Read", "Bash"],
-        blocked_by: ["backend", "frontend"],
-        produces: "test report"
-      })
-    ]
-  };
-}
-
-// node_modules/eta/dist/index.mjs
+// ../../node_modules/eta/dist/index.mjs
 import * as fs from "node:fs";
 import * as path from "node:path";
 var EtaError = class extends Error {
@@ -18882,7 +18631,7 @@ function handleCache(template, options) {
     else throw new EtaNameResolutionError(`Failed to get template '${template}'`);
   }
 }
-function render2(template, data, meta3) {
+function render(template, data, meta3) {
   let templateFn;
   const options = {
     ...meta3,
@@ -18909,7 +18658,7 @@ function renderAsync(template, data, meta3) {
 }
 function renderString(template, data) {
   const templateFn = this.compile(template, { async: false });
-  return render2.call(this, templateFn, data);
+  return render.call(this, templateFn, data);
 }
 function renderStringAsync(template, data) {
   const templateFn = this.compile(template, { async: true });
@@ -18960,7 +18709,7 @@ var Eta$1 = class {
   compileToString = compileToString;
   compileBody = compileBody;
   parse = parse3;
-  render = render2;
+  render = render;
   renderAsync = renderAsync;
   renderString = renderString;
   renderStringAsync = renderStringAsync;
@@ -18997,246 +18746,6 @@ var Eta = class extends Eta$1 {
   readFile = readFile;
   resolvePath = resolvePath;
 };
-
-// ts/assets.generated.ts
-var CSS = '/* jidoka styles \u2014 embedded via include_str!() */\n\n/* \u2500\u2500 Reset & Base \u2500\u2500 */\n*,\n*::before,\n*::after {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\n\n:root {\n  --bg: #ffffff;\n  --bg-secondary: #f9fafb;\n  --text: #111827;\n  --text-secondary: #6b7280;\n  --border: #e5e7eb;\n  --header-bg: #f3f4f6;\n  --code-bg: #f3f4f6;\n\n  --haiku-fill: #dbeafe;\n  --haiku-stroke: #3b82f6;\n  --sonnet-fill: #dcfce7;\n  --sonnet-stroke: #22c55e;\n  --opus-fill: #ede9fe;\n  --opus-stroke: #8b5cf6;\n  --main-fill: #fef3c7;\n  --main-stroke: #f59e0b;\n}\n\n[data-theme="dark"] {\n  --bg: #111827;\n  --bg-secondary: #1f2937;\n  --text: #f9fafb;\n  --text-secondary: #9ca3af;\n  --border: #374151;\n  --header-bg: #1f2937;\n  --code-bg: #1f2937;\n\n  --haiku-fill: #1e3a5f;\n  --haiku-stroke: #60a5fa;\n  --sonnet-fill: #14532d;\n  --sonnet-stroke: #4ade80;\n  --opus-fill: #3b0764;\n  --opus-stroke: #a78bfa;\n  --main-fill: #78350f;\n  --main-stroke: #fbbf24;\n}\n\nhtml, body {\n  height: 100%;\n}\n\nbody {\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n  background: var(--bg);\n  color: var(--text);\n  line-height: 1.6;\n}\n\n/* \u2500\u2500 Header \u2500\u2500 */\nheader {\n  background: var(--header-bg);\n  border-bottom: 1px solid var(--border);\n  padding: 1rem 1.5rem;\n}\n\nheader h1 {\n  font-size: 1.25rem;\n  font-weight: 600;\n  margin-bottom: 0.5rem;\n}\n\n.header-meta {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 1rem;\n}\n\n.mode-badge {\n  font-size: 0.8rem;\n  color: var(--text-secondary);\n  background: var(--bg);\n  border: 1px solid var(--border);\n  padding: 0.15rem 0.6rem;\n  border-radius: 9999px;\n}\n\n.header-actions {\n  display: flex;\n  gap: 0.5rem;\n}\n\n.header-actions button {\n  background: var(--bg);\n  border: 1px solid var(--border);\n  color: var(--text);\n  padding: 0.3rem 0.7rem;\n  border-radius: 6px;\n  cursor: pointer;\n  font-size: 0.8rem;\n  transition: background 0.15s;\n}\n\n.header-actions button:hover {\n  background: var(--bg-secondary);\n}\n\n.icon-dark { display: none; }\n[data-theme="dark"] .icon-light { display: none; }\n[data-theme="dark"] .icon-dark { display: inline; }\n\n/* \u2500\u2500 Main Layout \u2500\u2500 */\nmain {\n  display: flex;\n  min-height: calc(100vh - 5rem);\n}\n\n.no-plan main {\n  flex-direction: column;\n  max-width: 960px;\n  margin: 0 auto;\n  padding: 1.5rem;\n}\n\n.has-plan main {\n  flex-direction: row;\n}\n\n/* \u2500\u2500 Plan Panel \u2500\u2500 */\n.plan-panel {\n  width: 45%;\n  min-width: 320px;\n  max-width: 560px;\n  border-right: 1px solid var(--border);\n  padding: 1.5rem;\n  overflow-y: auto;\n  max-height: calc(100vh - 5rem);\n  background: var(--bg);\n}\n\n.plan-panel h2 {\n  font-size: 1.1rem;\n  font-weight: 600;\n  margin-bottom: 1rem;\n  padding-bottom: 0.5rem;\n  border-bottom: 1px solid var(--border);\n}\n\n#plan-content h1,\n#plan-content h2,\n#plan-content h3 {\n  margin-top: 1.2em;\n  margin-bottom: 0.5em;\n}\n\n#plan-content h1 { font-size: 1.3rem; }\n#plan-content h2 { font-size: 1.1rem; }\n#plan-content h3 { font-size: 1rem; }\n\n#plan-content p {\n  margin-bottom: 0.8em;\n}\n\n#plan-content ul,\n#plan-content ol {\n  margin-bottom: 0.8em;\n  padding-left: 1.5em;\n}\n\n#plan-content li {\n  margin-bottom: 0.3em;\n}\n\n#plan-content code {\n  background: var(--code-bg);\n  padding: 0.15em 0.35em;\n  border-radius: 3px;\n  font-size: 0.9em;\n}\n\n#plan-content pre {\n  background: var(--code-bg);\n  padding: 1em;\n  border-radius: 6px;\n  overflow-x: auto;\n  margin-bottom: 1em;\n}\n\n#plan-content pre code {\n  background: none;\n  padding: 0;\n}\n\n/* \u2500\u2500 Diagram Panel \u2500\u2500 */\n.diagram-panel {\n  flex: 1;\n  padding: 1.5rem;\n  overflow-y: auto;\n  max-height: calc(100vh - 5rem);\n}\n\n.has-plan .diagram-panel {\n  min-width: 0;\n}\n\n.diagram-block {\n  margin-bottom: 2rem;\n}\n\n.phase-label {\n  font-size: 0.95rem;\n  font-weight: 600;\n  color: var(--text-secondary);\n  margin-bottom: 0.75rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\npre.mermaid {\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  padding: 1.5rem;\n  overflow-x: auto;\n}\n\n/* \u2500\u2500 Legend \u2500\u2500 */\n.legend {\n  margin-top: 2rem;\n  padding: 1rem 1.25rem;\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n}\n\n.legend h3 {\n  font-size: 0.9rem;\n  font-weight: 600;\n  margin-bottom: 0.75rem;\n}\n\n.legend-grid {\n  display: flex;\n  gap: 2.5rem;\n  flex-wrap: wrap;\n}\n\n.legend-section h4 {\n  font-size: 0.75rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: var(--text-secondary);\n  margin-bottom: 0.4rem;\n}\n\n.legend-items {\n  display: flex;\n  gap: 1rem;\n  flex-wrap: wrap;\n}\n\n.legend-item {\n  display: flex;\n  align-items: center;\n  gap: 0.4rem;\n  font-size: 0.8rem;\n}\n\n.swatch {\n  display: inline-block;\n  width: 14px;\n  height: 14px;\n  border-radius: 3px;\n  border: 2px solid;\n}\n\n.swatch-haiku  { background: var(--haiku-fill);  border-color: var(--haiku-stroke); }\n.swatch-sonnet { background: var(--sonnet-fill); border-color: var(--sonnet-stroke); }\n.swatch-opus   { background: var(--opus-fill);   border-color: var(--opus-stroke); }\n.swatch-main   { background: var(--main-fill);   border-color: var(--main-stroke); }\n\n.shape {\n  display: inline-block;\n  width: 20px;\n  height: 14px;\n  border: 2px solid var(--text-secondary);\n  background: transparent;\n}\n\n.shape-rect {\n  border-radius: 2px;\n}\n\n.shape-pill {\n  border-radius: 7px;\n}\n\n/* \u2500\u2500 Overview \u2500\u2500 */\n.overview {\n  margin-top: 2rem;\n}\n\n.overview h3 {\n  font-size: 0.9rem;\n  font-weight: 600;\n  margin-bottom: 0.75rem;\n}\n\n.overview-text {\n  font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;\n  font-size: 0.8rem;\n  line-height: 1.7;\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  padding: 1rem 1.25rem;\n  white-space: pre-wrap;\n  overflow-x: auto;\n}\n\n/* \u2500\u2500 Responsive \u2500\u2500 */\n@media (max-width: 768px) {\n  .has-plan main {\n    flex-direction: column;\n  }\n\n  .plan-panel {\n    width: 100%;\n    max-width: none;\n    border-right: none;\n    border-bottom: 1px solid var(--border);\n    max-height: 50vh;\n  }\n\n  .diagram-panel {\n    max-height: none;\n  }\n\n  .legend-grid {\n    flex-direction: column;\n    gap: 1rem;\n  }\n}\n\n/* \u2500\u2500 Plan view \u2500\u2500 */\nbody.plan {\n  background: var(--bg);\n  color: var(--text);\n}\n\n.plan-main {\n  display: grid;\n  grid-template-columns: 240px minmax(0, 1fr);\n  gap: 1.5rem;\n  padding: 1.5rem;\n  align-items: start;\n}\n\n.plan-toc {\n  position: sticky;\n  top: 1.5rem;\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 6px;\n  padding: 1rem;\n  font-size: 0.875rem;\n}\n\n.plan-toc h2 {\n  font-size: 0.95rem;\n  margin-bottom: 0.5rem;\n}\n\n.plan-toc ul {\n  list-style: none;\n  display: flex;\n  flex-direction: column;\n  gap: 0.25rem;\n}\n\n.plan-toc a {\n  display: flex;\n  gap: 0.5rem;\n  align-items: baseline;\n  color: var(--text-secondary);\n  text-decoration: none;\n  padding: 0.25rem 0.4rem;\n  border-radius: 4px;\n}\n\n.plan-toc a:hover {\n  background: var(--header-bg);\n  color: var(--text);\n}\n\n.plan-toc .unit-prefix {\n  font-variant-numeric: tabular-nums;\n  font-weight: 600;\n  color: var(--text);\n}\n\n.plan-content {\n  display: flex;\n  flex-direction: column;\n  gap: 1.25rem;\n  min-width: 0;\n}\n\n.plan-overview-card,\n.unit-card {\n  background: var(--bg-secondary);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  padding: 1.25rem 1.5rem;\n}\n\n.plan-overview-card h2,\n.unit-header h2 {\n  font-size: 1.1rem;\n  margin-bottom: 0.75rem;\n}\n\n.unit-chips {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 0.4rem;\n  margin-bottom: 0.75rem;\n}\n\n.chip {\n  display: inline-block;\n  font-size: 0.75rem;\n  padding: 0.15rem 0.5rem;\n  border-radius: 999px;\n  border: 1px solid var(--border);\n  background: var(--bg);\n  color: var(--text-secondary);\n}\n\n.chip-blocked-by {\n  font-variant-numeric: tabular-nums;\n}\n\n.chip-topology {\n  background: var(--haiku-fill);\n  border-color: var(--haiku-stroke);\n  color: var(--haiku-stroke);\n}\n\n/* Per-step print/exec badge in a unit\'s review pipeline. Mirrors the Markdown\n   renderer\'s `**print**`/`**exec**` badge so the HTML view also tells the reader\n   whether the resuming agent runs the step (exec) or surfaces it (print). */\n.review-mode {\n  display: inline-block;\n  margin-left: 0.4rem;\n  font-size: 0.65rem;\n  font-weight: 600;\n  text-transform: uppercase;\n  letter-spacing: 0.03em;\n  padding: 0.05rem 0.4rem;\n  border-radius: 999px;\n  border: 1px solid var(--border);\n  vertical-align: middle;\n}\n\n.review-mode-exec {\n  background: var(--opus-fill);\n  border-color: var(--opus-stroke);\n  color: var(--opus-stroke);\n}\n\n.review-mode-print {\n  background: var(--sonnet-fill);\n  border-color: var(--sonnet-stroke);\n  color: var(--sonnet-stroke);\n}\n\n.unit-summary {\n  font-size: 0.95rem;\n  color: var(--text);\n  margin-bottom: 0.75rem;\n}\n\n.markdown-body {\n  font-size: 0.92rem;\n  line-height: 1.55;\n}\n\n.markdown-body h1,\n.markdown-body h2,\n.markdown-body h3 {\n  margin-top: 0.9rem;\n  margin-bottom: 0.4rem;\n  font-weight: 600;\n}\n\n.markdown-body h1 { font-size: 1.05rem; }\n.markdown-body h2 { font-size: 0.98rem; }\n.markdown-body h3 { font-size: 0.92rem; }\n\n.markdown-body p {\n  margin-bottom: 0.5rem;\n}\n\n.markdown-body ul,\n.markdown-body ol {\n  margin: 0.4rem 0 0.6rem 1.25rem;\n}\n\n.markdown-body table {\n  border-collapse: collapse;\n  margin: 0.5rem 0;\n  font-size: 0.85rem;\n}\n\n.markdown-body th,\n.markdown-body td {\n  border: 1px solid var(--border);\n  padding: 0.25rem 0.5rem;\n  text-align: left;\n}\n\n.markdown-body code {\n  background: var(--code-bg);\n  padding: 0.05rem 0.3rem;\n  border-radius: 3px;\n  font-size: 0.85em;\n}\n\n.markdown-body pre {\n  background: var(--code-bg);\n  padding: 0.5rem 0.75rem;\n  border-radius: 6px;\n  overflow-x: auto;\n  margin: 0.5rem 0;\n}\n\n.unit-card .diagram-block {\n  background: var(--bg);\n  border: 1px solid var(--border);\n  border-radius: 6px;\n  padding: 0.75rem;\n  margin-top: 0.75rem;\n}\n\n.unit-review {\n  margin-top: 1rem;\n  padding-top: 0.75rem;\n  border-top: 1px dashed var(--border);\n}\n\n.unit-review h3 {\n  font-size: 0.85rem;\n  text-transform: uppercase;\n  letter-spacing: 0.04em;\n  color: var(--text-secondary);\n  margin-bottom: 0.4rem;\n}\n\n.unit-review ul {\n  list-style: none;\n  display: flex;\n  flex-direction: column;\n  gap: 0.2rem;\n}\n\n.unit-review li::before {\n  content: "\u25A2 ";\n  color: var(--text-secondary);\n  margin-right: 0.25rem;\n}\n\n.unit-review code {\n  background: var(--code-bg);\n  padding: 0.05rem 0.4rem;\n  border-radius: 3px;\n  font-size: 0.85em;\n}\n\n.unit-footer {\n  margin-top: 0.75rem;\n  font-size: 0.8rem;\n  color: var(--text-secondary);\n  text-align: right;\n}\n\n.unit-footer a {\n  color: var(--text-secondary);\n  text-decoration: none;\n}\n\n.unit-footer a:hover {\n  text-decoration: underline;\n}\n\n@media (max-width: 720px) {\n  .plan-main {\n    grid-template-columns: 1fr;\n  }\n  .plan-toc {\n    position: static;\n  }\n}\n\n';
-var JS = `// jidoka client-side JS \u2014 embedded via include_str!()
-
-(function () {
-  "use strict";
-
-  function preserveMermaidSource() {
-    var diagrams = document.querySelectorAll("pre.mermaid");
-    diagrams.forEach(function (el) {
-      el.setAttribute("data-source", el.textContent);
-    });
-  }
-
-  function initMermaid() {
-    var theme = document.documentElement.getAttribute("data-theme");
-    mermaid.initialize({
-      startOnLoad: true,
-      theme: theme === "dark" ? "dark" : "default",
-      securityLevel: "loose",
-      flowchart: { useMaxWidth: true, htmlLabels: true },
-    });
-  }
-
-  function rerenderMermaid(theme) {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: theme === "dark" ? "dark" : "default",
-      securityLevel: "loose",
-      flowchart: { useMaxWidth: true, htmlLabels: true },
-    });
-
-    var diagrams = document.querySelectorAll("pre.mermaid");
-    diagrams.forEach(function (el) {
-      var source = el.getAttribute("data-source");
-      if (!source) return;
-      el.removeAttribute("data-processed");
-      el.innerHTML = source;
-    });
-
-    mermaid.run({ nodes: Array.from(diagrams) });
-  }
-
-  function initThemeToggle() {
-    var btn = document.getElementById("theme-toggle");
-    if (!btn) return;
-
-    btn.addEventListener("click", function () {
-      var current = document.documentElement.getAttribute("data-theme");
-      var next = current === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", next);
-      localStorage.setItem("jidoka-theme", next);
-      rerenderMermaid(next);
-    });
-  }
-
-  function initPngDownload() {
-    var btn = document.getElementById("download-png");
-    if (!btn) return;
-
-    btn.addEventListener("click", function () {
-      var svgs = document.querySelectorAll("pre.mermaid svg");
-      if (svgs.length === 0) return;
-
-      var svg = svgs[0];
-      var svgData = new XMLSerializer().serializeToString(svg);
-      var svgBlob = new Blob([svgData], {
-        type: "image/svg+xml;charset=utf-8",
-      });
-      var url = URL.createObjectURL(svgBlob);
-
-      var img = new Image();
-      img.onload = function () {
-        var canvas = document.createElement("canvas");
-        var scale = 2;
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-
-        var ctx = canvas.getContext("2d");
-        ctx.scale(scale, scale);
-        ctx.fillStyle = getComputedStyle(document.body).backgroundColor;
-        ctx.fillRect(0, 0, img.width, img.height);
-        ctx.drawImage(img, 0, 0);
-
-        canvas.toBlob(function (blob) {
-          var a = document.createElement("a");
-          a.href = URL.createObjectURL(blob);
-          a.download = "jidoka-topology.png";
-          a.click();
-          URL.revokeObjectURL(a.href);
-          URL.revokeObjectURL(url);
-        }, "image/png");
-      };
-      img.src = url;
-    });
-  }
-
-  function initPlanRendering() {
-    if (typeof window.__planMarkdown === "undefined") return;
-    var container = document.getElementById("plan-content");
-    if (!container) return;
-
-    if (typeof marked === "undefined" || typeof DOMPurify === "undefined") {
-      container.textContent = window.__planMarkdown;
-      return;
-    }
-
-    var rawHtml = marked.parse(window.__planMarkdown);
-    container.innerHTML = DOMPurify.sanitize(rawHtml);
-  }
-
-  function renderMarkdownInto(el, source) {
-    if (!el || !source) return;
-    if (typeof marked === "undefined" || typeof DOMPurify === "undefined") {
-      el.textContent = source;
-      return;
-    }
-    el.innerHTML = DOMPurify.sanitize(marked.parse(source));
-  }
-
-  function initJidokaRendering() {
-    if (typeof window.__overviewMarkdown !== "undefined") {
-      renderMarkdownInto(document.getElementById("overview-md"), window.__overviewMarkdown);
-    }
-    if (Array.isArray(window.__unitBodies)) {
-      window.__unitBodies.forEach(function (body, i) {
-        var el = document.querySelector('.unit-body[data-key="' + i + '"]');
-        renderMarkdownInto(el, body);
-      });
-    }
-  }
-
-  function restoreTheme() {
-    var saved = localStorage.getItem("jidoka-theme");
-    if (saved) {
-      document.documentElement.setAttribute("data-theme", saved);
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", function () {
-    restoreTheme();
-    initJidokaRendering();
-    preserveMermaidSource();
-    initMermaid();
-    initThemeToggle();
-    initPngDownload();
-    initPlanRendering();
-  });
-})();
-`;
-var PAGE_TEMPLATE = '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Topology: <%= it.task_summary %></title>\n  <style><%= it.css %></style>\n  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js"></script>\n  <% if (it.has_plan) { %>\n  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>\n  <% } %>\n</head>\n<body class="<% if (it.has_plan) { %>has-plan<% } else { %>no-plan<% } %>">\n\n  <header>\n    <h1><%= it.task_summary %></h1>\n    <div class="header-meta">\n      <span class="mode-badge">Mode: <%= it.mode_label %></span>\n      <div class="header-actions">\n        <button id="theme-toggle" type="button" title="Toggle dark mode">\n          <span class="icon-light">&#9788;</span>\n          <span class="icon-dark">&#9790;</span>\n        </button>\n        <button id="download-png" type="button" title="Download as PNG">&#8681; PNG</button>\n      </div>\n    </div>\n  </header>\n\n  <main>\n    <% if (it.has_plan) { %>\n    <aside class="plan-panel">\n      <h2>Plan</h2>\n      <div id="plan-content"></div>\n    </aside>\n    <% } %>\n\n    <section class="diagram-panel">\n      <div class="diagrams">\n        <% it.mermaid_graphs.forEach((graph, idx) => { %>\n        <div class="diagram-block">\n          <% if (it.phase_labels.length > 0) { %>\n          <h3 class="phase-label"><%= it.phase_labels[idx] %></h3>\n          <% } %>\n          <pre class="mermaid"><%= graph %></pre>\n        </div>\n        <% }); %>\n      </div>\n\n      <div class="legend">\n        <h3>Legend</h3>\n        <div class="legend-grid">\n          <div class="legend-section">\n            <h4>Model</h4>\n            <div class="legend-items">\n              <div class="legend-item">\n                <span class="swatch swatch-haiku"></span> haiku\n              </div>\n              <div class="legend-item">\n                <span class="swatch swatch-sonnet"></span> sonnet\n              </div>\n              <div class="legend-item">\n                <span class="swatch swatch-opus"></span> opus\n              </div>\n              <div class="legend-item">\n                <span class="swatch swatch-main"></span> main agent\n              </div>\n            </div>\n          </div>\n          <div class="legend-section">\n            <h4>Output</h4>\n            <div class="legend-items">\n              <div class="legend-item">\n                <span class="shape shape-rect"></span> inline\n              </div>\n              <div class="legend-item">\n                <span class="shape shape-pill"></span> file\n              </div>\n            </div>\n          </div>\n        </div>\n      </div>\n\n      <div class="overview">\n        <h3>Topology Overview</h3>\n        <pre class="overview-text"><%= it.description %></pre>\n      </div>\n    </section>\n  </main>\n\n  <% if (it.has_plan) { %>\n  <script>window.__planMarkdown = <%= it.plan_markdown_json %>;</script>\n  <% } %>\n  <script><%= it.js %></script>\n</body>\n</html>\n';
-var PLAN_TEMPLATE = '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Plan: <%= it.title %></title>\n  <style><%= it.css %></style>\n  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>\n  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>\n</head>\n<body class="plan">\n  <header>\n    <h1>Plan: <%= it.title %></h1>\n    <div class="header-meta">\n      <span class="mode-badge"><%= it.unit_count %> unit<%= it.unit_count_suffix %><% if (it.topology_count > 0) { %> \xB7 <%= it.topology_count %> with topology<% } %></span>\n      <div class="header-actions">\n        <button id="theme-toggle" type="button" title="Toggle dark mode">\n          <span class="icon-light">&#9788;</span>\n          <span class="icon-dark">&#9790;</span>\n        </button>\n      </div>\n    </div>\n  </header>\n\n  <main class="plan-main">\n    <aside class="plan-toc">\n      <h2>Units</h2>\n      <ul>\n        <% it.units.forEach((unit) => { %>\n        <li><a href="#<%= unit.anchor %>"><span class="unit-prefix"><%= unit.prefix %></span> <%= unit.title %></a></li>\n        <% }); %>\n      </ul>\n    </aside>\n\n    <section class="plan-content">\n      <article class="plan-overview-card" id="overview">\n        <h2>Overview</h2>\n        <div id="overview-md" class="markdown-body"></div>\n      </article>\n\n      <% it.units.forEach((unit) => { %>\n      <article class="unit-card" id="<%= unit.anchor %>">\n        <header class="unit-header">\n          <h2>Unit <%= unit.prefix %> \u2014 <%= unit.title %></h2>\n          <div class="unit-chips">\n            <span class="chip chip-blocked-by">Blocked by: <%= unit.blocked_by_label %></span>\n            <span class="chip chip-agents"><%= unit.agents_label %></span>\n            <% if (unit.has_topology) { %>\n            <span class="chip chip-topology">topology</span>\n            <% } %>\n          </div>\n        </header>\n\n        <p class="unit-summary"><%= unit.summary %></p>\n\n        <div class="unit-body markdown-body" data-key="<%= unit.index %>"></div>\n\n        <% unit.mermaid_graphs.forEach((graph) => { %>\n        <div class="diagram-block">\n          <pre class="mermaid"><%= graph %></pre>\n        </div>\n        <% }); %>\n\n        <% if (unit.review_commands.length > 0) { %>\n        <div class="unit-review">\n          <h3>Review pipeline</h3>\n          <ul>\n            <% unit.review_commands.forEach((cmd) => { %>\n            <li><code><%= cmd.label %></code><% if (cmd.mode) { %> <span class="review-mode review-mode-<%= cmd.mode %>"><%= cmd.mode %></span><% } %></li>\n            <% }); %>\n          </ul>\n        </div>\n        <% } %>\n\n        <div class="unit-footer"><a href="#overview">\u2191 overview</a></div>\n      </article>\n      <% }); %>\n    </section>\n  </main>\n\n  <script>\n    window.__overviewMarkdown = <%= it.overview_markdown_json %>;\n    window.__unitBodies = <%= it.unit_bodies_json %>;\n  </script>\n  <script><%= it.js %></script>\n</body>\n</html>\n';
-
-// ts/mermaid.ts
-function mermaid(topology) {
-  return topology.execution_mode === "subagents" ? generateSubagents(topology) : generateTeam(topology);
-}
-function generateSubagents(topology) {
-  const plan = groupByStep(topology.agents);
-  const graphs = [];
-  for (const [, agents] of plan.steps) {
-    const lines = ["graph TD", emitClassDefs(), mainNodeDef()];
-    const nodes = [];
-    const edges = [];
-    for (const agent of agents) {
-      renderAgentTree(agent, nodes, edges);
-      edges.push(`    main --> ${escapeId(agent.id)}`);
-    }
-    lines.push(...nodes, ...edges);
-    graphs.push(lines.join("\n"));
-  }
-  return graphs;
-}
-function generateTeam(topology) {
-  const lines = ["graph TD", emitClassDefs(), mainNodeDef()];
-  const nodes = [];
-  const edges = [];
-  nodes.push('    subgraph team["team"]');
-  for (const agent of topology.agents) {
-    renderAgentTree(agent, nodes, edges);
-  }
-  nodes.push("    end");
-  for (const agent of topology.agents) {
-    if (agent.blocked_by.length === 0) {
-      edges.push(`    main --> ${escapeId(agent.id)}`);
-    }
-  }
-  for (const agent of topology.agents) {
-    for (const blocker of agent.blocked_by) {
-      edges.push(`    ${escapeId(blocker)} --> ${escapeId(agent.id)}`);
-    }
-  }
-  lines.push(...nodes, ...edges);
-  return [lines.join("\n")];
-}
-function renderAgentTree(agent, nodes, edges) {
-  nodes.push(nodeDef(agent));
-  if (agent.agents === void 0) return;
-  const isTeam = agent.execution_mode === "team";
-  if (isTeam) {
-    nodes.push(
-      `    subgraph ${escapeId(agent.id)}_team["${agent.id} team"]`
-    );
-  }
-  for (const child of agent.agents) {
-    renderAgentTree(child, nodes, edges);
-  }
-  if (isTeam) {
-    nodes.push("    end");
-  }
-  for (const child of agent.agents) {
-    if (child.blocked_by.length === 0) {
-      edges.push(`    ${escapeId(agent.id)} --> ${escapeId(child.id)}`);
-    }
-    for (const blocker of child.blocked_by) {
-      edges.push(`    ${escapeId(blocker)} --> ${escapeId(child.id)}`);
-    }
-  }
-}
-function escapeId(id) {
-  return id.replaceAll("-", "_");
-}
-function nodeDef(agent) {
-  const esc2 = escapeId(agent.id);
-  const cls = agent.model;
-  const label = `${agent.id} (${cls})`;
-  return agent.output.kind === "inline" ? `    ${esc2}["${label}"]:::${cls}` : `    ${esc2}(["${label}"]):::${cls}`;
-}
-function mainNodeDef() {
-  return '    main(("main agent")):::main';
-}
-function emitClassDefs() {
-  return [
-    "    classDef haiku fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f",
-    "    classDef sonnet fill:#dcfce7,stroke:#22c55e,color:#14532d",
-    "    classDef opus fill:#ede9fe,stroke:#8b5cf6,color:#3b0764",
-    "    classDef main fill:#fef3c7,stroke:#f59e0b,color:#78350f"
-  ].join("\n");
-}
 
 // ts/render-md.ts
 import { fileURLToPath } from "node:url";
@@ -19286,7 +18795,6 @@ function buildUnitMd(unit) {
   const prefix = unitIdPrefix(unit.id) ?? unit.id;
   const blockedBy = unit.blocked_by.length === 0 ? "none" : unit.blocked_by.join(", ");
   const agents = unit.agents_involved && unit.agents_involved.length > 0 ? unit.agents_involved.join(", ") : "main only";
-  const topologyLabel = unit.topology !== void 0 ? "present" : "none";
   let summaryBlock = unit.summary;
   if (summaryBlock.length > 0 && !summaryBlock.endsWith("\n")) {
     summaryBlock += "\n";
@@ -19298,17 +18806,14 @@ function buildUnitMd(unit) {
     if (!bodyBlock.endsWith("\n")) bodyBlock += "\n";
     bodyBlock += "\n";
   }
-  const topologyBlock = unit.topology !== void 0 ? unitTopologyBlock(unit.topology) + "\n\n" : "";
   const reviewItems = renderPipelineChecklist(unit.review);
   return eta.render("unit.md.eta", {
     prefix,
     title: unit.title,
     blockedBy,
     agents,
-    topologyLabel,
     summaryBlock,
     bodyBlock,
-    topologyBlock,
     reviewItems
   });
 }
@@ -19375,122 +18880,8 @@ function overviewReviewsCell(steps) {
   if (steps === void 0 || steps.length === 0) return "\u2014";
   return steps.map(reviewStepLabel).map((label) => label.replaceAll("|", "\\|")).join(" + ");
 }
-function unitTopologyBlock(topology) {
-  return mermaid(topology).map((g) => `\`\`\`mermaid
-${g}
-\`\`\``).join("\n\n");
-}
-
-// ts/html.ts
-var eta2 = new Eta({ autoEscape: false });
-function htmlEscape(s) {
-  return s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
-}
-function jsonForScript(s) {
-  return JSON.stringify(s).replaceAll("</", "<\\/").replaceAll("<!--", "<\\!--");
-}
-function jsonArrayForScript(arr) {
-  return JSON.stringify(arr).replaceAll("</", "<\\/").replaceAll("<!--", "<\\!--");
-}
-function renderTopologyHtml(topology, mermaidGraphs, description, planMarkdown) {
-  const hasPlan = planMarkdown !== void 0;
-  const locals = {
-    task_summary: htmlEscape(topology.task_summary),
-    mode_label: buildModeLabel(topology),
-    mermaid_graphs: mermaidGraphs,
-    description: htmlEscape(description),
-    has_plan: hasPlan,
-    plan_markdown_json: hasPlan ? jsonForScript(planMarkdown) : "",
-    phase_labels: buildPhaseLabels(topology, mermaidGraphs.length),
-    css: CSS,
-    js: JS
-  };
-  const result = eta2.renderString(PAGE_TEMPLATE, locals);
-  return result;
-}
-function renderPlanHtml(plan, dirName) {
-  const overviewMd = buildOverviewMd(plan, dirName);
-  const unitBodies = plan.units.map((u) => u.body_markdown);
-  const topologyCount = plan.units.filter((u) => u.topology !== void 0).length;
-  const units = plan.units.map((unit, i) => {
-    const prefix = unitIdPrefix(unit.id) ?? unit.id;
-    const blockedByLabel = unit.blocked_by.length === 0 ? "\u2014" : unit.blocked_by.map(htmlEscape).join(", ");
-    const agentsLabel = unit.agents_involved && unit.agents_involved.length > 0 ? unit.agents_involved.map(htmlEscape).join(", ") : "main only";
-    const mermaidGraphs = unit.topology ? mermaid(unit.topology) : [];
-    return {
-      index: i,
-      anchor: `unit-${htmlEscape(unit.id)}`,
-      prefix,
-      title: htmlEscape(unit.title),
-      summary: htmlEscape(unit.summary),
-      blocked_by_label: blockedByLabel,
-      agents_label: agentsLabel,
-      has_topology: unit.topology !== void 0,
-      mermaid_graphs: mermaidGraphs,
-      review_commands: (unit.review ?? []).map((step) => ({
-        label: htmlEscape(reviewStepLabel(step)),
-        // A slash command (string form) carries no print/exec mode.
-        mode: typeof step === "string" ? void 0 : step.mode
-      }))
-    };
-  });
-  const unitCount = plan.units.length;
-  const locals = {
-    title: htmlEscape(plan.task_summary),
-    unit_count: unitCount,
-    unit_count_suffix: unitCount === 1 ? "" : "s",
-    topology_count: topologyCount,
-    units,
-    overview_markdown_json: jsonForScript(overviewMd),
-    unit_bodies_json: jsonArrayForScript(unitBodies),
-    css: CSS,
-    js: JS
-  };
-  return eta2.renderString(PLAN_TEMPLATE, locals);
-}
-function buildModeLabel(topology) {
-  const top = topology.execution_mode;
-  const hasNestedTeam = hasNestedMode(topology.agents, "team");
-  const hasNestedSubagents = hasNestedMode(topology.agents, "subagents");
-  if (top === "subagents" && hasNestedTeam) return "subagents + team";
-  if (top === "team" && hasNestedSubagents) return "team + subagents";
-  return top;
-}
-function hasNestedMode(agents, target) {
-  return agents.some((a2) => {
-    if (a2.execution_mode === target) return true;
-    if (a2.agents) return hasNestedMode(a2.agents, target);
-    return false;
-  });
-}
-function buildPhaseLabels(topology, graphCount) {
-  if (topology.execution_mode === "subagents" && graphCount > 1) {
-    return Array.from({ length: graphCount }, (_, i) => `Phase ${i + 1}`);
-  }
-  return [];
-}
-
-// ts/hook.ts
-import {
-  existsSync as existsSync2,
-  mkdirSync as mkdirSync2,
-  readFileSync as readFileSync3,
-  renameSync as renameSync2,
-  rmSync
-} from "node:fs";
-import { basename as basename2, isAbsolute as isAbsolute4, join as join6 } from "node:path";
 
 // ts/materialize.ts
-import { execFileSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  renameSync,
-  statSync,
-  writeFileSync
-} from "node:fs";
-import { basename, isAbsolute as isAbsolute3, join as join4 } from "node:path";
 var MaterializeError = class extends Error {
   constructor(kind, path2, message) {
     super(message);
@@ -19571,11 +18962,6 @@ function materializeAt(plan, targetDir, config2, dirNameOverride) {
   for (const unit of plan.units) {
     atomicWrite(join4(targetDir, `${unit.id}.md`), buildUnitMd(unit));
   }
-}
-function writePlanHtml(plan, targetDir, dirNameOverride) {
-  const dirName = dirNameOverride ?? basename(targetDir) ?? plan.slug;
-  const html = renderPlanHtml(plan, dirName);
-  atomicWrite(join4(targetDir, "overview.html"), html);
 }
 function atomicWrite(path2, contents) {
   const tmp = `${path2}.tmp`;
@@ -19734,30 +19120,6 @@ function gitErr(e) {
   return err.message ?? "unknown git error";
 }
 
-// ts/output.ts
-import { spawn } from "node:child_process";
-import { writeFileSync as writeFileSync2 } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join5 } from "node:path";
-function writeTempHtml(html, dir = tmpdir()) {
-  const timestamp = Date.now();
-  const path2 = join5(dir, `jidoka-${timestamp}.html`);
-  writeFileSync2(path2, html);
-  return path2;
-}
-function openBrowser(path2) {
-  const [cmd, args] = process.platform === "win32" ? ["cmd", ["/C", "start", "", path2]] : process.platform === "darwin" ? ["open", [path2]] : ["xdg-open", [path2]];
-  const child = spawn(cmd, args, {
-    detached: true,
-    stdio: "ignore"
-  });
-  child.on("error", (err) => {
-    process.stderr.write(`jidoka: could not open browser (${cmd}): ${err.message}
-`);
-  });
-  child.unref();
-}
-
 // ts/parse-markdown.ts
 function parsePlanMarkdown(md) {
   const stripped = md.charCodeAt(0) === 65279 ? md.slice(1) : md;
@@ -19797,21 +19159,13 @@ function parsePlanMarkdown(md) {
     const seq = String(k + 1).padStart(2, "0");
     const titleSlug = slugify2(cur.title, 57);
     const id = titleSlug.length > 0 ? `${seq}-${titleSlug}` : `${seq}-unit`;
-    const fence = extractTopologyFence(bodyMarkdown);
-    if (!fence.ok) {
-      return { ok: false, error: `units[${k}].topology: ${fence.error}` };
-    }
-    const unit = {
+    units.push({
       id,
       title: cur.title,
       summary,
       blocked_by: k === 0 ? [] : [units[k - 1].id],
-      body_markdown: fence.value.bodyWithoutFence
-    };
-    if (fence.value.topology !== void 0) {
-      unit.topology = fence.value.topology;
-    }
-    units.push(unit);
+      body_markdown: bodyMarkdown
+    });
   }
   return {
     ok: true,
@@ -19864,89 +19218,12 @@ function splitSummaryAndBody(lines) {
   const bodyMarkdown = lines.slice(i).join("\n").replace(/\s+$/, "");
   return { summary, bodyMarkdown };
 }
-var FENCE_LINE_RE = /^(`{3,})(.*)$/;
-function extractTopologyFence(bodyMarkdown) {
-  if (bodyMarkdown.length === 0) {
-    return { ok: true, value: { bodyWithoutFence: "", topology: void 0 } };
-  }
-  const lines = bodyMarkdown.split("\n");
-  let state = { kind: "outside" };
-  let openIdx = -1;
-  let closeIdx = -1;
-  let secondTopologyAt = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const m = FENCE_LINE_RE.exec(line);
-    if (!m) continue;
-    const ticks = m[1].length;
-    const info = m[2].trim();
-    if (state.kind === "outside") {
-      if (info === "topology") {
-        if (openIdx >= 0) {
-          secondTopologyAt = i;
-          break;
-        }
-        state = { kind: "inside", topology: true, ticks };
-        openIdx = i;
-      } else {
-        state = { kind: "inside", topology: false, ticks };
-      }
-    } else if (info === "" && ticks >= state.ticks) {
-      if (state.topology) closeIdx = i;
-      state = { kind: "outside" };
-    }
-  }
-  if (openIdx < 0) {
-    return { ok: true, value: { bodyWithoutFence: bodyMarkdown, topology: void 0 } };
-  }
-  if (closeIdx < 0) {
-    return { ok: false, error: "unterminated topology fence (missing closing ```)" };
-  }
-  if (secondTopologyAt >= 0) {
-    return { ok: false, error: "multiple topology fences in one unit (only one allowed)" };
-  }
-  const jsonContent = lines.slice(openIdx + 1, closeIdx).join("\n");
-  const parsed = parseTopologyJson(jsonContent);
-  if (!parsed.ok) {
-    return { ok: false, error: parsed.error };
-  }
-  const before = lines.slice(0, openIdx);
-  const after = lines.slice(closeIdx + 1);
-  let beforeEnd = before.length;
-  while (beforeEnd > 0 && before[beforeEnd - 1].trim().length === 0) beforeEnd--;
-  let afterStart = 0;
-  while (afterStart < after.length && after[afterStart].trim().length === 0) afterStart++;
-  const beforeKept = before.slice(0, beforeEnd);
-  const afterKept = after.slice(afterStart);
-  const bodyWithoutFence = beforeKept.length === 0 ? afterKept.join("\n") : afterKept.length === 0 ? beforeKept.join("\n") : `${beforeKept.join("\n")}
-
-${afterKept.join("\n")}`;
-  return { ok: true, value: { bodyWithoutFence, topology: parsed.value } };
-}
 
 // ts/validate.ts
 function formatError2(e) {
   switch (e.kind) {
     case "empty_task_summary":
       return "task_summary must be a non-empty string";
-    case "empty_agents":
-      return "agents must be a non-empty array";
-    case "invalid_agent_id":
-      return `invalid agent id '${e.id}' at ${e.path}: must match [a-zA-Z0-9_-]+`;
-    case "duplicate_agent_id":
-      return `duplicate agent id '${e.id}' at ${e.first_path} and ${e.second_path}`;
-    case "empty_role":
-      return `agent '${e.agent_id}' at ${e.path} has an empty role`;
-    case "empty_nested_agents":
-      return `agent '${e.agent_id}' at ${e.path} has an empty agents array`;
-    case "blocked_by_not_found":
-      return `agent '${e.agent_id}' at ${e.path} references unknown blocked_by id '${e.referenced_id}'`;
-    case "self_dependency":
-      return `agent '${e.agent_id}' at ${e.path} blocks itself`;
-    case "cyclic_dependency":
-      return `cyclic dependency at ${e.path}: ${e.cycle.join(" -> ")}`;
-    case "mermaid_id_collision":
-      return `agent ids '${e.id_a}' (${e.path_a}) and '${e.id_b}' (${e.path_b}) collide in Mermaid output: hyphens become underscores, so they would render as the same node`;
     case "empty_units":
       return "units must be a non-empty array";
     case "invalid_slug":
@@ -19980,11 +19257,6 @@ function isValidSlug(slug) {
 }
 function isValidUnitId(id) {
   return UNIT_ID_RE.test(id);
-}
-function validateTopology(topology) {
-  const errors = [];
-  validateTopologyInto(topology, "agents", errors);
-  return errors;
 }
 function validatePlan(plan) {
   const errors = [];
@@ -20040,161 +19312,7 @@ function validatePlan(plan) {
     }
   }
   detectUnitCycles(plan.units, errors);
-  for (let i = 0; i < plan.units.length; i++) {
-    const unit = plan.units[i];
-    if (unit.topology) {
-      validateTopologyInto(
-        unit.topology,
-        `units[${i}].topology.agents`,
-        errors
-      );
-    }
-  }
   return errors;
-}
-function validateTopologyInto(topology, rootPath, errors) {
-  if (topology.task_summary.length === 0) {
-    errors.push({ kind: "empty_task_summary" });
-  }
-  if (topology.agents.length === 0) {
-    errors.push({ kind: "empty_agents" });
-  }
-  const seen = /* @__PURE__ */ new Map();
-  const seenEscaped = /* @__PURE__ */ new Map();
-  collectAndValidateIds(topology.agents, rootPath, seen, seenEscaped, errors);
-  validateAgentFields(topology.agents, rootPath, errors);
-  validateDependenciesInScope(topology.agents, rootPath, errors);
-}
-function collectAndValidateIds(agents, path2, seen, seenEscaped, errors) {
-  for (let i = 0; i < agents.length; i++) {
-    const agent = agents[i];
-    const agentPath = `${path2}[${i}]`;
-    if (!isValidId(agent.id)) {
-      errors.push({ kind: "invalid_agent_id", id: agent.id, path: agentPath });
-    }
-    const firstPath = seen.get(agent.id);
-    if (firstPath !== void 0) {
-      errors.push({
-        kind: "duplicate_agent_id",
-        id: agent.id,
-        first_path: firstPath,
-        second_path: agentPath
-      });
-    } else {
-      seen.set(agent.id, agentPath);
-      const escaped = escapeId(agent.id);
-      const prior = seenEscaped.get(escaped);
-      if (prior !== void 0 && prior.id !== agent.id) {
-        errors.push({
-          kind: "mermaid_id_collision",
-          id_a: prior.id,
-          id_b: agent.id,
-          path_a: prior.path,
-          path_b: agentPath
-        });
-      } else if (prior === void 0) {
-        seenEscaped.set(escaped, { id: agent.id, path: agentPath });
-      }
-    }
-    if (agent.agents !== void 0) {
-      collectAndValidateIds(
-        agent.agents,
-        `${agentPath}.agents`,
-        seen,
-        seenEscaped,
-        errors
-      );
-    }
-  }
-}
-function validateAgentFields(agents, path2, errors) {
-  for (let i = 0; i < agents.length; i++) {
-    const agent = agents[i];
-    const agentPath = `${path2}[${i}]`;
-    if (agent.role.length === 0) {
-      errors.push({ kind: "empty_role", agent_id: agent.id, path: agentPath });
-    }
-    if (agent.agents !== void 0) {
-      if (agent.agents.length === 0) {
-        errors.push({
-          kind: "empty_nested_agents",
-          agent_id: agent.id,
-          path: agentPath
-        });
-      } else {
-        validateAgentFields(agent.agents, `${agentPath}.agents`, errors);
-      }
-    }
-  }
-}
-function validateDependenciesInScope(agents, path2, errors) {
-  const idsInScope = new Set(agents.map((a2) => a2.id));
-  for (let i = 0; i < agents.length; i++) {
-    const agent = agents[i];
-    const agentPath = `${path2}[${i}]`;
-    for (const blocker of agent.blocked_by) {
-      if (blocker === agent.id) {
-        errors.push({
-          kind: "self_dependency",
-          agent_id: agent.id,
-          path: agentPath
-        });
-      } else if (!idsInScope.has(blocker)) {
-        errors.push({
-          kind: "blocked_by_not_found",
-          agent_id: agent.id,
-          referenced_id: blocker,
-          path: agentPath
-        });
-      }
-    }
-  }
-  detectAgentCycles(agents, path2, errors);
-  for (let i = 0; i < agents.length; i++) {
-    const agent = agents[i];
-    if (agent.agents !== void 0 && agent.agents.length > 0) {
-      validateDependenciesInScope(
-        agent.agents,
-        `${path2}[${i}].agents`,
-        errors
-      );
-    }
-  }
-}
-function detectAgentCycles(agents, path2, errors) {
-  const agentMap = new Map(agents.map((a2) => [a2.id, a2]));
-  const color = new Map(
-    agents.map((a2) => [a2.id, "white"])
-  );
-  const dfs = (node, stack) => {
-    color.set(node, "gray");
-    stack.push(node);
-    const agent = agentMap.get(node);
-    if (agent) {
-      for (const dep of agent.blocked_by) {
-        const depColor = color.get(dep);
-        if (depColor === "gray") {
-          const cycleStart = stack.indexOf(dep);
-          if (cycleStart >= 0) {
-            errors.push({
-              kind: "cyclic_dependency",
-              cycle: stack.slice(cycleStart),
-              path: path2
-            });
-          }
-        } else if (depColor === "white" && agentMap.has(dep)) {
-          dfs(dep, stack);
-        }
-      }
-    }
-    stack.pop();
-    color.set(node, "black");
-  };
-  for (const agent of agents) {
-    if (color.get(agent.id) === "white") {
-      dfs(agent.id, []);
-    }
-  }
 }
 function detectUnitCycles(units, errors) {
   const unitMap = new Map(units.map((u) => [u.id, u]));
@@ -20247,14 +19365,11 @@ function configFromEnv() {
     );
   }
   const cfg = loadConfig(projectDir);
-  const noOpen = process.env["JIDOKA_NO_OPEN"] !== void 0;
-  const plansRoot = isAbsolute4(cfg.plan_dir_root) ? cfg.plan_dir_root : join6(projectDir, cfg.plan_dir_root);
+  const plansRoot = isAbsolute4(cfg.plan_dir_root) ? cfg.plan_dir_root : join5(projectDir, cfg.plan_dir_root);
   return {
     today: todayYymmddLocal(),
     projectDir,
     plansRoot,
-    autoOpenBrowser: cfg.auto_open_browser && !noOpen,
-    htmlOutput: cfg.html_output,
     cfg
   };
 }
@@ -20332,7 +19447,7 @@ function runWithInput(input, config2) {
       );
     }
   }
-  const target = forcedDirName !== void 0 ? join6(plansRoot, forcedDirName) : resolveTargetDir(plan, plansRoot, config2.today);
+  const target = forcedDirName !== void 0 ? join5(plansRoot, forcedDirName) : resolveTargetDir(plan, plansRoot, config2.today);
   if (existsSync2(target)) {
     onPublishFailure?.();
     emitDeny(
@@ -20340,7 +19455,7 @@ function runWithInput(input, config2) {
     );
     return;
   }
-  const staging = join6(plansRoot, `.jidoka-stage-${sessionId}`);
+  const staging = join5(plansRoot, `.jidoka-stage-${sessionId}`);
   try {
     mkdirSync2(plansRoot, { recursive: true });
     if (existsSync2(staging)) {
@@ -20348,7 +19463,6 @@ function runWithInput(input, config2) {
     }
     const finalDirName = basename2(target);
     materializeAt(plan, staging, config2.cfg, finalDirName);
-    if (config2.htmlOutput) writePlanHtml(plan, staging, finalDirName);
     renameSync2(staging, target);
   } catch (e) {
     try {
@@ -20365,16 +19479,6 @@ function runWithInput(input, config2) {
   process.stderr.write(`Wrote plan to ${target}
 `);
   if (worktreeNote !== void 0) process.stderr.write(worktreeNote + "\n");
-  if (config2.autoOpenBrowser && config2.htmlOutput) {
-    try {
-      openBrowser(join6(target, "overview.html"));
-    } catch (e) {
-      process.stderr.write(
-        `jidoka hook: could not open browser: ${e.message}
-`
-      );
-    }
-  }
 }
 function emitDeny(message) {
   const deny = {
@@ -20390,60 +19494,10 @@ function isValidSessionId(id) {
   return isValidId(id) && id.length <= 128;
 }
 
-// ts/schema.ts
-var topologyJsonSchema = {
-  $schema: "https://json-schema.org/draft/2020-12/schema",
-  title: "Topology",
-  type: "object",
-  required: ["task_summary", "execution_mode", "agents"],
-  properties: {
-    task_summary: { type: "string", minLength: 1 },
-    execution_mode: { type: "string", enum: ["team", "subagents"] },
-    agents: {
-      type: "array",
-      minItems: 1,
-      items: { $ref: "#/$defs/Agent" }
-    }
-  },
-  $defs: {
-    Agent: {
-      type: "object",
-      required: ["id", "role", "model", "tools", "blocked_by", "background"],
-      properties: {
-        id: { type: "string", pattern: "^[a-zA-Z0-9_-]+$" },
-        role: { type: "string", minLength: 1 },
-        model: { type: "string", enum: ["haiku", "sonnet", "opus"] },
-        tools: { type: "array", items: { type: "string" } },
-        blocked_by: { type: "array", items: { type: "string" } },
-        background: { type: "boolean" },
-        output: {
-          oneOf: [
-            { const: "inline" },
-            {
-              type: "object",
-              required: ["file"],
-              properties: { file: { type: "string", minLength: 1 } },
-              additionalProperties: false
-            }
-          ],
-          default: "inline"
-        },
-        produces: { type: "string" },
-        execution_mode: { type: "string", enum: ["team", "subagents"] },
-        agents: {
-          type: "array",
-          minItems: 1,
-          items: { $ref: "#/$defs/Agent" }
-        }
-      }
-    }
-  }
-};
-
 // ts/cli.ts
 var program2 = new Command();
 program2.name("jidoka").description(
-  "Visualize multi-agent task decomposition; materialize plans on ExitPlanMode"
+  "Materialize plan-mode output as reviewable markdown units on ExitPlanMode"
 ).version("0.3.0", "-v, --version", "Show version number");
 program2.command("hook").description("Process ExitPlanMode hook from stdin").action(async () => {
   const code = await runHook();
@@ -20457,48 +19511,6 @@ program2.command("materialize <file>").description(
 ).option("--today <yymmdd>", "Override today's date prefix").action((file2, opts) => {
   runMaterialize(file2, opts);
 });
-program2.argument("[file]", "Topology JSON file to render (omit to read from stdin)").option("--mermaid", "Output raw Mermaid graph definitions instead of HTML").option("--plan <file>", "Plan markdown file for two-column layout").option("--schema", "Dump topology JSON schema to stdout").option(
-  "--validate",
-  "Validate JSON without rendering (exit 0 = valid, exit 1 = invalid)"
-).option("--example", "Render the built-in showcase").option("--json", "With --example, dump showcase JSON to stdout instead of rendering").action(
-  (file2, opts) => {
-    if (opts.schema) {
-      process.stdout.write(JSON.stringify(topologyJsonSchema, null, 2) + "\n");
-      return;
-    }
-    if (opts.example) {
-      const t = showcase();
-      if (opts.json) {
-        process.stdout.write(
-          JSON.stringify(serializeTopology(t), null, 2) + "\n"
-        );
-        return;
-      }
-      renderAndOpen(t, opts);
-      return;
-    }
-    const json2 = file2 ? readFileSync4(file2, "utf8") : readFileSync4(0, "utf8");
-    if (opts.validate) {
-      runValidate(json2);
-      return;
-    }
-    const topo = parseTopologyJson(json2);
-    if (!topo.ok) {
-      process.stderr.write(`error: parse error: ${topo.error}
-`);
-      process.exit(1);
-    }
-    const errors = validateTopology(topo.value);
-    if (errors.length > 0) {
-      for (const e of errors) process.stderr.write(`${formatError2(e)}
-`);
-      process.stderr.write(`error: ${errors.length} validation error(s)
-`);
-      process.exit(1);
-    }
-    renderAndOpen(topo.value, opts);
-  }
-);
 function runMaterialize(file2, opts) {
   let input;
   try {
@@ -20526,12 +19538,11 @@ function runMaterialize(file2, opts) {
   }
   const projectDir = process.env["CLAUDE_PROJECT_DIR"] ?? process.cwd();
   const cfg = loadConfig(projectDir);
-  const plansRoot = opts.plansRoot ?? (isAbsolute5(cfg.plan_dir_root) ? cfg.plan_dir_root : join7(projectDir, cfg.plan_dir_root));
+  const plansRoot = opts.plansRoot ?? (isAbsolute5(cfg.plan_dir_root) ? cfg.plan_dir_root : join6(projectDir, cfg.plan_dir_root));
   const today = opts.today ?? todayYymmddLocal();
   let target;
   try {
     target = materialize(parsed.value, plansRoot, today, cfg);
-    if (cfg.html_output) writePlanHtml(parsed.value, target);
   } catch (e) {
     process.stderr.write(`error: ${e.message}
 `);
@@ -20541,51 +19552,6 @@ function runMaterialize(file2, opts) {
 `);
   process.stdout.write(`${target}
 `);
-  if (cfg.html_output && cfg.auto_open_browser && process.env["JIDOKA_NO_OPEN"] === void 0) {
-    try {
-      openBrowser(join7(target, "overview.html"));
-    } catch (e) {
-      process.stderr.write(
-        `warning: could not open browser: ${e.message}
-`
-      );
-    }
-  }
-}
-function runValidate(json2) {
-  let parsedRaw;
-  try {
-    parsedRaw = JSON.parse(json2);
-  } catch (e) {
-    process.stderr.write(`error: parse error: ${e.message}
-`);
-    process.exit(1);
-  }
-  const planResult = planSchema.safeParse(parsedRaw);
-  if (planResult.success) {
-    const errors = validatePlan(planResult.data);
-    if (errors.length === 0) process.exit(0);
-    for (const e of errors) process.stdout.write(`${formatError2(e)}
-`);
-    process.stderr.write(`error: ${errors.length} validation error(s)
-`);
-    process.exit(1);
-  }
-  const topoResult = topologySchema.safeParse(parsedRaw);
-  if (topoResult.success) {
-    const errors = validateTopology(topoResult.data);
-    if (errors.length === 0) process.exit(0);
-    for (const e of errors) process.stdout.write(`${formatError2(e)}
-`);
-    process.stderr.write(`error: ${errors.length} validation error(s)
-`);
-    process.exit(1);
-  }
-  process.stderr.write(
-    `error: parse error: ${formatZodIssues(planResult.error.issues)}
-`
-  );
-  process.exit(1);
 }
 function parsePlanInput(input) {
   const noBom = input.charCodeAt(0) === 65279 ? input.slice(1) : input;
@@ -20600,25 +19566,5 @@ function parsePlanInput(input) {
   }
   const r = parsePlanMarkdown(noBom);
   return r.ok ? r : { ok: false, error: `markdown: ${r.error}` };
-}
-function formatZodIssues(issues) {
-  if (issues.length === 0) return "(unknown)";
-  const i = issues[0];
-  const path2 = i.path.length > 0 ? i.path.join(".") : "<root>";
-  return `${i.message} at ${path2}`;
-}
-function renderAndOpen(topology, opts) {
-  const graphs = mermaid(topology);
-  if (opts.mermaid) {
-    process.stdout.write(graphs.join("\n\n") + "\n");
-    return;
-  }
-  const desc = describe3(topology);
-  const planMd = opts.plan ? readFileSync4(opts.plan, "utf8") : void 0;
-  const html = renderTopologyHtml(topology, graphs, desc, planMd);
-  const path2 = writeTempHtml(html);
-  process.stdout.write(`${path2}
-`);
-  if (process.env["JIDOKA_NO_OPEN"] === void 0) openBrowser(path2);
 }
 await program2.parseAsync();

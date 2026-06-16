@@ -1,12 +1,10 @@
 # Agent Guide: Producing Plan Markdown
 
-> See [Data Model](data-model.md) for the underlying types (Plan + per-unit Topology) and field semantics.
+> See [Data Model](data-model.md) for the underlying types (Plan and Unit) and field semantics.
 
 ## Overview
 
 You produce **plan markdown**. The renderer (the ExitPlanMode hook, or `jidoka materialize` from the CLI) parses it, validates the result, and writes the materialized plan dir. Your job is to analyze the task, decompose it into reviewable units, and emit conforming markdown.
-
-A unit may carry an optional **topology** when it dispatches multiple agents in a meaningful structure — embedded as a ` ```topology ` fenced JSON block inside the unit body. Most units don't need one.
 
 ## Skill Configuration
 
@@ -43,24 +41,10 @@ No fixed line/time budget. Most plans land at **3–7 units**. Two-unit plans ar
 Examples:
 
 - Adding a new data type + validation + tests → one unit. The three pieces are coupled and reviewed together.
-- Adding a new data type + materialization + HTML rendering + hook integration → four units. Each can be reviewed independently and lands a clean commit.
+- Adding a new data type + validation + materialization + hook integration → four units. Each can be reviewed independently and lands a clean commit.
 - Bumping a version + updating a README sentence → one unit ("housekeeping"). Don't split prose-only changes that share a theme.
 
 **Mid-plan incompleteness.** The per-unit review gate (`/code-review`) sees only the unit's diff with no plan context, so it flags intentional forward-references — a helper unit 01 adds but unit 03 calls reads as "unused"; a half-handled enum reads as "non-exhaustive." Splitting into testable slices keeps this rare. When a unit genuinely must leave a forward-reference, name it in the body (e.g. "`parsePlan()` is unused until Unit 03 wires it into the hook — unused-symbol findings here are expected") so the reviewer discounts the expected finding instead of acting on it. A *long* list of such notes is a splitting smell — re-split. Cross-unit completeness is the plan-level review's job, not the unit gate's.
-
-### Topology decision
-
-Default to no topology fence. Only attach one when a unit:
-
-- **Dispatches more than one agent** with **meaningful structure** — parallel review by two distinct roles, a writer + a tester running concurrently, or a researcher whose output feeds an implementer.
-
-Single-agent units (just "main does the work") **never carry a topology**. If you find yourself writing a one-agent topology, drop it — the unit is single-agent.
-
-Examples:
-
-- Unit "Implement X" with main + Sonnet writer + Opus reviewer running in parallel → topology fence with `execution_mode: "subagents"` and two agents.
-- Unit "Refactor module Y" with just main doing the work → no topology fence.
-- Unit "Research before implementing" with a researcher whose findings inform main → arguably a single-agent unit if the researcher just dumps to a file; arguably a 2-agent topology if the researcher genuinely runs in parallel and main waits on its output. When in doubt, prefer no topology.
 
 ### Slug
 
@@ -89,12 +73,11 @@ jidoka's lifecycle convention parks open questions and proposals as `ideas/<YYMM
 
 ## Hard Rules
 
-1. **NEVER** generate HTML. The renderer handles that.
-2. **NEVER** call the renderer binary. Return markdown only; the hook (or `jidoka materialize`) handles rendering.
-3. **NEVER** execute the plan. The skill is a planner only.
-4. **NEVER** loop or ask for approval. One-shot generator.
-5. On re-invocation with adjustments, regenerate the **FULL** markdown from scratch — no patching.
-6. **NEVER** save the markdown to disk yourself. Return it to the caller; ExitPlanMode delivers it to the hook via `tool_input.plan`.
+1. **NEVER** call the renderer binary. Return markdown only; the hook (or `jidoka materialize`) handles rendering.
+2. **NEVER** execute the plan. The skill is a planner only.
+3. **NEVER** loop or ask for approval. One-shot generator.
+4. On re-invocation with adjustments, regenerate the **FULL** markdown from scratch — no patching.
+5. **NEVER** save the markdown to disk yourself. Return it to the caller; ExitPlanMode delivers it to the hook via `tool_input.plan`.
 
 ## Design Constraints
 
@@ -109,9 +92,3 @@ Plan mode blocks Edit, Write, NotebookEdit, and Task tools. The Skill tool isn't
 ### Why the hook reads `tool_input.plan` directly
 
 ExitPlanMode + PreToolUse hooks shipped in Claude Code v2.1.85 (2026-03-26). Before that, jidoka ferried the plan through `/tmp/jidoka-{session_id}.json` because the hook had no way to see what the user was about to approve. Now the markdown is right there in the PreToolUse payload — no temp file, no marker file, no deny-loop.
-
-The standalone CLI (`echo '<topology-json>' | jidoka` or `jidoka <file>`) still accepts a bare Topology for direct rendering, untouched. Users wanting topology-only output don't go through the hook.
-
-## Execution Mode Details
-
-See [Data Model — Execution Modes](data-model.md#execution-modes) for full details on subagents vs team mode, arrow semantics, nested agents, and output strategies — those mechanics are unchanged, just applied per-unit instead of per-plan.

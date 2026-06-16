@@ -1,9 +1,8 @@
 import { Eta } from "eta";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { mermaid } from "./mermaid.js";
 import { REVIEW_PLACEHOLDERS, reviewStepLabel } from "./types.js";
-import type { Plan, ReviewStep, Topology, Unit } from "./types.js";
+import type { Plan, ReviewStep, Unit } from "./types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const templatesDir = join(here, "..", "templates");
@@ -73,7 +72,6 @@ export function buildUnitMd(unit: Unit): string {
     unit.agents_involved && unit.agents_involved.length > 0
       ? unit.agents_involved.join(", ")
       : "main only";
-  const topologyLabel = unit.topology !== undefined ? "present" : "none";
 
   let summaryBlock = unit.summary;
   if (summaryBlock.length > 0 && !summaryBlock.endsWith("\n")) {
@@ -88,9 +86,6 @@ export function buildUnitMd(unit: Unit): string {
     bodyBlock += "\n";
   }
 
-  const topologyBlock =
-    unit.topology !== undefined ? unitTopologyBlock(unit.topology) + "\n\n" : "";
-
   const reviewItems = renderPipelineChecklist(unit.review);
 
   return eta.render("unit.md.eta", {
@@ -98,10 +93,8 @@ export function buildUnitMd(unit: Unit): string {
     title: unit.title,
     blockedBy,
     agents,
-    topologyLabel,
     summaryBlock,
     bodyBlock,
-    topologyBlock,
     reviewItems,
   });
 }
@@ -237,10 +230,4 @@ function overviewReviewsCell(steps: ReviewStep[] | undefined): string {
     .map(reviewStepLabel)
     .map((label) => label.replaceAll("|", "\\|"))
     .join(" + ");
-}
-
-function unitTopologyBlock(topology: Topology): string {
-  return mermaid(topology)
-    .map((g) => `\`\`\`mermaid\n${g}\n\`\`\``)
-    .join("\n\n");
 }

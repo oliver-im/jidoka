@@ -7,9 +7,6 @@ import { reviewStepSchema, type ReviewStep } from "./types.js";
 
 export interface Config {
   plan_dir_root: string;
-  auto_open_browser: boolean;
-  html_output: boolean;
-  plan_level_topology: boolean;
   git_workflow: boolean;
   // Review steps per stage. Each entry is a slash command (e.g. "/code-review")
   // or a tool-agnostic bash template `{ run, mode }` — see `reviewStepSchema`.
@@ -20,9 +17,6 @@ export interface Config {
 
 export const defaultConfig: Config = {
   plan_dir_root: "docs/exec-plans/active",
-  auto_open_browser: false,
-  html_output: false,
-  plan_level_topology: false,
   git_workflow: false,
   pre_review: ["/jidoka:pre-plan-review"],
   unit_review: ["/code-review"],
@@ -31,9 +25,6 @@ export const defaultConfig: Config = {
 
 const configSchema = z.object({
   plan_dir_root: z.string().default(defaultConfig.plan_dir_root),
-  auto_open_browser: z.boolean().default(defaultConfig.auto_open_browser),
-  html_output: z.boolean().default(defaultConfig.html_output),
-  plan_level_topology: z.boolean().default(defaultConfig.plan_level_topology),
   git_workflow: z.boolean().default(defaultConfig.git_workflow),
   pre_review: z.array(reviewStepSchema).default(defaultConfig.pre_review),
   unit_review: z.array(reviewStepSchema).default(defaultConfig.unit_review),
@@ -111,8 +102,6 @@ function readJson(path: string): unknown {
 
 const PROJECT_OVERRIDE_KEYS = [
   "plan_dir_root",
-  "auto_open_browser",
-  "html_output",
   "git_workflow",
 ] as const;
 
@@ -140,22 +129,6 @@ function applyProjectOverrides(cfg: Config, value: unknown, path: string): void 
         continue;
       }
       cfg.plan_dir_root = val;
-    } else if (key === "auto_open_browser") {
-      if (typeof val !== "boolean") {
-        process.stderr.write(
-          "jidoka: project override 'auto_open_browser' must be a boolean; ignoring\n",
-        );
-        continue;
-      }
-      cfg.auto_open_browser = val;
-    } else if (key === "html_output") {
-      if (typeof val !== "boolean") {
-        process.stderr.write(
-          "jidoka: project override 'html_output' must be a boolean; ignoring\n",
-        );
-        continue;
-      }
-      cfg.html_output = val;
     } else if (key === "git_workflow") {
       if (typeof val !== "boolean") {
         process.stderr.write(
@@ -209,9 +182,6 @@ export function mergeForWrite(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = base ? { ...base } : {};
   out.plan_dir_root = cfg.plan_dir_root;
-  out.auto_open_browser = cfg.auto_open_browser;
-  out.html_output = cfg.html_output;
-  out.plan_level_topology = cfg.plan_level_topology;
   out.git_workflow = cfg.git_workflow;
   out.pre_review = [...cfg.pre_review];
   out.unit_review = [...cfg.unit_review];

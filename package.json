@@ -1,7 +1,7 @@
 {
   "name": "jidoka",
   "version": "0.3.0",
-  "description": "Materialize multi-unit plans on ExitPlanMode; render Mermaid topology diagrams",
+  "description": "Materialize multi-unit plans on ExitPlanMode",
   "type": "module",
   "private": true,
   "main": "dist/cli.js",
@@ -9,12 +9,11 @@
     "jidoka": "dist/cli.js"
   },
   "scripts": {
-    "build:assets": "node scripts/generate-assets.mjs",
-    "build": "npm run build:assets && node scripts/build.mjs",
-    "typecheck": "npm run build:assets && tsc --noEmit",
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
     "pretest": "npm run build",
     "test": "vitest run",
-    "test:watch": "npm run build:assets && vitest"
+    "test:watch": "vitest"
   },
   "engines": {
     "node": ">=20"

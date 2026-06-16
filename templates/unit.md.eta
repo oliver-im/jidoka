@@ -2,13 +2,11 @@
 
 **Blocked by:** <%= it.blockedBy %>
 **Agents involved:** <%= it.agents %>
-**Topology:** <%= it.topologyLabel %>
 
 ## Summary
 
 <%= it.summaryBlock -%>
 <%= it.bodyBlock -%>
-<%= it.topologyBlock -%>
 ## Review pipeline
 
 <%= it.reviewItems %>

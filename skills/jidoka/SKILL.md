@@ -7,9 +7,7 @@ user-invocable: false
 
 # jidoka
 
-You produce a **plan markdown** for the caller. The renderer (the ExitPlanMode hook) handles validation, materialization (writing `overview.md` + `progress.md` + per-unit md files), HTML rendering, and browser launch. Your job is to analyze the task, decompose it into units, and output conforming markdown.
-
-A unit may carry an optional **topology** fence when it dispatches multiple agents in a meaningful structure. Most units have no topology fence.
+You produce a **plan markdown** for the caller. The renderer (the ExitPlanMode hook) handles validation and materialization (writing `overview.md` + `progress.md` + per-unit md files). Your job is to analyze the task, decompose it into units, and output conforming markdown.
 
 ## Process
 
@@ -58,70 +56,6 @@ Tolerated heading variants (the parser canonicalizes them — pick whichever rea
 ## 01 — Foo               bare number, em-dash
 ```
 
-### Per-unit topology fence
-
-When a unit dispatches multiple agents, embed a topology JSON in a fenced block whose info string is exactly `topology`:
-
-````markdown
-## Unit 03: Parallel review
-
-Two reviewers run concurrently against the same diff.
-
-```topology
-{
-  "task_summary": "Parallel review",
-  "execution_mode": "subagents",
-  "agents": [
-    {
-      "id": "reviewer-a",
-      "role": "Reviews CLAUDE.md compliance",
-      "model": "sonnet",
-      "tools": ["Read", "Grep"],
-      "blocked_by": [],
-      "background": false
-    },
-    {
-      "id": "reviewer-b",
-      "role": "Reviews for security issues",
-      "model": "sonnet",
-      "tools": ["Read", "Grep"],
-      "blocked_by": [],
-      "background": false
-    }
-  ]
-}
-```
-
-Acceptance: both reviewers post findings to the parent agent.
-````
-
-The parser extracts and validates the JSON, attaches it to the unit, and strips the fence from the body so the renderer doesn't draw the graph twice. Use one fence per unit at most.
-
-## Topology shape
-
-```typescript
-interface Topology {
-  task_summary: string;            // informational when nested under a Unit
-  execution_mode: "team" | "subagents";
-  agents: Agent[];
-}
-
-interface Agent {
-  id: string;                      // ^[a-zA-Z0-9_-]+$
-  role: string;
-  model: "haiku" | "sonnet" | "opus";
-  tools: string[];
-  blocked_by: string[];
-  background: boolean;
-  output?: "inline" | { file: string };  // default "inline"
-  produces?: string;
-  execution_mode?: "team" | "subagents";  // when this agent dispatches sub-agents
-  agents?: Agent[];                       // nested
-}
-```
-
-See [`docs/data-model.md`](../../../docs/data-model.md) for full field semantics, examples, and execution-mode behavior.
-
 ## Heuristics
 
 ### Unit splitting
@@ -132,14 +66,6 @@ Each unit must be:
 2. **Finishable in one session including reviews** — the work, the review, the fixes, and the commit all fit in one focused pass.
 
 No fixed line/time budget. Most plans land at **3–7 units**. Two-unit plans are rare; ten-unit plans usually want to split into two plans.
-
-### Topology decision
-
-Default to no topology fence. Only attach one when a unit:
-
-- Dispatches **more than one agent** with **meaningful structure** — e.g. parallel review by two distinct roles, a writer + a tester running concurrently, or a researcher whose output feeds an implementer.
-
-Single-agent units (just "main does the work") **never carry a topology fence**. If you find yourself writing a one-agent topology, drop it — the unit is single-agent.
 
 ### Slug
 
@@ -169,7 +95,7 @@ When the task traces back to an `ideas/<YYMMDD-N-slug>.md` entry (an open questi
 
 - **Output**: one markdown plan in a ` ```markdown ` fence, returned to the caller.
 - **One-shot**: produce, return, exit. On re-invocation regenerate the full markdown from scratch — no patching of prior output.
-- **Scope is read-only analysis + markdown emission.** File writes, HTML rendering, binary invocations, plan execution all belong to the hook downstream.
+- **Scope is read-only analysis + markdown emission.** File writes, binary invocations, plan execution all belong to the hook downstream.
 
 ## Design Constraints
 
@@ -180,7 +106,3 @@ When the task traces back to an `ideas/<YYMMDD-N-slug>.md` entry (an open questi
 ### Why fork works inside plan mode
 
 Plan mode blocks Edit, Write, NotebookEdit, and Task tools. The Skill tool isn't restricted. When invoked, the forked subagent operates in its own context — outside plan-mode tool restrictions. It can run Bash and read the codebase to inform decomposition.
-
-### Why a per-unit topology fence, not a plan-level one
-
-The plan-level shape is "a list of units in order." Topology is for the within-unit dispatch pattern when a unit really does dispatch multiple agents. v1 deliberately omits a plan-level topology diagram; the plan dir + per-unit topology fence covers the cases where multi-agent visualization helps.

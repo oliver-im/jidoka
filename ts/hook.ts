@@ -15,9 +15,7 @@ import {
   resolveTargetDir,
   setupWorktree,
   todayYymmddLocal,
-  writePlanHtml,
 } from "./materialize.js";
-import { openBrowser } from "./output.js";
 import { parsePlanMarkdown } from "./parse-markdown.js";
 import { formatError, isValidId, validatePlan } from "./validate.js";
 
@@ -42,8 +40,6 @@ interface HookConfig {
    * git_workflow path resolves the main checkout from here. */
   projectDir: string;
   plansRoot: string;
-  autoOpenBrowser: boolean;
-  htmlOutput: boolean;
   cfg: Config;
 }
 
@@ -55,7 +51,6 @@ function configFromEnv(): HookConfig {
     );
   }
   const cfg = loadConfig(projectDir);
-  const noOpen = process.env["JIDOKA_NO_OPEN"] !== undefined;
   const plansRoot = isAbsolute(cfg.plan_dir_root)
     ? cfg.plan_dir_root
     : join(projectDir, cfg.plan_dir_root);
@@ -63,8 +58,6 @@ function configFromEnv(): HookConfig {
     today: todayYymmddLocal(),
     projectDir,
     plansRoot,
-    autoOpenBrowser: cfg.auto_open_browser && !noOpen,
-    htmlOutput: cfg.html_output,
     cfg,
   };
 }
@@ -186,7 +179,6 @@ export function runWithInput(input: string, config: HookConfig): void {
     }
     const finalDirName = basename(target);
     materializeAt(plan, staging, config.cfg, finalDirName);
-    if (config.htmlOutput) writePlanHtml(plan, staging, finalDirName);
     renameSync(staging, target);
   } catch (e) {
     try {
@@ -205,16 +197,6 @@ export function runWithInput(input: string, config: HookConfig): void {
 
   process.stderr.write(`Wrote plan to ${target}\n`);
   if (worktreeNote !== undefined) process.stderr.write(worktreeNote + "\n");
-
-  if (config.autoOpenBrowser && config.htmlOutput) {
-    try {
-      openBrowser(join(target, "overview.html"));
-    } catch (e) {
-      process.stderr.write(
-        `jidoka hook: could not open browser: ${(e as Error).message}\n`,
-      );
-    }
-  }
 }
 
 function emitDeny(message: string): void {

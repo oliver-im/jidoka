@@ -3,7 +3,6 @@ import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
-  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -37,8 +36,6 @@ const testConfig = (project: string): HookConfig => ({
   today: "260505",
   projectDir: project,
   plansRoot: join(project, "notes/plan"),
-  autoOpenBrowser: false,
-  htmlOutput: true,
   cfg: defaultConfig,
 });
 
@@ -66,8 +63,6 @@ const gitWorkflowConfig = (repo: string): HookConfig => ({
   today: "260505",
   projectDir: repo,
   plansRoot: join(repo, defaultConfig.plan_dir_root),
-  autoOpenBrowser: false,
-  htmlOutput: false,
   cfg: { ...defaultConfig, git_workflow: true },
 });
 
@@ -165,7 +160,7 @@ describe("runWithInput: missing or empty plan", () => {
 });
 
 describe("runWithInput: valid plan", () => {
-  it("parses markdown, materializes, writes overview.html", () => {
+  it("parses markdown and materializes the plan dir", () => {
     const project = makeTempDir("valid-proj");
     runWithInput(
       stdin(`valid-${process.pid}`, validPlanMd),
@@ -177,17 +172,6 @@ describe("runWithInput: valid plan", () => {
     expect(existsSync(join(target, "overview.md"))).toBe(true);
     expect(existsSync(join(target, "progress.md"))).toBe(true);
     expect(existsSync(join(target, "01-only-unit.md"))).toBe(true);
-    expect(existsSync(join(target, "overview.html"))).toBe(true);
-    rmSync(project, { recursive: true, force: true });
-  });
-
-  it("htmlOutput=false skips overview.html", () => {
-    const project = makeTempDir("nohtml-proj");
-    const cfg = { ...testConfig(project), htmlOutput: false };
-    runWithInput(stdin(`nohtml-${process.pid}`, validPlanMd), cfg);
-    const target = join(project, "notes/plan/260505-0-hook-test-plan");
-    expect(existsSync(join(target, "overview.md"))).toBe(true);
-    expect(existsSync(join(target, "overview.html"))).toBe(false);
     rmSync(project, { recursive: true, force: true });
   });
 
@@ -203,43 +187,6 @@ describe("runWithInput: valid plan", () => {
     expect(existsSync(join(target, "01-only-unit.md"))).toBe(true);
     rmSync(project, { recursive: true, force: true });
   });
-
-  it("plan with topology fence persists topology in unit md", () => {
-    const project = makeTempDir("topo-proj");
-    const planMd = `# Plan with topology
-
-## Unit 01: Multi-agent
-
-Dispatch a couple of agents.
-
-\`\`\`topology
-{
-  "task_summary": "Build X",
-  "execution_mode": "subagents",
-  "agents": [
-    {
-      "id": "a",
-      "role": "Do A",
-      "model": "sonnet",
-      "tools": [],
-      "blocked_by": [],
-      "background": false
-    }
-  ]
-}
-\`\`\`
-`;
-    runWithInput(stdin(`topo-${process.pid}`, planMd), testConfig(project));
-    const unitMd = readFileSync(
-      join(project, "notes/plan/260505-0-plan-with-topology/01-multi-agent.md"),
-      "utf8",
-    );
-    // The renderer turns the typed topology into a Mermaid block — the raw
-    // ```topology fence must not be re-rendered as JSON.
-    expect(unitMd).not.toContain("```topology");
-    expect(unitMd).toContain("```mermaid");
-    rmSync(project, { recursive: true, force: true });
-  });
 });
 
 describe("runWithInput: parse / validation errors", () => {
@@ -253,26 +200,6 @@ describe("runWithInput: parse / validation errors", () => {
     expect(out).toContain("PreToolUse");
     expect(out).toContain("deny");
     expect(out).toContain("cannot parse plan markdown");
-    expect(existsSync(join(project, "notes/plan"))).toBe(false);
-    rmSync(project, { recursive: true, force: true });
-  });
-
-  it("topology fence error surfaces as deny with units[k].topology prefix", () => {
-    const project = makeTempDir("badtopo-proj");
-    const planMd = `# Plan
-
-## Unit 01: Bad fence
-
-S.
-
-\`\`\`topology
-not json
-\`\`\`
-`;
-    runWithInput(stdin(`badtopo-${process.pid}`, planMd), testConfig(project));
-    const out = stdoutChunks.join("");
-    expect(out).toContain("deny");
-    expect(out).toContain("units[0].topology");
     expect(existsSync(join(project, "notes/plan"))).toBe(false);
     rmSync(project, { recursive: true, force: true });
   });
@@ -309,7 +236,6 @@ describe("runWithInput: filesystem behavior", () => {
     );
     // Existing dir untouched.
     expect(existsSync(oldTarget)).toBe(true);
-    expect(existsSync(join(oldTarget, "overview.html"))).toBe(false);
     // Fresh dir at counter=1.
     const newTarget = join(project, "notes/plan/260505-1-hook-test-plan");
     expect(existsSync(join(newTarget, "overview.md"))).toBe(true);
@@ -440,8 +366,6 @@ describe("runWithInput: git_workflow worktree scaffolding", () => {
       today: "260505",
       projectDir: existing,
       plansRoot: join(existing, defaultConfig.plan_dir_root),
-      autoOpenBrowser: false,
-      htmlOutput: false,
       cfg: { ...defaultConfig, git_workflow: true },
     };
     runWithInput(stdin(`wtnest-${process.pid}`, validPlanMd), cfg);

@@ -9,7 +9,6 @@ import {
 } from "node:fs";
 import { basename, isAbsolute, join } from "node:path";
 import type { Config } from "./config.js";
-import { renderPlanHtml } from "./html.js";
 import { buildOverviewMd, buildProgressMd, buildUnitMd } from "./render-md.js";
 import type { Plan } from "./types.js";
 
@@ -151,17 +150,6 @@ export function materializeAt(
   for (const unit of plan.units) {
     atomicWrite(join(targetDir, `${unit.id}.md`), buildUnitMd(unit));
   }
-}
-
-/** Writes `<targetDir>/overview.html` from the plan + dir name. */
-export function writePlanHtml(
-  plan: Plan,
-  targetDir: string,
-  dirNameOverride?: string,
-): void {
-  const dirName = dirNameOverride ?? basename(targetDir) ?? plan.slug;
-  const html = renderPlanHtml(plan, dirName);
-  atomicWrite(join(targetDir, "overview.html"), html);
 }
 
 function atomicWrite(path: string, contents: string): void {

@@ -1,3 +1,5 @@
+> **STATUS: superseded** · chose Chrome DevTools MCP + Playwright MCP to debug jidoka's rendered HTML (Mar 2026); the HTML rendering subsystem was later excised (Jun 2026), so there is no rendered HTML left to debug · kept as record. Retained as the research that informed the now-removed browser-output path.
+
 # Browser Debugging MCP Servers
 
 Research date: 2026-03-22

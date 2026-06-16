@@ -11,14 +11,11 @@ Interactive first-run configuration for the jidoka plugin. Runs **outside** the 
 
 ## What you write
 
-A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/jidoka/config.json`. Every run writes all eight top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
+A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/jidoka/config.json`. Every run writes all five top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
 
 | Key | Type | Default | Question to ask |
 |---|---|---|---|
 | `plan_dir_root` | string | `docs/exec-plans/active` | "Where should jidoka write plan dirs? (project-relative; defaults to `docs/exec-plans/active/` — the lifecycle convention's active slot. Simpler conventionless alternative: `plan/`.)" |
-| `auto_open_browser` | bool | `false` | "Auto-open overview.html in the browser after a successful materialize? (default off — most users view the markdown in their editor; set true if you want a browser pop)" |
-| `html_output` | bool | `false` | "Render overview.html alongside the markdown files? (default off — set true if you want the rendered HTML view; otherwise just the .md files)" |
-| `plan_level_topology` | bool | `false` | _(reserved for v2 — don't ask; always write `false`)_ |
 | `git_workflow` | bool | `false` | _(don't ask; write `false`. Set `true` by hand to opt into the worktree-per-plan / branch-per-unit workflow — jidoka then renders a `## Git workflow` reminder into each `progress.md`. Also settable per-repo in a committed `.jidoka.json`.)_ |
 | `pre_review` | ReviewStep[] | `["/jidoka:pre-plan-review"]` | _(don't ask; write the shipped default)_ |
 | `unit_review` | ReviewStep[] | `["/code-review"]` | _(don't ask; write the shipped default)_ |
@@ -42,7 +39,7 @@ Each entry in `pre_review` / `unit_review` / `plan_review` is a **review step**,
 
 ### Template to write
 
-Use this exact JSONC layout, substituting the three scalar answers from the questionnaire. The comments are part of the file — preserve them verbatim:
+Use this exact JSONC layout, substituting the `plan_dir_root` answer from the questionnaire. The comments are part of the file — preserve them verbatim:
 
 ```jsonc
 {
@@ -50,17 +47,6 @@ Use this exact JSONC layout, substituting the three scalar answers from the ques
   // lifecycle convention's active slot; "plan" is the simpler conventionless
   // alternative.
   "plan_dir_root": "docs/exec-plans/active",
-
-  // Open overview.html in the browser after a successful materialize.
-  // Most users view the markdown in their editor; set true for a browser pop.
-  "auto_open_browser": false,
-
-  // Render overview.html alongside the .md files. Off by default;
-  // set true if you want the rendered HTML view.
-  "html_output": false,
-
-  // Reserved for v2 — leave as false.
-  "plan_level_topology": false,
 
   // Opt into the recommended execution workflow — each plan worked in its own
   // git worktree, one branch per unit (squash to the plan branch, --no-ff to
@@ -121,8 +107,8 @@ These defaults give you a sensible review pipeline out of the box: `/jidoka:pre-
 ## Process
 
 1. Check whether `~/.claude/plugins/jidoka/config.json` already exists (Read or Bash with `test -f`). If it does, show its contents and ask the user whether to overwrite it or keep what's there. If they want surgical edits, point them at the file path and the README's "Editing review commands" section.
-2. Walk through each user-facing setting in order using `AskUserQuestion`. Show the default in the prompt; accept Enter-for-default. Validate input as you go (no empty `plan_dir_root`, etc.). The auto-populated keys (`plan_level_topology`, `git_workflow`, `pre_review`, `unit_review`, `plan_review`) are not asked; they get written at their defaults.
-3. Show a preview of the resulting JSONC (template above with the three scalar answers substituted in, comments preserved). Ask `confirm / edit / abort`.
+2. Walk through each user-facing setting in order using `AskUserQuestion`. Show the default in the prompt; accept Enter-for-default. Validate input as you go (no empty `plan_dir_root`, etc.). The auto-populated keys (`git_workflow`, `pre_review`, `unit_review`, `plan_review`) are not asked; they get written at their defaults.
+3. Show a preview of the resulting JSONC (template above with the `plan_dir_root` answer substituted in, comments preserved). Ask `confirm / edit / abort`.
 4. On `confirm`: `mkdir -p ~/.claude/plugins/jidoka && write the file`. Print the path. Mention that customizing review commands is a direct edit of this file — the inline comments document the schema, and the README's "Editing review commands" section has additional examples.
 5. On `edit`: jump back to the question whose answer the user wants to change.
 6. On `abort`: write nothing.

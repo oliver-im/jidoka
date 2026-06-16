@@ -63,4 +63,4 @@ Optionally add one line of context if the code has since evolved past the plan's
 - `../CONVENTION.md` — the portable three-kind lifecycle (ideas / exec-plans / design-docs) and its two rules.
 - `index.md` (this dir) and `../{ideas,design-docs}/index.md` — what each kind holds and its drift rule.
 - `../agent-guide.md` — what `/jidoka` emits and the heuristics it follows.
-- `../data-model.md` — Plan and Unit schema, plus the per-unit Topology shape.
+- `../data-model.md` — Plan and Unit schema, plus the review-step model.

@@ -1,3 +1,5 @@
+> **STATUS: superseded** · chose Mermaid as the V1 diagram backend (Mar 2026); the entire topology/Mermaid/HTML rendering subsystem was later excised (Jun 2026), leaving jidoka a pure plan-markdown materializer · kept as record. The evaluation below documents why Mermaid was chosen at the time and what the diagram view offered before removal — it no longer reflects the shipped tool.
+
 # Diagram Rendering Analysis (March 2026)
 
 Whether Mermaid is the right rendering backend for jidoka, or whether an alternative produces better results for this workload.
