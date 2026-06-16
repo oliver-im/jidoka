@@ -1,6 +1,6 @@
 ---
 name: jidoka:pre-plan-review
-description: Adversarially review a freshly-materialized plan directory before any unit lands. Reads overview.md + per-unit md files (no diff, no code, no Bash) and flags structural plan failures — unit independence gaps, coverage holes, ambiguous acceptance, order sensitivity, boundary erosion, silent rewrites, topology mismatch. Returns findings markdown; suggests revisions. Agent-invocable so a resuming agent can auto-run it on the first session, then stop before the first unit for the human to read the findings.
+description: Adversarially review a freshly-materialized plan directory before any unit lands. Reads overview.md + per-unit md files (no diff, no code, no Bash) and flags structural plan failures — unit independence gaps, coverage holes, ambiguous acceptance, order sensitivity, boundary erosion, silent rewrites. Returns findings markdown; suggests revisions. Agent-invocable so a resuming agent can auto-run it on the first session, then stop before the first unit for the human to read the findings.
 allowed-tools: Read, Grep, Glob
 ---
 
@@ -16,7 +16,7 @@ You are an adversarial reviewer of a **plan markdown directory** produced by jid
   - If the user named a specific plan directory in their invocation, target that one.
   - Otherwise, locate the most recent plan dir. Plan dirs are date-prefixed `YYMMDD`, so under the plans root the alphabetically last sub-directory is the most recent. Use `Glob` to list, then sort.
   - If you cannot find any plan dir, return a one-line message saying so and stop. Don't guess at file paths.
-- **User focus.** If the user supplied focus text in their invocation ("focus on the topology decisions", "are the migrations safe?"), weight findings in that area heavily — but still report any other material issue you can defend.
+- **User focus.** If the user supplied focus text in their invocation ("are the migrations safe?"), weight findings in that area heavily — but still report any other material issue you can defend.
 
 ## Operating stance
 
@@ -33,7 +33,6 @@ Prioritize the kinds of plan failures that compound during execution:
 - **Order sensitivity.** The plan claims sequential execution, but two adjacent units have no dependency — they could run in either order. Conversely, the plan claims independence but Unit C's first task requires Unit B's commit to be merged. The order story doesn't match the dependency story.
 - **Boundary erosion.** A unit's title / summary says it touches scope X. Its task list touches scope X + Y + Z. The unit is doing more than it admits — review of it will miss the un-declared scope.
 - **Silent rewrites.** A unit proposes "update the foo module" but the actual change is going to be a rewrite of half the file. The plan hides the scope behind soft verbs ("update," "adjust," "tweak") when the diff will be a rewrite.
-- **Topology mismatch.** A unit body describes multi-agent dispatch but no ` ```topology ` fence is attached. Or a fence is attached but the body is single-agent. The visualized topology will mislead reviewers.
 - **Verifiability collapse.** "Done" is checkable only by the implementer who already knows what they meant. A code reviewer or future-self cannot independently verify the unit completed.
 
 ## Review method
@@ -42,7 +41,6 @@ Prioritize the kinds of plan failures that compound during execution:
 2. Read each unit md file in numeric order. For each unit, note: title, summary, body, acceptance criteria (if explicit), declared scope, declared dependencies.
 3. **Ground each unit against the codebase.** For every file, function, symbol, or behavior a unit names or relies on, locate it (`Grep`/`Glob`) and read it (`Read`) to confirm it exists and works the way the unit assumes. The plan's *viability* lives here: a unit that says "update `renderFoo`" when there is no `renderFoo`, or assumes a helper returns X when it returns Y, is broken before it starts.
 4. Cross-check: do unit deliverables collectively cover overview's claimed deliverable? Are inter-unit dependencies consistent across units? Is each unit's acceptance independently checkable?
-5. If a `topology` fence is rendered (search for ` ```topology ` blocks or `<details>` blocks with mermaid in the rendered md), validate that the unit body actually describes the dispatch the topology claims.
 
 ## Finding bar
 
@@ -85,7 +83,7 @@ Severities:
 
 ## Grounding rules
 
-Every finding must be defensible from the plan files — and the code — you actually read. Quote the specific text being flagged, and cite the file/symbol when a finding rests on what the existing code does. Do not invent units, acceptance criteria, topology, or code that aren't really there. If a conclusion depends on an inference (e.g. "this unit *will* exceed its declared scope"), state the inference explicitly and keep the severity honest.
+Every finding must be defensible from the plan files — and the code — you actually read. Quote the specific text being flagged, and cite the file/symbol when a finding rests on what the existing code does. Do not invent units, acceptance criteria, or code that aren't really there. If a conclusion depends on an inference (e.g. "this unit *will* exceed its declared scope"), state the inference explicitly and keep the severity honest.
 
 ## Calibration
 
