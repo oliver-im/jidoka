@@ -1,6 +1,6 @@
 # 260616-0-excise-the-topology-and-html-rendering-subsystem — Progress
 
-**Cursor:** 02-excise-the-topology-data-model-and-mermaid-renderer (not started).
+**Cursor:** 03-retire-the-asset-generation-build-step (not started).
 
 ## Pre-execution review
 
@@ -19,6 +19,7 @@ This plan is worked in its own git worktree, one branch per unit. Full steps: `d
 ## Done
 
 - **Unit 01 — Remove the HTML/browser output and topology CLI command** ✅ Deleted `html.ts`/`output.ts`/`schema.ts`/`describe.ts`/`example.ts` + their tests; removed the standalone topology-render CLI command, the HTML render + browser-open path, and the `html_output`/`auto_open_browser`/`plan_level_topology` config flags. Markdown materialize path, hook exit-0 contract, and `isValidId` preserved. Build + 293 tests + typecheck green; `dist/cli.js` rebuilt. Reviews (`/code-review` + codex exec) clean. Squash: `39b1fec`.
+- **Unit 02 — Excise the topology data model and Mermaid renderer** ✅ Removed the `Topology`/`Agent`/`Output` types + their zod schemas/serializers + `parseTopology(Json)`, the `topology` field on `Unit`, topology validation (`validateTopology` + agent error kinds + the `mermaid_id_collision` check + the per-unit topology loop), topology-fence parsing (`extractTopologyFence`), and the Mermaid renderer (`mermaid.ts` + `graph.ts` + the `unit.md.eta` mermaid block). Plan-markdown parsing + plan/unit validation behave exactly as before; a `topology` fence now stays inline in `body_markdown` as prose (regression test added). Kept `isValidId`/`AGENT_ID_RE`, `Color`, `detectUnitCycles`, `empty_task_summary`, the ReviewStep machinery. Build + 190 tests + typecheck green; `dist/cli.js` rebuilt. Reviews (`/code-review` + codex exec) clean. Squash: `ff041d1`.
 
 ## Blockers
 
