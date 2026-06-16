@@ -1,6 +1,8 @@
+> **STATUS: completed · 2026-06 · realized-by the excise-topology-and-html-rendering commit series (`faa1f8e`→`b454917`), merged to `main` via `--no-ff`.** Excised the per-unit topology model, the Mermaid diagram renderer, and the HTML/browser output from jidoka end to end — leaving a pure plan-markdown → reviewable-markdown-units materializer (parse → validate → materialize → ExitPlanMode hook) plus the config-driven review pipeline. Unit 01 removed the HTML render + browser-open path, the standalone topology-render CLI command, and the `html_output`/`auto_open_browser`/`plan_level_topology` config flags; Unit 02 removed the `Topology`/`Agent`/`Output` types + zod schemas + `parseTopology`, topology validation, and topology-fence parsing, plus the Mermaid/`graph`/`describe` renderers (a ` ```topology ` fence now stays inline as prose); Unit 03 retired the asset-generation build step + HTML templates + `static/`; Unit 04 pruned topology/HTML guidance from the three runtime skill contracts; Unit 05 pruned the human docs + plugin manifests and superseded the two diagram/HTML design docs. Suite went 293 → 190 tests (all green); `dist/cli.js` rebuilt and committed; per-unit reviews (`/code-review` + codex) and the plan-level review came back clean — the plan-level pass's one MED (drifted CLI examples in the *active dated design records*) was accepted as out-of-scope historical context.
+
 # 260616-0-excise-the-topology-and-html-rendering-subsystem — Progress
 
-**Cursor:** all units complete — Unit 05 done. **Plan-level review pending** (see `## Plan-level review` below), then archival.
+**Cursor:** complete — all 5 units done, plan-level review done, archived to `completed/` and merged to `main`.
 
 ## Pre-execution review
 
