@@ -1,6 +1,6 @@
 # 260616-0-excise-the-topology-and-html-rendering-subsystem — Progress
 
-**Cursor:** 03-retire-the-asset-generation-build-step (not started).
+**Cursor:** 04-update-the-jidoka-skill-contract (not started).
 
 ## Pre-execution review
 
@@ -20,6 +20,7 @@ This plan is worked in its own git worktree, one branch per unit. Full steps: `d
 
 - **Unit 01 — Remove the HTML/browser output and topology CLI command** ✅ Deleted `html.ts`/`output.ts`/`schema.ts`/`describe.ts`/`example.ts` + their tests; removed the standalone topology-render CLI command, the HTML render + browser-open path, and the `html_output`/`auto_open_browser`/`plan_level_topology` config flags. Markdown materialize path, hook exit-0 contract, and `isValidId` preserved. Build + 293 tests + typecheck green; `dist/cli.js` rebuilt. Reviews (`/code-review` + codex exec) clean. Squash: `39b1fec`.
 - **Unit 02 — Excise the topology data model and Mermaid renderer** ✅ Removed the `Topology`/`Agent`/`Output` types + their zod schemas/serializers + `parseTopology(Json)`, the `topology` field on `Unit`, topology validation (`validateTopology` + agent error kinds + the `mermaid_id_collision` check + the per-unit topology loop), topology-fence parsing (`extractTopologyFence`), and the Mermaid renderer (`mermaid.ts` + `graph.ts` + the `unit.md.eta` mermaid block). Plan-markdown parsing + plan/unit validation behave exactly as before; a `topology` fence now stays inline in `body_markdown` as prose (regression test added). Kept `isValidId`/`AGENT_ID_RE`, `Color`, `detectUnitCycles`, `empty_task_summary`, the ReviewStep machinery. Build + 190 tests + typecheck green; `dist/cli.js` rebuilt. Reviews (`/code-review` + codex exec) clean. Squash: `ff041d1`.
+- **Unit 03 — Retire the asset-generation build step** ✅ Deleted `scripts/generate-assets.mjs`, the `static/` sidecar (`style.css`/`script.js`), the HTML templates (`page.eta`/`page.html`/`plan.eta`/`plan.html`), and the orphaned (gitignored) `ts/assets.generated.ts`. Rewired `package.json`: dropped the `build:assets` script, simplified `build`→`node scripts/build.mjs`, `typecheck`→`tsc --noEmit`, `test:watch`→`vitest` (kept `pretest`=`npm run build`), and corrected the `description`. Removed the now-dead `.gitignore` entry for the generated file. Runtime templates (`overview`/`progress`/`unit` `.eta`) and `scripts/build.mjs` kept; `dist/cli.js` rebuilds byte-identical (not in the diff). Build + 190 tests + typecheck green. Reviews (`/code-review` 3-angle + codex exec) clean; codex's lone note (stale build-section lines in `developer-guide.md`) is deferred to Unit 05 — see the carry-forward note below. Squash: `fe51148`.
 
 ## Blockers
 
@@ -31,6 +32,7 @@ _None._
 - On the **first session**, run the Pre-execution review checklist above before starting the cursor unit. Surface findings and revise the plan if anything material lands.
 - Work one unit at a time. After finishing the cursor unit, run its review steps, then update this file: move the unit into Done with a one-liner and advance the cursor to the next unit id.
 - Stop after each unit. Surface a brief summary to the user and wait for explicit go-ahead before starting the next unit. If the unit is blocked, record it under Blockers and stop without advancing the cursor.
+- **Carry-forward to Unit 05 (from the Unit 03 review):** `docs/developer-guide.md` has build-process drift that Unit 05's completeness grep (`topolog|mermaid|html_output|auto_open_browser|plan_level_topology`) will **not** catch. In the **Development Setup → Building** section: the `npm run build` comment still reads "generate assets + bundle" (now bundle-only — `build:assets` was removed in Unit 03), and the line below still says "rebuild after editing anything in `ts/` or `static/`" (`static/` was deleted in Unit 03). Fix both when pruning that doc so its descriptions match the shipped tool.
 
 ## Plan-level review
 
