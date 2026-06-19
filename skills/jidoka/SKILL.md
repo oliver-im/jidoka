@@ -7,17 +7,17 @@ user-invocable: false
 
 # jidoka
 
-You produce a **plan markdown** for the caller. The renderer (the ExitPlanMode hook) handles validation and materialization (writing `overview.md` + `progress.md` + per-unit md files). Your job is to analyze the task, decompose it into units, and output conforming markdown.
+You produce a **plan markdown** that becomes ExitPlanMode's `plan` argument. The renderer (the ExitPlanMode hook) handles validation and materialization (writing `overview.md` + `progress.md` + per-unit md files). Your job is to analyze the task, decompose it into units, and output conforming markdown.
 
 ## Process
 
 ### Step 1: Analyze and produce a plan
 
-Read the codebase using Read, Grep, Glob, then decompose the task into the markdown shape below.
+Read the codebase using Read, Grep, Glob, and Bash, then decompose the task into the markdown shape below.
 
-### Step 2: Return the markdown
+### Step 2: Emit the markdown for ExitPlanMode
 
-Output the complete plan markdown in a single ` ```markdown ` fence so the caller can copy-paste it into ExitPlanMode's `plan` argument. The caller (main agent) decides what to do — typically reviews and either accepts (calls ExitPlanMode) or re-invokes you with adjustments.
+Output the complete plan markdown in a single ` ```markdown ` fence — it round-trips verbatim, since the hook's parser unwraps an outer ` ```markdown ` wrapper before parsing. Then call ExitPlanMode yourself with that markdown as the `plan` argument. If the plan needs changes, regenerate the whole thing from scratch rather than patching a prior draft (one-shot — see below).
 
 You do **not** save the markdown anywhere. The hook reads it directly from PreToolUse stdin's `tool_input.plan` field when ExitPlanMode fires; nothing else needs to mediate.
 
@@ -62,7 +62,7 @@ Tolerated heading variants (the parser canonicalizes them — pick whichever rea
 
 Each unit must be:
 
-1. **Reviewable on its own** — a code review or adversarial-review pass can check it without needing context from sibling units.
+1. **Reviewable on its own** — a code review or adversarial-review pass can check it without needing context from sibling units. The sharp test: can you build / test / run this slice independently? Prefer a vertical slice you can exercise on its own over a horizontal layer that only makes sense once a later unit wires it up.
 2. **Finishable in one session including reviews** — the work, the review, the fixes, and the commit all fit in one focused pass.
 
 No fixed line/time budget. Most plans land at **3–7 units**. Two-unit plans are rare; ten-unit plans usually want to split into two plans.
@@ -93,16 +93,18 @@ When the task traces back to an `ideas/<YYMMDD-N-slug>.md` entry (an open questi
 
 ## Contract
 
-- **Output**: one markdown plan in a ` ```markdown ` fence, returned to the caller.
-- **One-shot**: produce, return, exit. On re-invocation regenerate the full markdown from scratch — no patching of prior output.
-- **Scope is read-only analysis + markdown emission.** File writes, binary invocations, plan execution all belong to the hook downstream.
+- **Output**: one markdown plan in a ` ```markdown ` fence, passed to ExitPlanMode's `plan` argument.
+- **One-shot**: produce the complete plan in a single pass. On re-invocation regenerate the full markdown from scratch — no patching of prior output.
+- **Scope is read-only analysis + markdown emission.** Everything downstream is out of scope — the hook materializes the dir; the resuming agent executes units and runs reviews. None of it is the skill's job.
 
 ## Design Constraints
 
+### Runs inline, not as a fork
+
+This skill has no `context: fork` in its frontmatter, so Claude Code runs it **inline** — its instructions enter the *same* context the planning agent is already in (composing with plan mode's native prompt), rather than spawning an isolated subagent. That's deliberate: inline, the skill sees the live plan-mode conversation — the task as it developed, the codebase notes, the back-and-forth with the user — which is exactly the raw material decomposition needs. A `context: fork` subagent would start blind, with only this file as its prompt.
+
+Inline keeps the skill under plan mode's restrictions, but it never needs to escape them: plan mode blocks the *mutating* tools (Edit, Write, NotebookEdit, Task), and this skill only uses read-only analysis tools (Read, Grep, Glob, and Bash for inspection). `allowed-tools` just pre-approves those so they don't prompt for permission.
+
 ### Why one-shot
 
-`AskUserQuestion` does not surface inside a forked subagent — the fork runs to completion autonomously. The skill produces and returns. The caller (main agent) handles iteration using `AskUserQuestion` at the main-agent level, then re-invokes the skill with feedback baked into the prompt.
-
-### Why fork works inside plan mode
-
-Plan mode blocks Edit, Write, NotebookEdit, and Task tools. The Skill tool isn't restricted. When invoked, the forked subagent operates in its own context — outside plan-mode tool restrictions. It can run Bash and read the codebase to inform decomposition.
+One-shot is a **design choice, not a platform limit.** The skill isn't barred from `AskUserQuestion` — inline skills inherit the agent's tools, `allowed-tools` pre-approves rather than restricts, and plan mode itself permits clarifying questions — but it deliberately doesn't ask. It does one thing: analyze the task and emit a complete plan in a single pass. Clarification and iteration live one level up — the agent gathers what it needs (via `AskUserQuestion` in the normal plan-mode loop, before or after running the skill) and re-runs the skill with that folded in, regenerating the whole plan rather than patching. Every invocation yields a fresh, complete plan, which keeps the renderer's input simple.

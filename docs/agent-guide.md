@@ -32,9 +32,8 @@ You do **not** save the markdown anywhere. The hook reads it directly from PreTo
 
 Each unit must satisfy these constraints:
 
-1. **Reviewable on its own.** A code-review or adversarial-review pass on the unit's diff should be meaningful without context from sibling units. If reviewing unit 03 requires understanding units 01–02 simultaneously, you've split incorrectly.
-2. **Independently testable.** Prefer a vertical slice you can exercise (build / test / run) on its own over a horizontal layer that only makes sense once a later unit wires it up. Testability is the sharp version of "reviewable on its own": if the slice can be tested, the per-unit review gate has something coherent to judge.
-3. **Finishable in one session including reviews.** The work, the review, the fixes, and the commit all fit in one focused session. If a unit takes three sessions, split it.
+1. **Reviewable on its own.** A code-review or adversarial-review pass on the unit's diff should be meaningful without context from sibling units. If reviewing unit 03 requires understanding units 01–02 simultaneously, you've split incorrectly. The sharp test: can you build / test / run this slice independently? Prefer a vertical slice you can exercise on its own over a horizontal layer that only makes sense once a later unit wires it up — if the slice can be tested, the per-unit review gate has something coherent to judge.
+2. **Finishable in one session including reviews.** The work, the review, the fixes, and the commit all fit in one focused session. If a unit takes three sessions, split it.
 
 No fixed line/time budget. Most plans land at **3–7 units**. Two-unit plans are rare (usually a single unit is enough). Ten-unit plans usually want to split into two plans with their own dirs.
 

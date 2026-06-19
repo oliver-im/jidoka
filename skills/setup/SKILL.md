@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # jidoka:setup
 
-Interactive first-run configuration for the jidoka plugin. Runs **outside** the planning fork — `AskUserQuestion` works here, unlike inside `/jidoka`.
+Interactive first-run configuration for the jidoka plugin. Unlike `/jidoka` — which runs one-shot during plan mode and emits its plan without prompting — this skill is interactive by design: you invoke it directly and it uses `AskUserQuestion` to walk through the config.
 
 ## What you write
 
