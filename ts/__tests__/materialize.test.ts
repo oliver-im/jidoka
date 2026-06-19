@@ -122,7 +122,7 @@ describe("materialize", () => {
     expect(progress).toContain("## Pre-execution review");
     expect(progress).toContain("- [ ] `/jidoka:pre-plan-review`");
     expect(progress).toContain("## Plan-level review");
-    expect(progress).toContain("_No plan-level reviews configured.");
+    expect(progress).toContain('codex exec -s read-only "{focus}"');
     expect(progress).not.toContain("## Git workflow");
 
     const u01 = readFileSync(join(target, "01-prep.md"), "utf8");

@@ -19,7 +19,7 @@ A JSONC file (JSON with `//` comments — the reader strips them before parsing)
 | `git_workflow` | bool | `false` | _(don't ask; write `false`. Set `true` by hand to opt into the worktree-per-plan / branch-per-unit workflow — jidoka then renders a `## Git workflow` reminder into each `progress.md`. Also settable per-repo in a committed `.jidoka.json`.)_ |
 | `pre_review` | ReviewStep[] | `["/jidoka:pre-plan-review"]` | _(don't ask; write the shipped default)_ |
 | `unit_review` | ReviewStep[] | `["/code-review"]` | _(don't ask; write the shipped default)_ |
-| `plan_review` | ReviewStep[] | `[]` | _(don't ask; write the shipped default)_ |
+| `plan_review` | ReviewStep[] | `[{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }]` | _(don't ask; write the shipped default)_ |
 
 ### Review step forms
 
@@ -98,11 +98,11 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
   // codex needs /codex:setup + `codex login` first. Leaving this [] but still
   // running the composer falls back to a default codex command.
   // Example: [{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }]
-  "plan_review": []
+  "plan_review": [{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }]
 }
 ```
 
-These defaults give you a sensible review pipeline out of the box: `/jidoka:pre-plan-review` flags structural plan issues before any unit lands, the built-in `/code-review` reviews each unit's diff, and the plan-level slot is opt-in. Customizing is a hand-edit of `~/.claude/plugins/jidoka/config.json` after setup: add or remove slash commands **or `{ run, mode }` templates** in any of the three arrays (see "Review step forms" above). The README's "Editing review commands" section has more examples. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
+These defaults give you a sensible review pipeline out of the box: `/jidoka:pre-plan-review` flags structural plan issues before any unit lands, the built-in `/code-review` reviews each unit's diff, and the plan-level slot ships on (a `codex exec` template, agent-run; set `[]` to disable). Customizing is a hand-edit of `~/.claude/plugins/jidoka/config.json` after setup: add or remove slash commands **or `{ run, mode }` templates** in any of the three arrays (see "Review step forms" above). The README's "Editing review commands" section has more examples. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
 
 ## Process
 

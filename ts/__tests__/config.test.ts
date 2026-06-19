@@ -28,7 +28,9 @@ describe("defaults", () => {
 
   it("ships a unit-level pipeline matching today's behavior", () => {
     expect(defaultConfig.unit_review).toEqual(["/code-review"]);
-    expect(defaultConfig.plan_review).toEqual([]);
+    expect(defaultConfig.plan_review).toEqual([
+      { run: "codex exec -s read-only \"{focus}\"", mode: "exec" },
+    ]);
   });
 
   it("ships a pre-execution review defaulting to /jidoka:pre-plan-review", () => {

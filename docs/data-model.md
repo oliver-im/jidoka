@@ -146,7 +146,7 @@ Object form (not a prefix-tagged string) because a bash template can legitimatel
 |---|---|---|---|---|
 | Pre-execution | `pre_review` | `progress.md` (`## Pre-execution review`, above Done) | `["/jidoka:pre-plan-review"]` | On the first session, before Unit 01 — the resuming agent works through it against the freshly materialized plan dir, then stops: it auto-runs the agent-invocable steps (the default `/jidoka:pre-plan-review`, or an `exec` template) and surfaces any `print` template / operator-run slash command for the human. Reviews the plan *as a plan* — no diff exists yet. |
 | Per-unit | `unit_review` | Each `<id>.md` (`## Review pipeline`) | `["/code-review"]` | After the unit's diff lands and before it's committed. Local correctness gate on the unit's working-tree diff. |
-| Plan-level | `plan_review` | `progress.md` (`## Plan-level review`, below Notes) | `[]` | After the last unit's review lands and is committed. Adversarial pass against the cumulative *committed* plan diff — the completeness net for cross-unit issues. |
+| Plan-level | `plan_review` | `progress.md` (`## Plan-level review`, below Notes) | `[{ run: "codex exec -s read-only \"{focus}\"", mode: "exec" }]` | After the last unit's review lands and is committed. Adversarial pass against the cumulative *committed* plan diff — the completeness net for cross-unit issues. |
 
 ### Validation
 

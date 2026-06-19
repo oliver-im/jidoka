@@ -20,7 +20,7 @@ export const defaultConfig: Config = {
   git_workflow: false,
   pre_review: ["/jidoka:pre-plan-review"],
   unit_review: ["/code-review"],
-  plan_review: [],
+  plan_review: [{ run: "codex exec -s read-only \"{focus}\"", mode: "exec" }],
 };
 
 const configSchema = z.object({
