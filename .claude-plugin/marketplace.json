@@ -13,7 +13,12 @@
       "source": "./",
       "description": "Materialize multi-unit plans as reviewable markdown units under <plan_dir_root>/<YYMMDD-N-slug>/ on ExitPlanMode. The /jidoka slash command produces the plan markdown; the ExitPlanMode hook validates it and writes the dir.",
       "category": "planning",
-      "tags": ["plan-mode", "planning", "agents", "claude-code"]
+      "tags": [
+        "plan-mode",
+        "planning",
+        "agents",
+        "claude-code"
+      ]
     }
   ]
 }
