@@ -1,0 +1,100 @@
+name: release
+
+# Dispatch-driven release. You trigger this with a version (or a bump keyword);
+# the runner does everything in the order that keeps the tag honest:
+#   bump the 3 manifests -> commit -> tag THAT commit -> push -> publish.
+#
+# The tag is created on the already-bumped commit, so whoever checks out the tag
+# (and the marketplace, which reads the committed plugin.json) sees the right version.
+#
+#   gh workflow run release.yml -f version=0.3.2
+#   gh workflow run release.yml -f version=patch     # or minor / major
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Explicit semver (0.3.2) or a bump keyword (patch/minor/major)"
+        required: true
+        default: patch
+        type: string
+
+# Only one release at a time; never cancel one mid-push.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0 # need full history + tags for the existence check and notes
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Compute next version
+        id: ver
+        env:
+          INPUT: ${{ inputs.version }} # via env, never interpolated into the script (injection-safe)
+        run: |
+          current=$(jq -r .version .claude-plugin/plugin.json)
+          case "$INPUT" in
+            major|minor|patch)
+              maj=${current%%.*}; rest=${current#*.}; min=${rest%%.*}; pat=${rest##*.}
+              case "$INPUT" in
+                major) next="$((maj + 1)).0.0" ;;
+                minor) next="$maj.$((min + 1)).0" ;;
+                patch) next="$maj.$min.$((pat + 1))" ;;
+              esac ;;
+            *) next="${INPUT#v}" ;;
+          esac
+          echo "$next" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::Not a semver version: $next"; exit 1; }
+          tag="v$next"
+          git rev-parse "$tag" >/dev/null 2>&1 && { echo "::error::Tag $tag already exists"; exit 1; }
+          echo "Releasing $current -> $next"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag"   >> "$GITHUB_OUTPUT"
+
+      - name: Bump manifests
+        env:
+          NEXT: ${{ steps.ver.outputs.next }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          for spec in \
+            ".claude-plugin/plugin.json:.version" \
+            "package.json:.version" \
+            ".claude-plugin/marketplace.json:.metadata.version"; do
+            file="${spec%%:*}"; path="${spec#*:}"
+            tmp=$(mktemp)
+            jq --indent 2 --arg v "$NEXT" "$path = \$v" "$file" > "$tmp" && mv "$tmp" "$file"
+          done
+          ./scripts/check-version.sh "$TAG" # fail loudly if any manifest didn't take
+
+      - run: npm test # rebuilds dist/cli.js with the new version baked in
+
+      - name: Commit, tag, and push
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "release: $TAG"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin HEAD:main --follow-tags
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: gh release create "$TAG" --title "$TAG" --generate-notes
