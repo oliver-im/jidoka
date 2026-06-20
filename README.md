@@ -1,7 +1,8 @@
-`The following is 100% written by a human.`
 
 ![jidoka — automation with a human touch](docs/assets/jidoka-hero-light.png#gh-light-mode-only)
 ![jidoka — automation with a human touch](docs/assets/jidoka-hero-dark.png#gh-dark-mode-only)
+
+The following is 100% written by a human.
 
 > Jidoka is an opinionated Claude Code plugin that builds on top of native plan mode, turning the plan into reviewable units.
 
