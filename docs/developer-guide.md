@@ -133,7 +133,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/jido
 - Missing files are not errors: layer falls through silently.
 - Invalid JSON or shape mismatch on the global file: stderr warning, fall back to defaults.
 - Project file may only set the keys marked above. Other keys are warn-and-ignored. Non-boolean values for the boolean keys are warn-and-ignored. `plan_dir_root` strings are validated (`isAbsolute` and `..` segments rejected) before being applied.
-- `mergeForWrite(base, cfg)` round-trips the global file preserving any manually added keys — used by `jidoka:setup` when overwriting an existing file.
+- `mergeForWrite(base, cfg)` encodes the round-trip invariant for overwriting an existing global file — known keys are re-emitted while any manually added keys are preserved. It's exercised by the config tests; `jidoka:setup` edits the file directly rather than shelling into the CLI.
 
 ### Daily counter
 

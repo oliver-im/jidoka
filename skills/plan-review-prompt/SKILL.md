@@ -23,7 +23,7 @@ The review vehicle is **configurable and tool-agnostic**: codex is one option, n
 
 ## Read the configured plan_review vehicle
 
-Read `~/.claude/plugins/jidoka/config.json` — it is **JSONC** (strip both `//` line and `/* */` block comments before parsing, matching the renderer's loader). If it is missing or unreadable, treat `plan_review` as the shipped default `[]`. Take the `plan_review` array. Each entry is a `ReviewStep` in one of two forms:
+Read `~/.claude/plugins/jidoka/config.json` — it is **JSONC** (strip both `//` line and `/* */` block comments before parsing, matching the renderer's loader). If it is missing or unreadable, treat `plan_review` as empty (no configured vehicle — fall back to case C). Take the `plan_review` array. Each entry is a `ReviewStep` in one of two forms:
 
 - a **`{ run, mode }` template** — a tool-agnostic bash command. For an agentic tool that fetches the diff itself: `{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }`; to feed the diff in to a non-agentic tool: `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }`. `run` may contain the placeholders `{plan_dir}`, `{base}`, `{diff_range}`, `{focus}`; `mode` is `"print"` (default) or `"exec"`.
 - a **slash command string** (e.g. `"/codex:adversarial-review"`).

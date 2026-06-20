@@ -18290,7 +18290,6 @@ import {
   mkdirSync,
   readdirSync,
   renameSync,
-  statSync,
   writeFileSync
 } from "node:fs";
 import { basename, isAbsolute as isAbsolute3, join as join4 } from "node:path";

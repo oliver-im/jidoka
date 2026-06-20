@@ -53,7 +53,7 @@ export type ReviewStep = z.infer<typeof reviewStepSchema>;
 
 // Compact display label for a step: a slash command is its own label; a
 // template labels as its `run` text. Used where one dense line is wanted (the
-// overview table cell, the HTML unit card). The prose checklists in
+// overview table cell). The prose checklists in
 // `render-md.ts` render the richer form on top of this — the `print`/`exec`
 // mode badge and the pre_review auto-run framing.
 export function reviewStepLabel(step: ReviewStep): string {

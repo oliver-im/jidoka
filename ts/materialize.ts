@@ -4,7 +4,6 @@ import {
   mkdirSync,
   readdirSync,
   renameSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import { basename, isAbsolute, join } from "node:path";
@@ -169,15 +168,6 @@ export function todayYymmddLocal(): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yy}${mm}${dd}`;
-}
-
-/** True if `path` exists and is a directory. */
-export function isDir(path: string): boolean {
-  try {
-    return statSync(path).isDirectory();
-  } catch {
-    return false;
-  }
 }
 
 /**

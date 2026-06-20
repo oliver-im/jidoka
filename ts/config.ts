@@ -159,21 +159,6 @@ export function validateProjectPlanDirRoot(s: string): string | undefined {
 }
 
 /**
- * Reads the global config as a raw JSON value, preserving manually-added
- * keys. Used by `jidoka:setup` when overwriting an existing file, so
- * fields the questionnaire doesn't know about survive the round-trip.
- */
-export function loadGlobalRaw(): Record<string, unknown> | undefined {
-  const path = globalConfigPath();
-  if (path === undefined) return undefined;
-  const raw = readJson(path);
-  if (raw === undefined) return undefined;
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw))
-    return undefined;
-  return raw as Record<string, unknown>;
-}
-
-/**
  * Merges known config fields into `base`, preserving unknown keys.
  */
 export function mergeForWrite(
