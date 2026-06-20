@@ -18857,7 +18857,7 @@ function renderGitWorkflowBlock(planId, enabled) {
   if (!enabled) return "";
   return `## Git workflow
 
-This plan is worked in its own git worktree, one branch per unit. Full steps: \`docs/exec-plans/AGENTS.md\` + \`docs/CONVENTION.md\`.
+This plan is worked in its own git worktree, one branch per unit:
 
 - **Worktree:** \`worktrees/${planId}/\` on branch \`plan/${planId}\` (off \`main\`); the plan's \`active/\` dir lives only inside it.
 - **Per unit:** branch \`unit/NN-slug\` off the plan branch \u2192 work + review \u2192 \`git merge --squash unit/NN-slug\` into the plan branch as one \`Unit NN: <title>\` commit \u2192 \`git branch -D unit/NN-slug\` \u2192 advance the cursor.

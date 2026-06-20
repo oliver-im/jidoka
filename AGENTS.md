@@ -20,6 +20,10 @@ The contract between them: ExitPlanMode carries the plan markdown in `tool_input
 - `docs/agent-guide.md` — skill config, heuristics, hard rules (for LLM agents)
 - `docs/developer-guide.md` — architecture, validation rules, algorithms, CLI, hooks, design decisions (for developers building the renderer)
 
+## Git workflow
+
+`main` is protected — **never commit, push, or merge to `main` directly.** Land every change through a GitHub pull request: branch from `main`, push the branch, `gh pr create`, and let it merge on GitHub (CodeRabbit reviews PRs). This includes plan archival — `docs/exec-plans/AGENTS.md`'s end-of-plan step opens a PR for the plan branch rather than merging locally.
+
 ## Key Architecture Concepts
 
 - **Hook integration:** PreToolUse hook on ExitPlanMode reads `tool_input.plan` markdown directly from stdin and materializes the plan dir before the user sees the approval dialog. Empty/missing plan → silent exit 0; parse or validation failure → deny with reasoning.
