@@ -7,9 +7,10 @@
 
 ### What is Jidoka
 Jidoka(`自働化`) is "automation with a human touch". Developed from Toyota, the concept became popular in the 90s as a way to practice lean manufacturing. The high level concept is surprisingly applicable with agent driven software development.
-<img src="docs/assets/jidoka-process.png" alt="The Jidoka process: discover an abnormality, stop the process, fix the immediate problem, remove the root cause" width="560">
 
+<img src="docs/assets/jidoka-process.png" alt="The Jidoka process: discover an abnormality, stop the process, fix the immediate problem, remove the root cause" width="560">
 <sub>Source: <a href="https://kanbanzone.com/2020/how-to-apply-the-jidoka-principle-to-boost-your-productivity/">How to apply the Jidoka principle to boost your productivity</a></sub>
+
 ### Sometimes vibe coding isn't enough
 Agents are increasingly becoming capable of performing large tasks in very long running sessions, spanning days or even weeks. While an impressive technological feat, it is far from clear if this is the ideal way to develop and maintain software.
 

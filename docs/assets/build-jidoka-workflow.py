@@ -21,7 +21,7 @@ UA = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
 CSS_URL = ('https://fonts.googleapis.com/css2?'
            'family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap')
 
-W, H = 1100, 506
+W, H = 500, 850
 
 
 def fetch(url, headers=None):
@@ -68,37 +68,36 @@ html.dark{
 }
 html,body{background:var(--bg)}
 body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--ink)}
-.slide{width:__W__px;height:__H__px;background:var(--bg);padding:38px 48px 52px;display:flex;flex-direction:column}
+.slide{width:__W__px;height:__H__px;background:var(--bg);padding:18px;display:flex;flex-direction:column}
 .urow{display:inline-block;vertical-align:middle}
 
-.cols{display:flex;align-items:stretch;width:100%;position:relative}
+.cols{display:flex;flex-direction:column;align-items:stretch;width:100%;gap:30px}
 
 /* left: capture note, sits under the title and above the tree */
 .capnote{margin-top:14px;font-size:12.5px;line-height:1.55;color:var(--muted);
-  max-width:360px;border-left:2px solid var(--line);padding-left:13px}
+  max-width:440px;border-left:2px solid var(--line);padding-left:13px}
 .capnote .flabel{display:block;font-family:'Space Grotesk';font-size:10.5px;
   font-weight:600;letter-spacing:.15em;color:var(--faint);margin-bottom:5px}
 .capnote .k{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11.5px;
   color:var(--ink);background:var(--track);border:1px solid var(--line);
   border-radius:5px;padding:1px 6px}
 .capnote b{color:var(--ink);font-weight:600}
-.col{display:flex;flex-direction:column;flex:0 0 50%;max-width:50%;min-width:0}
-.col.lft{padding-right:104px}
-.col.rgt{padding-left:104px}
+.col{display:flex;flex-direction:column;width:100%;min-width:0}
 .ptitle{font-family:'Space Grotesk';font-weight:600;font-size:21px;
-  line-height:1.18;letter-spacing:-.01em;color:var(--ink);max-width:376px}
-.psub{font-size:13.5px;line-height:1.45;color:var(--muted);margin-top:13px;max-width:376px}
+  line-height:1.18;letter-spacing:-.01em;color:var(--ink);max-width:440px}
+.psub{font-size:13.5px;line-height:1.45;color:var(--muted);margin-top:13px;max-width:440px}
 .psub b{color:var(--ink);font-weight:600}
-.phead{min-height:92px}
+.psub.gate-sub{margin-bottom:28px}
+.phead{min-height:0}
 .psub.lead{margin-top:13px}
 
-/* center connector — floats on the 50/50 seam, out of flow */
-.connect{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:176px;display:flex;flex-direction:column;align-items:center;gap:9px;z-index:2}
+/* center connector — between the two stacked panels, horizontal: "each unit ->" */
+.connect{display:flex;flex-direction:row;align-items:center;gap:10px;
+  padding:12px 0;align-self:center}
 .clabel{font-size:12.5px;font-weight:600;letter-spacing:.03em;color:var(--muted);white-space:nowrap}
 
 /* left: directory tree (CSS-drawn connectors) */
-.tree{margin-top:22px;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:14.5px}
+.tree{margin-top:14px;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:14.5px}
 .trow{display:flex;align-items:center;line-height:2.0}
 .troot{color:var(--muted);font-weight:600}
 .elbow{color:var(--tree)}
@@ -114,10 +113,10 @@ body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased
 .tmore-d{color:var(--faint);letter-spacing:.12em}
 .child .urow{margin-left:11px}
 .tcom{color:var(--faint);font-size:12px;margin-left:12px;font-style:italic}
-.tlegend{margin-top:24px;font-size:12px;color:var(--faint);display:flex;align-items:center;gap:9px}
+.tlegend{margin-top:6px;font-size:12px;color:var(--faint);display:flex;align-items:center;gap:9px}
 
 /* right: vertical gate */
-.gatev{margin-top:30px;display:flex;flex-direction:column;align-items:flex-start}
+.gatev{margin-top:0;display:flex;flex-direction:column;align-items:flex-start}
 .grow{display:flex;align-items:center;gap:15px}
 .gpill{width:160px;justify-content:center;display:inline-flex;align-items:center;
   gap:8px;border-radius:12px;padding:10px 14px;font-size:15.5px;font-weight:600;
@@ -132,7 +131,7 @@ html.dark .gpill.ok{background:rgba(95,160,121,.17)}
 html.dark .gpill.reset{background:rgba(118,162,192,.17)}
 .gpill.next{background:var(--bg);border-color:var(--line);border-style:dashed;color:var(--muted)}
 .gcap{font-size:12.5px;line-height:1.25;color:var(--faint);max-width:188px}
-.gdown{width:160px;display:flex;justify-content:center;padding:7px 0}
+.gdown{width:160px;display:flex;justify-content:center;padding:5px 0}
 """
 
 
@@ -154,9 +153,9 @@ CHECK = ('<svg class="ic" viewBox="0 0 24 24" fill="none">'
 RESET = ('<svg class="ic" viewBox="0 0 24 24" fill="none">'
          '<path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" stroke="currentColor" '
          'stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>')
-DOWN = ('<svg width="16" height="34" viewBox="0 0 16 34" fill="none">'
-        '<line x1="8" y1="0" x2="8" y2="25" stroke="var(--arrow)" stroke-width="2" stroke-linecap="round"/>'
-        '<path d="M3 23 L8 29 L13 23" stroke="var(--arrow)" stroke-width="2" fill="none" '
+DOWN = ('<svg width="14" height="22" viewBox="0 0 14 22" fill="none">'
+        '<line x1="7" y1="1" x2="7" y2="15" stroke="var(--arrow)" stroke-width="2" stroke-linecap="round"/>'
+        '<path d="M3 13 L7 18 L11 13" stroke="var(--arrow)" stroke-width="2" fill="none" '
         'stroke-linecap="round" stroke-linejoin="round"/></svg>')
 RIGHT = ('<svg width="62" height="18" viewBox="0 0 62 18" fill="none">'
          '<line x1="0" y1="9" x2="52" y2="9" stroke="var(--arrow)" stroke-width="2" stroke-linecap="round"/>'
@@ -221,20 +220,16 @@ def body():
       </div>
       __TREE__
     </div>
-    <div class="connect">
-      <div class="clabel">each unit</div>
-      __RIGHT__
-    </div>
     <div class="col rgt">
       <div class="phead">
         <div class="ptitle">A gate after every unit</div>
-        <div class="psub">Stop, review, approve, then optionally reset context before the next execution begins</div>
+        <div class="psub gate-sub">Stop, review, approve, then optionally reset context before the next execution begins</div>
       </div>
       __GATE__
     </div>
   </div>
 </div>
-""".replace('__TREE__', tree()).replace('__GATE__', gate()).replace('__RIGHT__', RIGHT)
+""".replace('__TREE__', tree()).replace('__GATE__', gate())
 
 
 def html(theme):
