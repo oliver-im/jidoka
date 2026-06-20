@@ -7,8 +7,9 @@
 
 ### What is Jidoka
 Jidoka(`自働化`) is "automation with a human touch". Developed from Toyota, the concept became popular in the 90s as a way to practice lean manufacturing. The high level concept is surprisingly applicable with agent driven software development.
-![The Jidoka process: discover an abnormality, stop the process, fix the immediate problem, remove the root cause](docs/assets/jidoka-process.png)
-- [source](https://kanbanzone.com/2020/how-to-apply-the-jidoka-principle-to-boost-your-productivity/)
+<img src="docs/assets/jidoka-process.png" alt="The Jidoka process: discover an abnormality, stop the process, fix the immediate problem, remove the root cause" width="560">
+
+<sub>Source: <a href="https://kanbanzone.com/2020/how-to-apply-the-jidoka-principle-to-boost-your-productivity/">How to apply the Jidoka principle to boost your productivity</a></sub>
 ### Sometimes vibe coding isn't enough
 Agents are increasingly becoming capable of performing large tasks in very long running sessions, spanning days or even weeks. While an impressive technological feat, it is far from clear if this is the ideal way to develop and maintain software.
 
@@ -16,18 +17,25 @@ The fundamental issue boils down to two categories. The first is that it is almo
 
 The second, and the most critical issue is that as agents write more software autonomously, it becomes harder for the human to reason about the project. Once the drift happens the human is no longer the steward of the project. While not all software written needs to be 100% understood, we can easily think of cases where we need to know exactly how it is written.
 
+This idea is commonly felt across the community.
+
 > When you vibe code, you are incurring tech debt as fast as the LLM can spit it out. Which is why vibe coding is perfect for prototypes and throwaway projects: It's only legacy code if you have to maintain it!
-> ![Vibe versus understanding: as vibe goes up, understanding goes down](docs/assets/vibe-vs-understanding.png)
-> **Steve Krouse**, [Vibe code is legacy code](https://blog.val.town/vibe-code)
+>
+> <img src="docs/assets/vibe-vs-understanding.png" alt="Vibe versus understanding: as vibe goes up, understanding goes down" width="380">
+>
+> — **Steve Krouse**, [Vibe code is legacy code](https://blog.val.town/vibe-code)
 
+---
 
-> ![Mitchell Hashimoto on agentic coding: if it works who cares what the code looks like only holds if the agent has perfect understanding](docs/assets/hashimoto-tweet.png)
-> **Mitchell Hashimoto**, [X](https://x.com/mitchellh/status/2066657032938442833)
+> <img src="docs/assets/hashimoto-tweet.png" alt="Mitchell Hashimoto on agentic coding: if it works who cares what the code looks like only holds if the agent has perfect understanding" width="480">
+>
+> — **Mitchell Hashimoto**, [X](https://x.com/mitchellh/status/2066657032938442833)
 
+---
 
 > the central lesson of the vibe-coding month: I didn't refactor enough, the codebase became something I couldn't reason about, and I had to throw it all away. In the rewrite, refactoring became the core of my workflow.
 >
-> **Lalit Maganti**, [Eight years of wanting, three months of building with AI](https://lalitm.com/post/building-syntaqlite-ai/)
+> — **Lalit Maganti**, [Eight years of wanting, three months of building with AI](https://lalitm.com/post/building-syntaqlite-ai/)
 
 ### Shortcomings of the existing frameworks
 
@@ -50,11 +58,12 @@ After each unit, the default action is to run a review cycle by another agent, a
 
 For the review process, jidoka has the ability to insert custom bash commands (to run another agent like codex or opencode), or claude plugins to be executed before implementation (`pre_review`), after implementation of each unit (`unit_review`), and after implementation of the entire plan (`plan_review`). The project has a baseline prompt, and the skill appends custom prompts to steer the review agent. The default settings uses `/code-review` plugin and codex for review, and again is heavily geared towards the author's taste.
 
-**TLDR**
-- Use native plan mode inside Claude Code
-- Use Claude hooks to inject jidoka into plan mode, turning the plan into units
-- Each unit boundary is a place for other agents to review
-- Each unit boundary is a place for humans to see the overview findings, steer the direction, and compact/clear the context window
+> [!NOTE]
+> **TLDR**
+> - Use native plan mode inside Claude Code
+> - Use Claude hooks to inject jidoka into plan mode, turning the plan into units
+> - Each unit boundary is a place for other agents to review
+> - Each unit boundary is a place for humans to see the overview findings, steer the direction, and compact/clear the context window
 
 ### Documentation
 
