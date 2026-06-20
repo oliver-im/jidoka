@@ -1,6 +1,7 @@
 ---
 name: jidoka:pre-plan-review
-description: Adversarially review a freshly-materialized plan directory before any unit lands. Reads overview.md + per-unit md files (no diff, no code, no Bash) and flags structural plan failures — unit independence gaps, coverage holes, ambiguous acceptance, order sensitivity, boundary erosion, silent rewrites. Returns findings markdown; suggests revisions. Agent-invocable so a resuming agent can auto-run it on the first session, then stop before the first unit for the human to read the findings.
+description: Adversarial pre-execution review of a freshly-materialized jidoka plan dir (overview + per-unit md, no diff, read-only). Flags structural plan failures — unit independence gaps, coverage holes, ambiguous acceptance, order sensitivity, boundary erosion — and returns findings markdown. Auto-run by the resuming agent on its first session, before Unit 01; surface findings, don't auto-revise.
+user-invocable: false
 allowed-tools: Read, Grep, Glob
 ---
 
