@@ -61,7 +61,7 @@ Plan mode is being treated as core infrastructure across the industry, not an ex
 
 ### Current coupling points
 
-1. **Skill** — Claude Code skill config (`context: fork`, `allowed-tools`), `CLAUDE_SESSION_ID`
+1. **Skill** — Claude Code skill config (runs inline, `allowed-tools`), `CLAUDE_SESSION_ID`
 2. **Hook** — PreToolUse on ExitPlanMode (Claude Code hook system)
 3. **Terminology** — "agents" aligns with Claude Code's Agent tool (though this is industry-standard)
 

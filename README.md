@@ -1,159 +1,61 @@
-# jidoka
+`The following is 100% written by a human.`
 
-A Claude Code plugin that materializes plan-mode output as a structured directory of markdown files (`docs/exec-plans/active/<YYMMDD-N-slug>/` with `overview.md`, `progress.md`, and per-unit `0N-*.md`).
+![jidoka — automation with a human touch](docs/assets/jidoka-hero-light.png#gh-light-mode-only)
+![jidoka — automation with a human touch](docs/assets/jidoka-hero-dark.png#gh-dark-mode-only)
 
-### The Problem
+> Jidoka is an opinionated Claude Code plugin that builds on top of native plan mode, turning the plan into reviewable units.
 
-Plan mode gives you approval before execution, but the plan lands in a random file under `~/.claude/plans/` and is reviewed in the terminal — fine for small tasks, painful for multi-step work that benefits from a directory of reviewable units.
+### What is Jidoka
+Jidoka(`自働化`) is "automation with a human touch". Developed from Toyota, the concept became popular in the 90s as a way to practice lean manufacturing. The high level concept is surprisingly applicable with agent driven software development.
+![The Jidoka process: discover an abnormality, stop the process, fix the immediate problem, remove the root cause](docs/assets/jidoka-process.png)
+- [source](https://kanbanzone.com/2020/how-to-apply-the-jidoka-principle-to-boost-your-productivity/)
+### Sometimes vibe coding isn't enough
+Agents are increasingly becoming capable of performing large tasks in very long running sessions, spanning days or even weeks. While an impressive technological feat, it is far from clear if this is the ideal way to develop and maintain software.
 
-### What jidoka Does
+The fundamental issue boils down to two categories. The first is that it is almost impossible for the agent to have ALL of the context needed to build the perfect software, especially when it comes to human taste and future roadmaps. Even when the agent does have all the context, only one bad technical decision is all it takes for the mistake to ripple across the entire project.
 
-1. **Plan-mode dir materialization (primary):** the ExitPlanMode hook reads the plan markdown straight out of `tool_input.plan` (PreToolUse stdin), parses it, validates it, and writes `overview.md` + `progress.md` + `0N-<unit-slug>.md` files into `<plan_dir_root>/<YYMMDD-N-slug>/` (default `docs/exec-plans/active/`).
-2. **Silent on empty/missing plan:** if `tool_input.plan` is empty, the hook exits 0 without doing anything. Parse or validation failure surfaces a deny payload with the reason so the agent can fix it and retry.
+The second, and the most critical issue is that as agents write more software autonomously, it becomes harder for the human to reason about the project. Once the drift happens the human is no longer the steward of the project. While not all software written needs to be 100% understood, we can easily think of cases where we need to know exactly how it is written.
 
-## Installation
+> When you vibe code, you are incurring tech debt as fast as the LLM can spit it out. Which is why vibe coding is perfect for prototypes and throwaway projects: It's only legacy code if you have to maintain it!
+> ![Vibe versus understanding: as vibe goes up, understanding goes down](docs/assets/vibe-vs-understanding.png)
+> **Steve Krouse**, [Vibe code is legacy code](https://blog.val.town/vibe-code)
 
-### Build
 
-```bash
-npm install
-npm run build
-```
+> ![Mitchell Hashimoto on agentic coding: if it works who cares what the code looks like only holds if the agent has perfect understanding](docs/assets/hashimoto-tweet.png)
+> **Mitchell Hashimoto**, [X](https://x.com/mitchellh/status/2066657032938442833)
 
-The bundled CLI lands at `dist/cli.js` (committed). Requires Node ≥ 20.
 
-### Use as a Claude Code plugin (recommended)
+> the central lesson of the vibe-coding month: I didn't refactor enough, the codebase became something I couldn't reason about, and I had to throw it all away. In the rewrite, refactoring became the core of my workflow.
+>
+> **Lalit Maganti**, [Eight years of wanting, three months of building with AI](https://lalitm.com/post/building-syntaqlite-ai/)
 
-Enabling the plugin auto-loads the skills under `skills/` and the ExitPlanMode hook declared in `hooks/hooks.json`. The hook invokes the bundled CLI via `$CLAUDE_PLUGIN_ROOT/dist/cli.js` — no PATH setup needed.
+### Shortcomings of the existing frameworks
 
-### Standalone CLI (optional)
+The most common way to handle this issue is to specify all of the requirements before the implementation. However frameworks such as [superpowers](https://github.com/obra/superpowers) make the plan **too** verbose, and contain code snippets which can easily become stale. I personally prefer to just use the plan mode built natively inside Claude Code because it is a natural extension of the model and agent framework released by Anthropic.
 
-To run `jidoka materialize` outside the plugin (e.g. to materialize a hand-written plan markdown), symlink the bundled CLI:
+Plan mode is invoked when the task on hand is large enough that it should be executed in discrete steps, but the current implementation in Claude Code is problematic for a few reasons.
+- The output file is saved in the user space under a randomly generated file name (`~/.claude/plans/steady-dreaming-sprout.md`). This makes it cumbersome to view the file in an editor, and difficult to put it in the repo for version control, which is increasingly being preferred as a [way](https://openai.com/index/harness-engineering/) to give the agents a durable source of truth.
+- The current SOTA models have 1M context and will likely increase as the models develop, but over long sessions the context window size will never be large enough. As of June 2026 Claude Code only offers automatic compaction that triggers when the context window is 95% full. This can become an [issue](https://github.com/anthropics/claude-code/issues/36068) if the compact is triggered mid session, losing critical context.
+- Using different models/harness for planning, implementation, and review is increasingly becoming standard practice, but plan mode does not support this.
 
-```bash
-ln -sf "$(pwd)/dist/cli.js" /usr/local/bin/jidoka
-```
+### Solution: Jidoka
+![Jidoka: the plan dir on disk (a tree of reviewable markdown units) and a review gate after every unit](docs/assets/jidoka-workflow-light.png#gh-light-mode-only)
+![Jidoka: the plan dir on disk (a tree of reviewable markdown units) and a review gate after every unit](docs/assets/jidoka-workflow-dark.png#gh-dark-mode-only)
 
-Verify:
+Jidoka is not a replacement for plan mode, but rather builds on top of it. More specifically we enforce that the skill is called in Plan Mode by blocking the `ExitPlanMode` call with `PreToolUse`, and block the plan mode exit if the jidoka skill is not used. The [prompt](https://github.com/oliver-im/jidoka/blob/main/skills/jidoka/SKILL.md) inside the skill has the instructions to divide the plan into units, where the plan is divided into reviewable, executable parts. Since this is done automatically, the jidoka skill is not possible to invoke manually (via `user-invocable: false`).
 
-```bash
-jidoka --version
-jidoka --help       # lists the materialize and hook subcommands
-```
+Jidoka has a separate tool to capture the plan mode output and divide it into `overview.md` + `progress.md` + `0N-<unit-slug>.md` files into `<plan_dir_root>/<YYMMDD-N-slug>/`, where the default `plan_dir_root` is `docs/exec-plans/active/`. This behavior can be modified via config.json and is heavily geared toward the author's taste.
 
-### Hook Setup
+After each unit, the default action is to run a review cycle by another agent, and then stop until explicit human approval. This gives the reviewer the chance to see 1) the implementation overview 2) the review agent findings 3) whether to compact or reset the context before the next implementation starts.
 
-The plugin's `hooks/hooks.json` already wires the PreToolUse hook. To add the hook to a project that doesn't use the plugin, add this to that project's `.claude/settings.json` (replacing `$CLAUDE_PLUGIN_ROOT` with the actual path to a jidoka checkout):
+For the review process, jidoka has the ability to insert custom bash commands (to run another agent like codex or opencode), or claude plugins to be executed before implementation (`pre_review`), after implementation of each unit (`unit_review`), and after implementation of the entire plan (`plan_review`). The project has a baseline prompt, and the skill appends custom prompts to steer the review agent. The default settings uses `/code-review` plugin and codex for review, and again is heavily geared towards the author's taste.
 
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "ExitPlanMode",
-        "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PLUGIN_ROOT/dist/cli.js\" hook" }
-        ]
-      }
-    ]
-  }
-}
-```
+**TLDR**
+- Use native plan mode inside Claude Code
+- Use Claude hooks to inject jidoka into plan mode, turning the plan into units
+- Each unit boundary is a place for other agents to review
+- Each unit boundary is a place for humans to see the overview findings, steer the direction, and compact/clear the context window
 
-### Environment Variables
+### Documentation
 
-| Variable | Effect |
-|---|---|
-| `CLAUDE_PROJECT_DIR` | Project root used to resolve `<project>/<plan_dir_root>/`. PWD fallback with a stderr warning when unset. |
-
-## Configuration
-
-jidoka reads a layered config: built-in defaults < `~/.claude/plugins/jidoka/config.json` (global) < `<project>/.jidoka.json` (project).
-
-| Key | Default | Project-overridable? | What it does |
-|---|---|---|---|
-| `plan_dir_root` | `docs/exec-plans/active` | ✓ (relative paths only) | Where plan dirs land, resolved against the project root. |
-| `git_workflow` | `false` | ✓ | Opt into the worktree-per-plan / branch-per-unit workflow. When on, jidoka renders a `## Git workflow` reminder into each `progress.md`. Shipped off (OSS opt-in); a committed `.jidoka.json` can turn it on for a whole repo. |
-| `pre_review` | `["/jidoka:pre-plan-review"]` | — | Review steps to run **before** Unit 01, against the freshly materialized plan dir. On the first session the resuming agent auto-runs the agent-invocable steps (default `/jidoka:pre-plan-review`) and surfaces any `print`/operator-run step for you, then stops. Rendered as `## Pre-execution review` in `progress.md`. Reviews the plan *as a plan* — no diff exists yet. |
-| `unit_review` | `["/code-review"]` | — | Review steps to run after each Unit lands, on the unit's local working-tree diff. The built-in **`/code-review`** (correctness bugs + reuse/simplification/efficiency cleanups) — **not** `/code-review:code-review`, which is the code-review *plugin* and reviews a GitHub PR. No `--fix` (findings are triaged against plan context, not auto-applied). Rendered as a checklist in the Unit md. |
-| `plan_review` | `[{ run: "codex exec -s read-only \"{focus}\"", mode: "exec" }]` | — | Review steps to run after the last Unit's review and commit, against the cumulative committed diff. Ships on: the `/jidoka:plan-review-prompt` composer drives `codex exec` (agent-run; needs `/codex:setup` + `codex login`). Set `[]` to disable, or swap in `/codex:adversarial-review` (see below). Rendered as `## Plan-level review` in `progress.md`. |
-
-Each entry in the three review arrays is a **review step**: a slash command (`/code-review`, `/codex:adversarial-review`) **or** a `{ run, mode }` bash template for any tool — e.g. `{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }`. `mode` is `print` (default — surface the command for you to run) or `exec` (the resuming agent runs it via Bash). Templates may use the placeholders `{plan_dir}`/`{base}`/`{diff_range}`/`{focus}`. Review steps are **global-config-only** (not settable in a per-repo `.jidoka.json`) — the security boundary that makes `exec` safe.
-
-Plan dirs are plain files on disk — view and review them in your editor (Obsidian, VS Code, iA Writer).
-
-### First-time setup
-
-Tell Claude Code "**set up jidoka**" to invoke the `jidoka:setup` skill — a short Q&A that writes `~/.claude/plugins/jidoka/config.json` from scratch. It runs outside the planning fork (so `AskUserQuestion` works there).
-
-### Editing review commands
-
-After first-time setup, hand-edit `~/.claude/plugins/jidoka/config.json` directly — `pre_review`, `unit_review`, and `plan_review` are lists of review steps (slash commands or `{ run, mode }` templates). Schema reference: [`docs/data-model.md`](docs/data-model.md#review-commands).
-
-The three stages, in execution order on a fresh plan:
-
-1. **Pre-execution** (`pre_review`) — on the first session the resuming agent auto-runs the agent-invocable steps (the default `["/jidoka:pre-plan-review"]`, the bundled adversarial planning reviewer, or an `exec` template), surfaces any `print`/operator-run step for you, then stops before Unit 01 (surface, don't auto-revise). Reviews the plan *as a plan* (no diff yet).
-2. **Per-unit** (`unit_review`) — runs after each unit's diff lands, before committing. Default `["/code-review"]` — the built-in local-diff reviewer (bugs + cleanups). It's a *local correctness gate*: findings are candidates to triage against plan context (so no `--fix`, which would blindly "fix" intentional mid-plan forward-references). `/code-review` takes no focus argument — put per-unit review focus in the unit body prose. Add `/simplify` for a dedicated cleanup-only pass (it does **not** hunt bugs).
-3. **Plan-level** (`plan_review`) — runs after the last unit is reviewed and committed, against the cumulative committed diff. The *completeness net* for cross-unit issues the per-unit gate can't see. Ships on by default — a `codex exec` template (agent-run; needs `/codex:setup` + `codex login`); set `[]` to disable. The resuming agent runs the bundled **`/jidoka:plan-review-prompt`** composer — it reads the plan + cumulative diff, aims a hostile cross-unit focus (seams, deferred forward-references that should now be wired up), and **drives whatever vehicle you configure**, tool-agnostically. Configure `plan_review` as either a `{ run, mode }` template (e.g. `codex exec` — jidoka injects its **own** plan-level review prompt, codex just supplies the model; `print` hands you the command, `exec` runs it via Bash) or the slash form `/codex:adversarial-review` (operator-run — it sets `disable-model-invocation`, so the composer hands you the command). The composer earns its keep because the agent that just executed the plan has the sharpest context for the aiming. codex needs `/codex:setup` + `codex login` first.
-
-The file is parsed as **JSONC** — `//` and `/* */` comments are stripped before parsing. The setup skill writes an annotated template by default, so the in-file comments are the primary "what does this key do" reference; the README is for examples and schema depth.
-
-The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe: a malformed config surfaces a deny payload the next time you exit plan mode, with the parse / schema error inline.
-
-Example A — slash commands throughout: the pre-execution default, `/code-review` + a `/simplify` cleanup pass after each unit, and codex's adversarial review at plan-close. codex is **operator-run** (`disable-model-invocation`), so the `/jidoka:plan-review-prompt` composer aims it and hands you the ready-to-run command:
-
-```jsonc
-{
-  "pre_review": ["/jidoka:pre-plan-review"],
-  "unit_review": ["/code-review", "/simplify"],
-  "plan_review": ["/codex:adversarial-review"]
-}
-```
-
-Example B — drive plan-level review **fully agent-run** with a tool-agnostic `codex exec` template in `exec` mode. `codex exec` is agentic, so it fetches the diff itself (paging it at its own pace — this is what scales to a large plan); the composer fills `{focus}` with jidoka's own plan-level review prompt + the cross-unit targets + the diff range, runs it via Bash, and relays the findings — no operator step:
-
-```jsonc
-{
-  "pre_review": ["/jidoka:pre-plan-review"],
-  "unit_review": ["/code-review"],
-  "plan_review": [
-    { "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }
-  ]
-}
-```
-
-Each entry is a review step — a slash command or a `{ run, mode }` template — rendered verbatim into a Unit md checkbox (`unit_review`) or into `progress.md` (`pre_review` and `plan_review`); templates also show a `print`/`exec` mode badge. Things to keep in mind:
-
-- **Namespace trap:** the built-in `/code-review` reviews a **local diff**; `/code-review:code-review` is a *separate plugin* that reviews a **GitHub PR**. For pre-commit unit gates you want the built-in.
-- **print vs exec:** a template's `mode` decides who runs it — `print` (default) surfaces the command for you; `exec` has the resuming agent run it via Bash. For a slash command, the target skill's `disable-model-invocation` decides (codex's review commands set it → operator-run). The `exec`/Bash route is legitimate because that flag blocks only the SlashCommand tool, not Bash.
-- **codex review is operator-run (as a slash command):** `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation`, so a resuming agent can't invoke them via SlashCommand — the `/jidoka:plan-review-prompt` composer hands you a ready command. To have the agent drive codex instead, configure it as a `{ run: "… codex exec …", mode: "exec" }` template (Bash, not SlashCommand). codex needs `/codex:setup` + `codex login` first. Don't also enable codex's own `--enable-review-gate` (Stop hook) if jidoka already drives plan-level review, or you double-gate.
-
-## Documentation
-
-| Document | Audience | Contents |
-|---|---|---|
-| [Data Model](docs/data-model.md) | Both | JSON schema, field semantics, review-step model, terminology |
-| [Agent Guide](docs/agent-guide.md) | LLM agents | Skill configuration, process steps, heuristics, hard rules |
-| [Developer Guide](docs/developer-guide.md) | Developers | Architecture, algorithms, validation, CLI, hooks, design decisions |
-
-## Workflow
-
-### Full Plan Mode Flow
-
-1. User enters plan mode with a task
-2. Claude explores the codebase, asks clarifying questions, drafts the plan
-3. Claude invokes `/jidoka` from within plan mode
-4. The forked subagent decomposes the work into units and returns the plan markdown to the caller
-5. User reviews the proposed plan — if adjustments needed, tells the main agent
-6. Main agent re-invokes `/jidoka` with adjustments (repeat until satisfied)
-7. Main agent calls `ExitPlanMode` with the markdown as the `plan` argument → PreToolUse hook reads `tool_input.plan`, materializes `<plan_dir_root>/<YYMMDD-N-slug>/`
-8. User reviews the materialized plan alongside the approval dialog in the CLI
-9. User approves or rejects → execution begins from the materialized unit files
-
-### Materialize a plan markdown without ExitPlanMode
-
-```
-jidoka materialize <plan.md>            # parses markdown, writes plan dir
-jidoka materialize - < plan.md          # same, via stdin
-jidoka materialize <legacy-plan.json>   # legacy Plan JSON still accepted (auto-detected)
-```
+For an overview of the docs, see [docs/README.md](docs/README.md).

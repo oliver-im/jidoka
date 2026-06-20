@@ -10,14 +10,14 @@ Two components with a strict boundary between them.
 User types /jidoka <task>
       |
       v
-+- SKILL (forked subagent) -------------------------+
++- SKILL (inline, no context: fork) ----------------+
 |                                                    |
 |  LLM analyzes task -> produces plan markdown       |
 |    (# Title H1 + ## Unit NN: headings + bodies)    |
-|  Returns markdown to caller (one-shot)             |
+|  Calls ExitPlanMode with markdown (one-shot)       |
 +------------------+--------------------------------+
                    |
-                   v  (caller calls ExitPlanMode with markdown as `plan` arg)
+                   v  (markdown rides in tool_input.plan)
 +------------------v--------------------------------+
 |  RENDERER (bundled dist/cli.js, hook mode)         |
 |                                                    |
@@ -30,7 +30,7 @@ User types /jidoka <task>
 
 ### Skill (SKILL.md)
 
-Runs in a forked subagent (`context: fork`). One-shot generator: analyzes the task, produces **plan markdown**, returns it to the caller. All planning context stays in the fork. Main agent only sees the returned markdown and decides what to do with it.
+Runs **inline** in the planning agent's context — no `context: fork`, so its instructions compose with plan mode's native prompt rather than running in an isolated subagent. One-shot generator: analyzes the task, produces **plan markdown**, then calls `ExitPlanMode` with it. Running inline, the skill sees the live plan-mode conversation (the task as it developed, codebase notes, the user back-and-forth) — exactly the raw material decomposition needs.
 
 The skill handles everything requiring LLM judgment: task analysis, unit decomposition, body prose. It never saves to disk, never calls the renderer, never executes the plan.
 
@@ -129,6 +129,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/jido
 
 ### Loader behavior
 
+- The global file is parsed as **JSONC** — `//` and `/* */` comments are stripped before `JSON.parse`. `jidoka:setup` writes an annotated template by default, so the in-file comments are the primary "what does this key do" reference.
 - Missing files are not errors: layer falls through silently.
 - Invalid JSON or shape mismatch on the global file: stderr warning, fall back to defaults.
 - Project file may only set the keys marked above. Other keys are warn-and-ignored. Non-boolean values for the boolean keys are warn-and-ignored. `plan_dir_root` strings are validated (`isAbsolute` and `..` segments rejected) before being applied.
@@ -140,7 +141,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/jido
 
 ### Skills
 
-One skill fronts the config UX (runs outside the planning fork so `AskUserQuestion` works):
+One skill fronts the config UX (interactive by design — it uses `AskUserQuestion`, unlike `/jidoka`, which runs one-shot and never prompts):
 
 - `jidoka:setup` — first-run Q&A walkthrough that writes the global file. Triggered by phrases like "set up jidoka". Handles only the scalar knobs; the review steps (`pre_review`, `unit_review`, `plan_review` — each a slash command or `{ run, mode }` template) are written at their defaults and hand-edited in the JSON afterward (see README → Editing review commands). The hook re-validates on next plan-mode use, so no separate validator is needed.
 
@@ -172,6 +173,8 @@ The hook in `hooks/hooks.json`:
 ```
 
 `$CLAUDE_PLUGIN_ROOT` expands to the plugin install path, so no `jidoka` binary needs to be on `$PATH`. The bundle always exits 0 internally — there is no `|| true` shell guard, since a non-zero exit from `dist/cli.js` would indicate a bug we want to surface, not silently swallow. Hook errors land on stderr via the run() wrapper.
+
+**Wiring the hook into a non-plugin project.** Enabling the plugin installs the hook automatically. To add it to a project that doesn't use the plugin, drop the same `{ "hooks": { "PreToolUse": [...] } }` block shown above into that project's `.claude/settings.json`, replacing `$CLAUDE_PLUGIN_ROOT` with the path to your jidoka checkout (the symlinked CLI from §Making the binary available also works: `"command": "jidoka hook"`).
 
 ## Hook Integration
 
@@ -247,10 +250,10 @@ PreToolUse hooks block the tool if they return a non-zero exit code. The hook mu
 | Decision | Rationale |
 |---|---|
 | Produce-only, no execution | The plan is a composable output. Users incorporate it into their existing workflows rather than being locked into a closed pipeline. |
-| `context: fork` for planning | Planning context stays in the forked subagent. Main agent only sees the returned markdown. No context window pollution. |
+| Run the planning skill inline (no `context: fork`) | Inline, the skill sees the live plan-mode conversation — the developing task, codebase notes, user back-and-forth — which is the raw material decomposition needs. A forked subagent would start blind with only the skill file as its prompt. |
 | Skill + renderer split | LLM handles judgment (decomposition); renderer handles deterministic work (parsing, validation, materialization). Zero tokens spent on rendering. |
 | Markdown as contract | Single boundary between skill and renderer. Skill emits `# Title` + `## Unit NN:` + bodies; renderer parses, validates, materializes. Both sides validate independently. ExitPlanMode's `plan` arg + PreToolUse stdin carry the contract end-to-end with no temp file in between. |
-| One-shot skill, caller-driven iteration | `AskUserQuestion` doesn't surface inside forks. Skill generates and returns; caller handles adjust loop. Each adjustment is a full regeneration — no state to preserve. |
+| One-shot skill, agent-driven iteration | One-shot is a design choice, not a platform limit — the skill emits a complete plan in a single pass rather than prompting. The agent gathers feedback in the plan-mode loop and re-invokes; each adjustment is a full regeneration — no state to preserve. |
 | Single bundled Node entrypoint | esbuild produces a self-contained `dist/cli.js`; runtime deps (`commander`, `zod`, `eta`) are inlined. End users only need Node ≥ 20. |
 | Hook-driven enforcement via deny | Hooks can gate but can't invoke skills or call the LLM. The only way to trigger LLM work from a hook is to deny with an instruction. |
 | Regenerate on adjust, don't patch | Full rebuild from scratch is simpler and less error-prone than surgical edits. |

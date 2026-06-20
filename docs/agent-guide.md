@@ -10,9 +10,11 @@ You produce **plan markdown**. The renderer (the ExitPlanMode hook, or `jidoka m
 
 ```
 name: jidoka
-context: fork
+user-invocable: false
 allowed-tools: Read, Grep, Glob, Bash
 ```
+
+No `context: fork` — the skill runs **inline** in the planning agent's context (see [Design Constraints](#design-constraints)).
 
 ## Process
 
@@ -20,9 +22,9 @@ allowed-tools: Read, Grep, Glob, Bash
 
 Read the codebase using Read, Grep, Glob, then decompose the task into the markdown shape described in [Data Model — Plan markdown shape](data-model.md#plan-markdown-shape).
 
-### Step 2: Return the markdown
+### Step 2: Emit the markdown for ExitPlanMode
 
-Output the complete plan in a single ` ```markdown ` fence. The caller (main agent) decides what to do — typically reviews it, surfaces the summary to the user, then either accepts (calls `ExitPlanMode` with the markdown as the `plan` argument) or re-invokes `/jidoka` with adjustments.
+Output the complete plan in a single ` ```markdown ` fence, then call `ExitPlanMode` yourself with that markdown as the `plan` argument. If the plan needs changes, regenerate the whole thing from scratch rather than patching a prior draft (one-shot — see [Design Constraints](#design-constraints)).
 
 You do **not** save the markdown anywhere. The hook reads it directly from PreToolUse stdin's `tool_input.plan` field when ExitPlanMode fires.
 
@@ -76,17 +78,17 @@ jidoka's lifecycle convention parks open questions and proposals as `ideas/<YYMM
 2. **NEVER** execute the plan. The skill is a planner only.
 3. **NEVER** loop or ask for approval. One-shot generator.
 4. On re-invocation with adjustments, regenerate the **FULL** markdown from scratch — no patching.
-5. **NEVER** save the markdown to disk yourself. Return it to the caller; ExitPlanMode delivers it to the hook via `tool_input.plan`.
+5. **NEVER** save the markdown to disk yourself. Emit it and pass it to `ExitPlanMode`; the hook reads it from `tool_input.plan`.
 
 ## Design Constraints
 
+### Runs inline, not as a fork
+
+The skill has no `context: fork` in its frontmatter, so Claude Code runs it **inline** — its instructions enter the *same* context the planning agent is already in (composing with plan mode's native prompt) rather than spawning an isolated subagent. That's deliberate: inline, the skill sees the live plan-mode conversation — the task as it developed, the codebase notes, the back-and-forth with the user — which is exactly the raw material decomposition needs. A `context: fork` subagent would start blind, with only the skill file as its prompt. Inline keeps the skill under plan mode's restrictions, but it never needs to escape them: plan mode blocks only the *mutating* tools (Edit, Write, NotebookEdit, Task), and this skill uses read-only analysis tools (Read, Grep, Glob, Bash); `allowed-tools` pre-approves those so they don't prompt.
+
 ### Why one-shot
 
-`AskUserQuestion` does not surface to the user inside a forked subagent — the fork runs to completion autonomously. The skill produces and returns. The caller (main agent) handles iteration using `AskUserQuestion` at the main-agent level, then re-invokes the skill with feedback baked into the prompt.
-
-### Why fork works inside plan mode
-
-Plan mode blocks Edit, Write, NotebookEdit, and Task tools. The Skill tool isn't restricted. When invoked, the forked subagent operates in its own context — outside plan-mode tool restrictions. It can run Bash and read the codebase to inform decomposition.
+One-shot is a **design choice, not a platform limit.** The skill isn't barred from `AskUserQuestion` — inline skills inherit the agent's tools and plan mode itself permits clarifying questions — but it deliberately doesn't ask. It does one thing: analyze the task and emit a complete plan in a single pass. Clarification and iteration live one level up — the agent gathers what it needs (via `AskUserQuestion` in the normal plan-mode loop) and re-runs the skill with that folded in, regenerating the whole plan rather than patching.
 
 ### Why the hook reads `tool_input.plan` directly
 

@@ -168,6 +168,34 @@ jidoka renders commands verbatim; it does not run them. These properties of the 
 - **codex commands are operator-run.** `/codex:review` and `/codex:adversarial-review` set `disable-model-invocation: true`, so a resuming agent cannot invoke them via the SlashCommand tool — they're surfaced for the human to run. They require `/codex:setup` + `codex login` (they fail loudly otherwise). If jidoka drives plan-level review, leave codex's own Stop-time `--enable-review-gate` off to avoid double-gating. (Running codex as a `{ run: "… codex exec …", mode }` **template** is the agent-run alternative — Bash, not SlashCommand — when you want the agent to drive it.)
 - **`/jidoka:plan-review-prompt` drives the configured `plan_review` vehicle (tool-agnostic).** The resuming agent runs this bundled composer (it is agent-invocable); it reads the plan + cumulative diff, composes a cross-unit focus (seams, deferred forward-references that should now be wired up), and drives whatever `plan_review` configures: a `{ run, mode }` template for a generic tool — into which jidoka injects its **own** plan-level review prompt, then `print` (surface the command) or `exec` (run via Bash) — or a slash command like `/codex:adversarial-review`, into which it composes the focus for the operator. codex is one vehicle, not hardcoded; the agent does the aiming, the configured mode decides who runs it. **How the diff reaches the reviewer is read off the template's `run`:** a no-pipe skeleton (e.g. `codex exec -s read-only "{focus}"`) is *agentic* — the tool runs `git diff` itself from the range the composer puts in `{focus}`, paging it at its own pace so an extremely large diff never has to fit in one context window; a `git diff {diff_range} | …` skeleton *feeds* the diff in (the only option for a tool that can't run shell, but the whole diff then lands in the model's context, so it doesn't scale to very large plans).
 
+### Examples
+
+Two worked `config.json` shapes (the `pre_review`/`unit_review`/`plan_review` slice; the file is parsed as JSONC, so `//` comments are allowed).
+
+**Example A — slash commands throughout.** The pre-execution default, `/code-review` + a `/simplify` cleanup pass after each unit, and codex's adversarial review at plan-close. codex is operator-run (`disable-model-invocation`), so the `/jidoka:plan-review-prompt` composer aims it and hands you the ready-to-run command:
+
+```jsonc
+{
+  "pre_review": ["/jidoka:pre-plan-review"],
+  "unit_review": ["/code-review", "/simplify"],
+  "plan_review": ["/codex:adversarial-review"]
+}
+```
+
+**Example B — plan-level review fully agent-run** via a tool-agnostic `codex exec` template in `exec` mode. `codex exec` is agentic, so it fetches the diff itself (paging it at its own pace — this is what scales to a large plan); the composer fills `{focus}` with jidoka's own plan-level review prompt + the cross-unit targets + the diff range, runs it via Bash, and relays the findings — no operator step:
+
+```jsonc
+{
+  "pre_review": ["/jidoka:pre-plan-review"],
+  "unit_review": ["/code-review"],
+  "plan_review": [
+    { "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }
+  ]
+}
+```
+
+See *Command semantics & invocation* above for the namespace trap (`/code-review` vs the `/code-review:code-review` PR plugin), print-vs-exec, and codex being operator-run.
+
 ### Terminology
 
 | Term | Meaning |

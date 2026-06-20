@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 jidoka is a Claude Code plugin that materializes plan-mode output as a directory of reviewable markdown units. It has two components:
 
-- **Skill** (forked subagent) — LLM analyzes a task, decomposes it into units, returns plan markdown (`# Title` H1 + `## Unit NN:` headings + per-unit summary + body) to the caller.
+- **Skill** (inline) — LLM analyzes a task, decomposes it into units, and emits plan markdown (`# Title` H1 + `## Unit NN:` headings + per-unit summary + body) that becomes ExitPlanMode's `plan` argument. It has no `context: fork`, so it runs in the planning agent's own context.
 - **Renderer** (TypeScript bundled to `dist/cli.js` via esbuild) — deterministic CLI. Reads plan markdown from PreToolUse stdin's `tool_input.plan` (hook mode) or from a file/stdin (`materialize` mode), validates, and writes the plan dir. Never calls the LLM.
 
 The contract between them: ExitPlanMode carries the plan markdown in `tool_input.plan`; the hook reads it, materializes `<plan_dir_root>/<YYMMDD-N-slug>/` on disk, and exits 0.
@@ -23,7 +23,7 @@ The contract between them: ExitPlanMode carries the plan markdown in `tool_input
 ## Key Architecture Concepts
 
 - **Hook integration:** PreToolUse hook on ExitPlanMode reads `tool_input.plan` markdown directly from stdin and materializes the plan dir before the user sees the approval dialog. Empty/missing plan → silent exit 0; parse or validation failure → deny with reasoning.
-- **One-shot skill:** AskUserQuestion doesn't surface inside forks. Skill generates and returns; caller handles iteration by re-invoking with feedback.
+- **One-shot skill:** the skill emits a complete plan in a single pass and deliberately doesn't ask clarifying questions — a design choice, not a platform limit. Iteration lives one level up: the agent gathers feedback in the normal plan-mode loop and re-invokes the skill, which regenerates the whole plan from scratch.
 - **Review pipelines are config-driven:** the materializer resolves the user's `pre_review`/`unit_review`/`plan_review` steps from `~/.claude/plugins/jidoka/config.json` and renders them into each Unit md and `progress.md`; the renderer never runs them.
 
 ## When Implementing
