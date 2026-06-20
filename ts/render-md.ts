@@ -179,17 +179,17 @@ function renderPreReviewBlock(steps: ReviewStep[] | undefined): string {
 
 /**
  * The `## Git workflow` reminder, rendered into `progress.md` only when the
- * `git_workflow` flag is on (config or `.jidoka.json`). Terse on purpose —
- * the full version lives in `docs/exec-plans/AGENTS.md` + `docs/CONVENTION.md`.
- * Returns "" when off (no empty section), and a block ending in a blank line
- * when on, so the template slot collapses cleanly either way.
+ * `git_workflow` flag is on (config or `.jidoka.json`). Self-contained — it
+ * names this plan's actual worktree/branch and spells out the per-unit and
+ * land-on-main steps inline, so a resuming agent in any repo needs no external
+ * doc. Returns "" when off (no empty section), and a block ending in a blank
+ * line when on, so the template slot collapses cleanly either way.
  */
 function renderGitWorkflowBlock(planId: string, enabled: boolean): string {
   if (!enabled) return "";
   return (
     "## Git workflow\n\n" +
-    "This plan is worked in its own git worktree, one branch per unit. " +
-    "Full steps: `docs/exec-plans/AGENTS.md` + `docs/CONVENTION.md`.\n\n" +
+    "This plan is worked in its own git worktree, one branch per unit:\n\n" +
     `- **Worktree:** \`worktrees/${planId}/\` on branch \`plan/${planId}\` ` +
     "(off `main`); the plan's `active/` dir lives only inside it.\n" +
     "- **Per unit:** branch `unit/NN-slug` off the plan branch → work + review → " +

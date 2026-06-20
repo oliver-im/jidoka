@@ -1,6 +1,7 @@
 ---
 name: jidoka:plan-review-prompt
-description: Compose a hostile, plan-level adversarial review for a COMPLETED jidoka plan and drive it through the configured plan_review vehicle. Reads the plan dir (overview + units + progress, incl. deferred forward-reference notes) and the cumulative committed diff, composes a cross-unit focus (integration seams, forward-references that should now be wired up), then honors the configured plan_review step shape — a { run, mode } bash template for a generic tool (codex exec, cursor-agent, …), into which jidoka injects its OWN review prompt; or a slash command, into which it composes the focus. print (default) surfaces a ready-to-run command and stops for the operator; exec runs it via Bash and surfaces findings. Tool-agnostic — no hardcoded reviewer. Use as the plan_review step, after the last unit lands and is committed.
+description: Compose a cross-unit adversarial review for a COMPLETED jidoka plan and drive it through the configured plan_review vehicle. Reads the plan dir + cumulative committed diff, composes a focus (integration seams, deferred forward-references), then injects jidoka's own plan-level review prompt into a { run, mode } template (print surfaces the command, exec runs it via Bash) or composes the focus into a slash command. Tool-agnostic — no hardcoded reviewer. Run as the plan_review step, after the last unit lands and is committed.
+user-invocable: false
 allowed-tools: Read, Grep, Glob, Bash
 ---
 

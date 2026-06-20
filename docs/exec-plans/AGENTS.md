@@ -22,7 +22,7 @@ A plan is **worked in its own git worktree**, and each **unit is a branch**. The
 
 - **Per plan:** `worktrees/<plan-id>/` on branch `plan/<plan-id>`, off `main`. The plan dir lives in `active/<plan-id>/` *inside that worktree*. (Create it by hand with `git worktree add worktrees/<plan-id> -b plan/<plan-id>`; jidoka can also scaffold it automatically when its `git_workflow` flag is enabled. `worktrees/` is gitignored.)
 - **Per unit:** branch `unit/NN-slug` off the plan branch. Do the unit's work there, run the unit review (below) on the branch diff, fix flags, commit freely. Then **squash-merge** into the plan branch as one `Unit NN: <title>` commit (`git merge --squash unit/NN-slug` → commit), delete the unit branch (`git branch -D unit/NN-slug`), and advance the cursor. The squash absorbs the review→fix rounds, so the plan branch carries exactly one clean commit per unit.
-- **At the end (archive + merge):** `git mv active/<plan-id> completed/<plan-id>`, prepend the provenance stamp to its `progress.md`, commit on the plan branch; then `git checkout main && git merge --no-ff plan/<plan-id>` and `git worktree remove worktrees/<plan-id>`. `main` gains the plan under `completed/`, never under `active/`.
+- **At the end (archive + PR):** `git mv active/<plan-id> completed/<plan-id>`, prepend the provenance stamp to its `progress.md`, commit on the plan branch; then **land it per the repo's git workflow (root `AGENTS.md`)** — push the branch and open a PR (`git push -u origin plan/<plan-id>` → `gh pr create`), not a local merge into `main`. Once the PR merges, `git checkout main && git pull`, then `git worktree remove worktrees/<plan-id>`. `main` gains the plan under `completed/`, never under `active/`.
 
 ## Resume protocol
 
@@ -46,7 +46,7 @@ After completing the cursor unit:
 When the cursor unit was the **last** one:
 
 - After its review + squash-merge, walk `progress.md`'s `## Plan-level review` against the cumulative (committed) plan diff. Run the bundled **`/jidoka:plan-review-prompt`** composer (agent-invocable): it reads the plan + diff, composes a cross-unit focus, and **drives whatever `plan_review` configures** — tool-agnostically. For a `{ run, mode }` **template** (e.g. `codex exec`), it injects jidoka's own plan-level review prompt, then either surfaces the ready-to-run command (`print`) or runs it itself via **Bash** (`exec`). For a slash command like `/codex:adversarial-review`, it composes the focus into the command and surfaces it for you — codex review sets `disable-model-invocation` so you run it (needs `/codex:setup` + `codex login`). In short: `print`/slash-with-`disable-model-invocation` → surface and wait; `exec` template → the agent runs it and relays findings.
-- On approval, **archive + merge** per the git workflow above (`git mv` to `completed/`, stamp, `--no-ff` merge to `main`, remove the worktree). Don't archive before sign-off, even if `## Plan-level review` is empty.
+- On approval, **archive + open a PR** per the git workflow above (`git mv` to `completed/`, stamp, commit on the plan branch, push, `gh pr create`; the PR merges on GitHub, then update `main` and remove the worktree). Don't archive before sign-off, even if `## Plan-level review` is empty.
 
 ## Provenance stamp (on archive)
 
