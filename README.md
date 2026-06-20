@@ -59,3 +59,13 @@ For the review process, jidoka has the ability to insert custom bash commands (t
 ### Documentation
 
 For an overview of the docs, see [docs/README.md](docs/README.md).
+
+### Installation
+```
+# inside Claude Code
+/plugin marketplace add oliver-im/jidoka
+/plugin install jidoka@jidoka
+/reload-plugins
+```
+
+Note: Node 20+ is required.

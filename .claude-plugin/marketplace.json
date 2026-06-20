@@ -1,11 +1,11 @@
 {
-  "name": "jidoka-local",
+  "name": "jidoka",
   "owner": {
     "name": "Oliver Im"
   },
   "metadata": {
-    "description": "Local marketplace for the jidoka plugin",
-    "version": "0.3.0"
+    "description": "Marketplace for the jidoka plugin",
+    "version": "0.3.1"
   },
   "plugins": [
     {
