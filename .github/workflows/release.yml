@@ -9,6 +9,11 @@ name: release
 #
 #   gh workflow run release.yml -f version=0.3.2
 #   gh workflow run release.yml -f version=patch     # or minor / major
+# NOTE: `main` is protected by the "Protect main" ruleset (PRs required; direct
+# pushes blocked, even for GITHUB_TOKEN). The final `git push ... HEAD:main`
+# below authenticates with the `DEPLOY_KEY` secret — an ed25519 deploy key on
+# the ruleset bypass list — so the push is allowed. To rotate: regenerate the
+# key, then update the repo deploy key and the DEPLOY_KEY secret.
 on:
   workflow_dispatch:
     inputs:
@@ -34,6 +39,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0 # need full history + tags for the existence check and notes
+          ssh-key: ${{ secrets.DEPLOY_KEY }} # push to protected main via bypass deploy key; GITHUB_TOKEN is blocked by the ruleset
 
       - uses: actions/setup-node@v4
         with:
