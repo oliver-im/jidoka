@@ -73,12 +73,20 @@ const validPlanMd = `# Hook test plan
 Just a smoke test.
 `;
 
-const stdin = (sessionId: string, plan?: string): string =>
-  JSON.stringify({
+const stdin = (
+  sessionId: string,
+  plan?: string,
+  planFilePath?: string,
+): string => {
+  const toolInput: Record<string, unknown> = {};
+  if (plan !== undefined) toolInput.plan = plan;
+  if (planFilePath !== undefined) toolInput.planFilePath = planFilePath;
+  return JSON.stringify({
     session_id: sessionId,
     tool_name: "ExitPlanMode",
-    tool_input: plan === undefined ? {} : { plan },
+    tool_input: toolInput,
   });
+};
 
 let stdoutChunks: string[] = [];
 let stderrChunks: string[] = [];
@@ -122,39 +130,112 @@ describe("isValidSessionId", () => {
   });
 });
 
-describe("runWithInput: missing or empty plan", () => {
-  it("absent tool_input.plan exits silent (no deny, no plan dir)", () => {
+// Regression: the silent no-op bug. When the plan never reaches the hook
+// (empty `plan` and no readable plan file) the hook must DENY loudly with an
+// explanation, never exit 0 having created nothing. See ts/hook.ts
+// resolvePlanSource / emptyPlanDenyMessage.
+describe("runWithInput: missing or empty plan (loud, not silent)", () => {
+  const expectEmptyDeny = (project: string, input: string): void => {
+    runWithInput(input, testConfig(project));
+    const out = stdoutChunks.join("");
+    expect(out).toContain("PreToolUse");
+    expect(out).toContain("deny");
+    expect(out).toContain("no plan content reached the hook");
+    // Nothing materialized.
+    expect(existsSync(join(project, "notes/plan"))).toBe(false);
+  };
+
+  it("absent tool_input.plan denies loudly (the reproduced bug payload)", () => {
     const project = makeTempDir("absent-proj");
-    runWithInput(stdin(`absent-${process.pid}`), testConfig(project));
-    expect(stdoutChunks.join("")).toBe("");
-    expect(existsSync(join(project, "notes/plan"))).toBe(false);
+    expectEmptyDeny(project, stdin(`absent-${process.pid}`));
     rmSync(project, { recursive: true, force: true });
   });
 
-  it("empty plan string exits silent", () => {
+  it("empty plan string denies loudly", () => {
     const project = makeTempDir("empty-proj");
-    runWithInput(stdin(`empty-${process.pid}`, ""), testConfig(project));
-    expect(stdoutChunks.join("")).toBe("");
-    expect(existsSync(join(project, "notes/plan"))).toBe(false);
+    expectEmptyDeny(project, stdin(`empty-${process.pid}`, ""));
     rmSync(project, { recursive: true, force: true });
   });
 
-  it("whitespace-only plan exits silent", () => {
+  it("whitespace-only plan denies loudly", () => {
     const project = makeTempDir("ws-proj");
-    runWithInput(stdin(`ws-${process.pid}`, "   \n\n  "), testConfig(project));
-    expect(stdoutChunks.join("")).toBe("");
-    expect(existsSync(join(project, "notes/plan"))).toBe(false);
+    expectEmptyDeny(project, stdin(`ws-${process.pid}`, "   \n\n  "));
     rmSync(project, { recursive: true, force: true });
   });
 
-  it("missing tool_input field entirely exits silent", () => {
+  it("missing tool_input field entirely denies loudly", () => {
     const project = makeTempDir("no-tool-input-proj");
-    runWithInput(
+    expectEmptyDeny(
+      project,
       JSON.stringify({ session_id: `noti-${process.pid}` }),
+    );
+    rmSync(project, { recursive: true, force: true });
+  });
+
+  it("names the unreadable plan file in the deny when only planFilePath is given", () => {
+    const project = makeTempDir("badpath-proj");
+    const missing = join(project, "does-not-exist.md");
+    runWithInput(
+      stdin(`badpath-${process.pid}`, undefined, missing),
       testConfig(project),
     );
-    expect(stdoutChunks.join("")).toBe("");
+    const out = stdoutChunks.join("");
+    expect(out).toContain("deny");
+    expect(out).toContain("no plan content reached the hook");
+    expect(out).toContain(missing);
     expect(existsSync(join(project, "notes/plan"))).toBe(false);
+    rmSync(project, { recursive: true, force: true });
+  });
+});
+
+// The current Claude Code harness writes the plan to a file and hands the hook
+// both the inlined content (tool_input.plan) and the path (tool_input.planFilePath).
+// When the inline copy is absent, the hook reads the file. Verified against
+// Claude Code 2.1.173.
+describe("runWithInput: plan sourced from planFilePath", () => {
+  it("materializes from the plan file when tool_input.plan is absent", () => {
+    const project = makeTempDir("pfp-proj");
+    const planFile = join(project, "plan.md");
+    writeFileSync(planFile, validPlanMd);
+    runWithInput(
+      stdin(`pfp-${process.pid}`, undefined, planFile),
+      testConfig(project),
+    );
+    const target = join(project, "notes/plan/260505-0-hook-test-plan");
+    expect(existsSync(join(target, "overview.md"))).toBe(true);
+    expect(existsSync(join(target, "01-only-unit.md"))).toBe(true);
+    expect(stdoutChunks.join("")).toBe(""); // no deny
+    rmSync(project, { recursive: true, force: true });
+  });
+
+  it("prefers inline tool_input.plan over the file when both are present", () => {
+    const project = makeTempDir("pfp-pref-proj");
+    const planFile = join(project, "plan.md");
+    // The file holds a DIFFERENT plan; the inline plan must win.
+    writeFileSync(planFile, "# File plan\n\n## Unit 01: From file\n\nfile body.\n");
+    runWithInput(
+      stdin(`pfppref-${process.pid}`, validPlanMd, planFile),
+      testConfig(project),
+    );
+    // Inline plan's slug materialized, not the file's.
+    expect(
+      existsSync(join(project, "notes/plan/260505-0-hook-test-plan/overview.md")),
+    ).toBe(true);
+    expect(existsSync(join(project, "notes/plan/260505-0-file-plan"))).toBe(false);
+    rmSync(project, { recursive: true, force: true });
+  });
+
+  it("falls back to the file when inline plan is whitespace-only", () => {
+    const project = makeTempDir("pfp-ws-proj");
+    const planFile = join(project, "plan.md");
+    writeFileSync(planFile, validPlanMd);
+    runWithInput(
+      stdin(`pfpws-${process.pid}`, "   \n  ", planFile),
+      testConfig(project),
+    );
+    expect(
+      existsSync(join(project, "notes/plan/260505-0-hook-test-plan/overview.md")),
+    ).toBe(true);
     rmSync(project, { recursive: true, force: true });
   });
 });

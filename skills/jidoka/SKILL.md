@@ -1,13 +1,13 @@
 ---
 name: jidoka
 description: Decompose a multi-step task into reviewable units and emit a plan markdown that the ExitPlanMode hook materializes as a directory under <plan_dir_root>/ (default `docs/exec-plans/active/`). Use in plan mode before ExitPlanMode. When the plan crystallizes, structure it as explicit units (## Unit 01: <title>, ## Unit 02: <title>, …) so each unit is reviewable on its own and finishable in one session.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Write
 user-invocable: false
 ---
 
 # jidoka
 
-You produce a **plan markdown** that becomes ExitPlanMode's `plan` argument. The renderer (the ExitPlanMode hook) handles validation and materialization (writing `overview.md` + `progress.md` + per-unit md files). Your job is to analyze the task, decompose it into units, and output conforming markdown.
+You produce a **plan markdown**, write it to the plan-mode plan file, and call ExitPlanMode. The renderer (the ExitPlanMode hook) handles validation and materialization (writing `overview.md` + `progress.md` + per-unit md files). Your job is to analyze the task, decompose it into units, write the conforming markdown to the plan file, and exit plan mode.
 
 ## Process
 
@@ -15,11 +15,16 @@ You produce a **plan markdown** that becomes ExitPlanMode's `plan` argument. The
 
 Read the codebase using Read, Grep, Glob, and Bash, then decompose the task into the markdown shape below.
 
-### Step 2: Emit the markdown for ExitPlanMode
+### Step 2: Write the plan to the plan file, then call ExitPlanMode
 
-Output the complete plan markdown in a single ` ```markdown ` fence — it round-trips verbatim, since the hook's parser unwraps an outer ` ```markdown ` wrapper before parsing. Then call ExitPlanMode yourself with that markdown as the `plan` argument. If the plan needs changes, regenerate the whole thing from scratch rather than patching a prior draft (one-shot — see below).
+Plan mode designates a **plan file** for this session — its path is shown in the plan-mode reminder in your context (as the plan file path / `planFilePath`, e.g. `~/.claude/plans/<name>.md`). Do these two things, in order:
 
-You do **not** save the markdown anywhere. The hook reads it directly from PreToolUse stdin's `tool_input.plan` field when ExitPlanMode fires; nothing else needs to mediate.
+1. **Write the complete plan markdown to that plan file** with the Write tool. Write raw markdown — the `# Title` H1 + `## Unit NN:` sections in the shape below, with **no** outer ` ```markdown ` fence. This file is what the user reviews in the approval dialog, and it is the only channel by which the plan reaches the renderer.
+2. **Call ExitPlanMode.** When it fires, the harness reads the plan file you just wrote and passes its content to the jidoka hook as `tool_input.plan`; the hook validates and materializes the plan dir. You do **not** pass the markdown as a tool argument — current ExitPlanMode has no `plan` parameter, so the file *is* the channel.
+
+If you skip the write, the plan file stays empty, the hook receives nothing, and materialization **fails loudly** — the hook denies ExitPlanMode with an explanation instead of silently doing nothing. So always write the file first. If the plan needs changes, regenerate the whole thing from scratch and re-write the file rather than patching a prior draft (one-shot — see below).
+
+> Compatibility: older harnesses (before the plan-file mechanism) took the markdown as an inline `plan` argument to ExitPlanMode. Writing the plan file is the current path; if you find yourself on an older harness whose ExitPlanMode still surfaces a `plan` parameter, pass the same markdown there as well. The renderer reads `tool_input.plan` either way, and the parser also tolerates an accidental outer ` ```markdown ` fence — so writing the file is always safe.
 
 ## Markdown shape
 
@@ -93,9 +98,9 @@ When the task traces back to an `ideas/<YYMMDD-N-slug>.md` entry (an open questi
 
 ## Contract
 
-- **Output**: one markdown plan in a ` ```markdown ` fence, passed to ExitPlanMode's `plan` argument.
+- **Output**: one markdown plan (the `# Title` + `## Unit NN:` shape), written verbatim to the plan-mode plan file; then ExitPlanMode is called. The renderer reads it from `tool_input.plan`, which the harness populates from that file.
 - **One-shot**: produce the complete plan in a single pass. On re-invocation regenerate the full markdown from scratch — no patching of prior output.
-- **Scope is read-only analysis + markdown emission.** Everything downstream is out of scope — the hook materializes the dir; the resuming agent executes units and runs reviews. None of it is the skill's job.
+- **Scope is read-only analysis + writing the plan file + calling ExitPlanMode.** Everything downstream is out of scope — the hook materializes the dir; the resuming agent executes units and runs reviews. None of it is the skill's job.
 
 ## Design Constraints
 
@@ -103,7 +108,7 @@ When the task traces back to an `ideas/<YYMMDD-N-slug>.md` entry (an open questi
 
 This skill has no `context: fork` in its frontmatter, so Claude Code runs it **inline** — its instructions enter the *same* context the planning agent is already in (composing with plan mode's native prompt), rather than spawning an isolated subagent. That's deliberate: inline, the skill sees the live plan-mode conversation — the task as it developed, the codebase notes, the back-and-forth with the user — which is exactly the raw material decomposition needs. A `context: fork` subagent would start blind, with only this file as its prompt.
 
-Inline keeps the skill under plan mode's restrictions, but it never needs to escape them: plan mode blocks the *mutating* tools (Edit, Write, NotebookEdit, Task), and this skill only uses read-only analysis tools (Read, Grep, Glob, and Bash for inspection). `allowed-tools` just pre-approves those so they don't prompt for permission.
+Inline keeps the skill under plan mode's restrictions. Plan mode blocks mutating tools in general (Edit, NotebookEdit, Task) but **permits writing the session's designated plan file** — which is exactly what Step 2 does. Apart from that one sanctioned write, the skill uses only read-only analysis tools (Read, Grep, Glob, and Bash for inspection). `allowed-tools` lists `Write` so the plan-file write is pre-approved rather than prompting.
 
 ### Why one-shot
 
