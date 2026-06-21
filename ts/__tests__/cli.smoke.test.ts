@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -135,7 +143,7 @@ describe("hook", () => {
     expect(r.status).toBe(0);
   });
 
-  it("exits 0 silently when tool_input.plan is absent", () => {
+  it("exits 0 but denies loudly when tool_input.plan is absent", () => {
     const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-hook-empty-"));
     try {
       const sessionId = `smoke-${Date.now()}`;
@@ -143,9 +151,39 @@ describe("hook", () => {
         stdin: JSON.stringify({ session_id: sessionId }),
         env: { CLAUDE_PROJECT_DIR: tmp },
       });
+      // Always exit 0 (a non-zero would block ExitPlanMode permanently) — but
+      // the empty payload now surfaces a deny instead of vanishing silently.
       expect(r.status).toBe(0);
-      expect(r.stdout).toBe("");
+      expect(r.stdout).toContain("deny");
+      expect(r.stdout).toContain("no plan content reached the hook");
       expect(existsSync(join(tmp, "docs/exec-plans/active"))).toBe(false);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("materializes from tool_input.planFilePath when plan is absent (file-based flow)", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-hook-pfp-"));
+    try {
+      const sessionId = `smoke-${Date.now()}`;
+      const planFile = join(tmp, "plan.md");
+      writeFileSync(planFile, "# File plan\n\n## Unit 01: Only\n\nSummary.\n");
+      const r = run(["hook"], {
+        stdin: JSON.stringify({
+          session_id: sessionId,
+          tool_name: "ExitPlanMode",
+          tool_input: { allowedPrompts: [], planFilePath: planFile },
+        }),
+        env: { CLAUDE_PROJECT_DIR: tmp },
+      });
+      expect(r.status).toBe(0);
+      expect(r.stdout).toBe(""); // no deny
+      expect(r.stderr).toMatch(/Wrote plan to /);
+      // A plan dir was materialized from the file's content (slug "file-plan").
+      // The date prefix is dynamic, so match on the slug suffix.
+      const active = join(tmp, "docs/exec-plans/active");
+      expect(existsSync(active)).toBe(true);
+      expect(readdirSync(active).some((d) => d.endsWith("-file-plan"))).toBe(true);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

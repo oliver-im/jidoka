@@ -19353,7 +19353,8 @@ function detectUnitCycles(units, errors) {
 var hookInputSchema = external_exports.object({
   session_id: external_exports.string(),
   tool_input: external_exports.object({
-    plan: external_exports.string().optional()
+    plan: external_exports.string().optional(),
+    planFilePath: external_exports.string().optional()
   }).passthrough().optional()
 });
 function configFromEnv() {
@@ -19398,10 +19399,12 @@ function runWithInput(input, config2) {
   if (!isValidSessionId(sessionId)) {
     throw new Error(`invalid session_id: ${sessionId}`);
   }
-  const planMd = parsed.data.tool_input?.plan;
-  if (planMd === void 0 || planMd.trim().length === 0) {
+  const source = resolvePlanSource(parsed.data.tool_input);
+  if (!source.ok) {
+    emitDeny(emptyPlanDenyMessage(parsed.data.tool_input?.planFilePath));
     return;
   }
+  const planMd = source.value;
   const planResult = parsePlanMarkdown(planMd);
   if (!planResult.ok) {
     emitDeny(`jidoka: cannot parse plan markdown: ${planResult.error}`);
@@ -19479,6 +19482,25 @@ function runWithInput(input, config2) {
 `);
   if (worktreeNote !== void 0) process.stderr.write(worktreeNote + "\n");
 }
+function resolvePlanSource(toolInput) {
+  const inline = toolInput?.plan;
+  if (typeof inline === "string" && inline.trim().length > 0) {
+    return { ok: true, value: inline };
+  }
+  const planFilePath = toolInput?.planFilePath;
+  if (typeof planFilePath === "string" && planFilePath.trim().length > 0) {
+    try {
+      const fromFile = readFileSync3(planFilePath, "utf8");
+      if (fromFile.trim().length > 0) return { ok: true, value: fromFile };
+    } catch {
+    }
+  }
+  return { ok: false };
+}
+function emptyPlanDenyMessage(planFilePath) {
+  const fileNote = typeof planFilePath === "string" && planFilePath.trim().length > 0 ? ` The named plan file (${planFilePath}) was missing or empty.` : "";
+  return "jidoka: ExitPlanMode fired but no plan content reached the hook \u2014 tool_input.plan was empty and no readable plan file was provided." + fileNote + " In the current Claude Code harness the plan must be WRITTEN to the plan-mode plan file before ExitPlanMode; the harness then passes that file's content to this hook as tool_input.plan. If you used /jidoka, write the emitted plan markdown to that file (its path is shown in the plan-mode reminder) and exit plan mode again. Nothing was materialized.";
+}
 function emitDeny(message) {
   const deny = {
     hookSpecificOutput: {
@@ -19503,11 +19525,14 @@ program2.command("hook").description("Process ExitPlanMode hook from stdin").act
   process.exit(code);
 });
 program2.command("materialize <file>").description(
-  "Materialize a plan markdown (or legacy Plan JSON) into <plan_dir_root>/<YYMMDD-N-slug>/ (use - for stdin)"
+  "Materialize a plan markdown (or legacy Plan JSON) into <plan_dir_root>/<YYMMDD-N-slug>/ (use - for stdin). Writes the plan's md files ONLY \u2014 it does NOT create a git worktree even when git_workflow is enabled; only the ExitPlanMode `hook` does that."
 ).option(
   "--plans-root <dir>",
   "Override the plans root (default: <CLAUDE_PROJECT_DIR or cwd>/<plan_dir_root>, layered config honored; plan_dir_root defaults to 'plan')"
-).option("--today <yymmdd>", "Override today's date prefix").action((file2, opts) => {
+).option("--today <yymmdd>", "Override today's date prefix").addHelpText(
+  "after",
+  "\nNote: `materialize` is the in-tree / recovery path \u2014 it never sets up the\nper-plan worktree or `plan/<id>` branch that the ExitPlanMode `hook` creates\nunder git_workflow. It is therefore NOT a drop-in for the hook flow. If you\nused it to recover a plan that should live in a worktree, create the worktree\nyourself (e.g. `git worktree add worktrees/<id> -b plan/<id> <trunk>`) and move\nthe materialized dir into it."
+).action((file2, opts) => {
   runMaterialize(file2, opts);
 });
 function runMaterialize(file2, opts) {

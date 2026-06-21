@@ -11,7 +11,7 @@ You produce **plan markdown**. The renderer (the ExitPlanMode hook, or `jidoka m
 ```
 name: jidoka
 user-invocable: false
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Write
 ```
 
 No `context: fork` — the skill runs **inline** in the planning agent's context (see [Design Constraints](#design-constraints)).
@@ -22,11 +22,11 @@ No `context: fork` — the skill runs **inline** in the planning agent's context
 
 Read the codebase using Read, Grep, Glob, then decompose the task into the markdown shape described in [Data Model — Plan markdown shape](data-model.md#plan-markdown-shape).
 
-### Step 2: Emit the markdown for ExitPlanMode
+### Step 2: Write the plan to the plan file, then call ExitPlanMode
 
-Output the complete plan in a single ` ```markdown ` fence, then call `ExitPlanMode` yourself with that markdown as the `plan` argument. If the plan needs changes, regenerate the whole thing from scratch rather than patching a prior draft (one-shot — see [Design Constraints](#design-constraints)).
+Plan mode designates a **plan file** for the session — its path is in the plan-mode reminder in your context (shown as the plan file path / `planFilePath`). Write the complete plan markdown to that file (raw markdown — the `# Title` H1 + `## Unit NN:` sections, **no** outer ` ```markdown ` fence), then call `ExitPlanMode`. When it fires, the harness reads the plan file and passes its content to the hook as `tool_input.plan`; current ExitPlanMode has no `plan` parameter, so the file *is* the channel. If the plan needs changes, regenerate the whole thing from scratch and re-write the file rather than patching a prior draft (one-shot — see [Design Constraints](#design-constraints)).
 
-You do **not** save the markdown anywhere. The hook reads it directly from PreToolUse stdin's `tool_input.plan` field when ExitPlanMode fires.
+If the plan file is never written, the hook receives nothing and **denies ExitPlanMode loudly** instead of silently materializing nothing — so always write the file first.
 
 ## Heuristics
 
@@ -78,18 +78,18 @@ jidoka's lifecycle convention parks open questions and proposals as `ideas/<YYMM
 2. **NEVER** execute the plan. The skill is a planner only.
 3. **NEVER** loop or ask for approval. One-shot generator.
 4. On re-invocation with adjustments, regenerate the **FULL** markdown from scratch — no patching.
-5. **NEVER** save the markdown to disk yourself. Emit it and pass it to `ExitPlanMode`; the hook reads it from `tool_input.plan`.
+5. **ALWAYS** write the complete plan markdown to the plan-mode plan file before calling `ExitPlanMode`. That file is the only channel to the hook (which reads it from `tool_input.plan`, populated by the harness from the file). Do not rely on an inline `plan` argument — current ExitPlanMode has no such parameter. (The plan file is the one disk write the skill makes; never write anything else.)
 
 ## Design Constraints
 
 ### Runs inline, not as a fork
 
-The skill has no `context: fork` in its frontmatter, so Claude Code runs it **inline** — its instructions enter the *same* context the planning agent is already in (composing with plan mode's native prompt) rather than spawning an isolated subagent. That's deliberate: inline, the skill sees the live plan-mode conversation — the task as it developed, the codebase notes, the back-and-forth with the user — which is exactly the raw material decomposition needs. A `context: fork` subagent would start blind, with only the skill file as its prompt. Inline keeps the skill under plan mode's restrictions, but it never needs to escape them: plan mode blocks only the *mutating* tools (Edit, Write, NotebookEdit, Task), and this skill uses read-only analysis tools (Read, Grep, Glob, Bash); `allowed-tools` pre-approves those so they don't prompt.
+The skill has no `context: fork` in its frontmatter, so Claude Code runs it **inline** — its instructions enter the *same* context the planning agent is already in (composing with plan mode's native prompt) rather than spawning an isolated subagent. That's deliberate: inline, the skill sees the live plan-mode conversation — the task as it developed, the codebase notes, the back-and-forth with the user — which is exactly the raw material decomposition needs. A `context: fork` subagent would start blind, with only the skill file as its prompt. Inline keeps the skill under plan mode's restrictions: plan mode blocks mutating tools in general (Edit, NotebookEdit, Task) but permits writing the session's designated plan file — the one write Step 2 makes — alongside the read-only analysis tools (Read, Grep, Glob, Bash); `allowed-tools` pre-approves these (including `Write`, for the plan file) so they don't prompt.
 
 ### Why one-shot
 
 One-shot is a **design choice, not a platform limit.** The skill isn't barred from `AskUserQuestion` — inline skills inherit the agent's tools and plan mode itself permits clarifying questions — but it deliberately doesn't ask. It does one thing: analyze the task and emit a complete plan in a single pass. Clarification and iteration live one level up — the agent gathers what it needs (via `AskUserQuestion` in the normal plan-mode loop) and re-runs the skill with that folded in, regenerating the whole plan rather than patching.
 
-### Why the hook reads `tool_input.plan` directly
+### Why the hook reads `tool_input.plan` (sourced from the plan file)
 
-ExitPlanMode + PreToolUse hooks shipped in Claude Code v2.1.85 (2026-03-26). Before that, jidoka ferried the plan through `/tmp/jidoka-{session_id}.json` because the hook had no way to see what the user was about to approve. Now the markdown is right there in the PreToolUse payload — no temp file, no marker file, no deny-loop.
+ExitPlanMode + PreToolUse hooks shipped in Claude Code v2.1.85 (2026-03-26); before that, jidoka ferried the plan through `/tmp/jidoka-{session_id}.json` because the hook had no way to see what the user was about to approve. Early ExitPlanMode took the plan as an inline `plan` argument that landed directly in `tool_input.plan`. The current harness (verified on 2.1.173) instead has the agent **write the plan to a designated plan file**; when ExitPlanMode fires, the harness reads that file and injects its content into the PreToolUse payload as `tool_input.plan` (and the path as `tool_input.planFilePath`) — even when the model passed only `allowedPrompts`. So the hook still reads `tool_input.plan`; what changed is the source (a file the agent writes, not an inline arg). The hook falls back to reading `planFilePath` if the inlined copy is ever absent, and denies loudly if both are empty — no temp file, no marker file, no deny-loop.

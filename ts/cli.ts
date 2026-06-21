@@ -29,13 +29,22 @@ program
 program
   .command("materialize <file>")
   .description(
-    "Materialize a plan markdown (or legacy Plan JSON) into <plan_dir_root>/<YYMMDD-N-slug>/ (use - for stdin)",
+    "Materialize a plan markdown (or legacy Plan JSON) into <plan_dir_root>/<YYMMDD-N-slug>/ (use - for stdin). Writes the plan's md files ONLY — it does NOT create a git worktree even when git_workflow is enabled; only the ExitPlanMode `hook` does that.",
   )
   .option(
     "--plans-root <dir>",
     "Override the plans root (default: <CLAUDE_PROJECT_DIR or cwd>/<plan_dir_root>, layered config honored; plan_dir_root defaults to 'plan')",
   )
   .option("--today <yymmdd>", "Override today's date prefix")
+  .addHelpText(
+    "after",
+    "\nNote: `materialize` is the in-tree / recovery path — it never sets up the\n" +
+      "per-plan worktree or `plan/<id>` branch that the ExitPlanMode `hook` creates\n" +
+      "under git_workflow. It is therefore NOT a drop-in for the hook flow. If you\n" +
+      "used it to recover a plan that should live in a worktree, create the worktree\n" +
+      "yourself (e.g. `git worktree add worktrees/<id> -b plan/<id> <trunk>`) and move\n" +
+      "the materialized dir into it.",
+  )
   .action((file: string, opts: { plansRoot?: string; today?: string }) => {
     runMaterialize(file, opts);
   });

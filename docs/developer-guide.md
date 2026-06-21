@@ -14,10 +14,10 @@ User types /jidoka <task>
 |                                                    |
 |  LLM analyzes task -> produces plan markdown       |
 |    (# Title H1 + ## Unit NN: headings + bodies)    |
-|  Calls ExitPlanMode with markdown (one-shot)       |
+|  Writes plan to plan file, calls ExitPlanMode      |
 +------------------+--------------------------------+
                    |
-                   v  (markdown rides in tool_input.plan)
+                   v  (harness reads plan file -> tool_input.plan)
 +------------------v--------------------------------+
 |  RENDERER (bundled dist/cli.js, hook mode)         |
 |                                                    |
@@ -30,9 +30,9 @@ User types /jidoka <task>
 
 ### Skill (SKILL.md)
 
-Runs **inline** in the planning agent's context — no `context: fork`, so its instructions compose with plan mode's native prompt rather than running in an isolated subagent. One-shot generator: analyzes the task, produces **plan markdown**, then calls `ExitPlanMode` with it. Running inline, the skill sees the live plan-mode conversation (the task as it developed, codebase notes, the user back-and-forth) — exactly the raw material decomposition needs.
+Runs **inline** in the planning agent's context — no `context: fork`, so its instructions compose with plan mode's native prompt rather than running in an isolated subagent. One-shot generator: analyzes the task, produces **plan markdown**, writes it to the plan-mode plan file, then calls `ExitPlanMode`. Running inline, the skill sees the live plan-mode conversation (the task as it developed, codebase notes, the user back-and-forth) — exactly the raw material decomposition needs.
 
-The skill handles everything requiring LLM judgment: task analysis, unit decomposition, body prose. It never saves to disk, never calls the renderer, never executes the plan.
+The skill handles everything requiring LLM judgment: task analysis, unit decomposition, body prose. It writes only the plan-mode plan file (the one sanctioned plan-mode write), never calls the renderer, never executes the plan.
 
 ### Renderer (ts/)
 
@@ -53,8 +53,9 @@ plan markdown (from PreToolUse stdin's tool_input.plan, or from a file/stdin)
 **Hook contract** (the primary path):
 
 ```
-ExitPlanMode fires with markdown in tool_input.plan
-  -> hook reads stdin, extracts tool_input.plan
+agent writes the plan to the plan-mode plan file, then ExitPlanMode fires
+  -> harness reads that file, injects its content as tool_input.plan (+ planFilePath)
+  -> hook reads stdin, takes tool_input.plan (or reads planFilePath if absent)
   -> parse_plan_markdown + validate_plan
   -> materializes <project>/<plan_dir_root>/<YYMMDD-N-slug>/
   -> exits 0
@@ -194,10 +195,10 @@ PostToolUse is structurally incompatible with "review before approval."
 PreToolUse fires before the user sees the approval dialog:
 
 1. Agent (in plan mode) crystallizes a plan, runs `/jidoka`
-2. Skill returns plan markdown to the main agent
-3. Main agent calls `ExitPlanMode` with the markdown as the `plan` argument
+2. Skill writes the plan markdown to the plan-mode plan file
+3. Main agent calls `ExitPlanMode`; the harness reads the plan file and puts its content in `tool_input.plan` (+ `planFilePath`)
 4. **>> PreToolUse hook fires** (synchronous, blocks until complete)
-5. Hook reads stdin, pulls the markdown out of `tool_input.plan`, parses + validates it
+5. Hook reads stdin, takes the markdown from `tool_input.plan` (or reads `planFilePath`), parses + validates it
 6. Hook materializes `<project>/<plan_dir_root>/<YYMMDD-N-slug>/`
 7. User sees ExitPlanMode approval dialog in CLI
 8. User reviews the materialized plan + units in their editor while deciding
@@ -206,14 +207,17 @@ PreToolUse fires before the user sees the approval dialog:
 ### Hook Flow
 
 ```
-Hook receives stdin JSON: { "session_id": "...", "tool_name": "ExitPlanMode", "tool_input": { "plan": "..." } }
+Hook receives stdin JSON: { "session_id": "...", "tool_name": "ExitPlanMode",
+                            "tool_input": { "plan": "...", "planFilePath": "..." } }
   |
   +-- Validate session_id (path-safe)
   |
-  +- [tool_input.plan is missing or whitespace-only]
-  |   +-- exit 0 silently (no deny, no plan dir)
+  +-- Resolve plan markdown: tool_input.plan, else read tool_input.planFilePath off disk
   |
-  +- [tool_input.plan is non-empty]
+  +- [both channels empty / file unreadable]
+  |   +-- deny LOUDLY ("no plan content reached the hook ...") -> exit 0
+  |
+  +- [plan markdown resolved]
       +-- parse_plan_markdown -> error? -> deny with parser reason -> exit 0
       +-- validate_plan       -> errors? -> deny with reasons      -> exit 0
       +-- resolve_target_dir
@@ -223,7 +227,7 @@ Hook receives stdin JSON: { "session_id": "...", "tool_name": "ExitPlanMode", "t
       +-- atomic rename staging -> target ; cleanup staging on any failure -> exit 0
 ```
 
-There is no marker file, deny-loop, or `hook_behavior` knob — `ExitPlanMode` + `PreToolUse` shipped in Claude Code v2.1.85 (2026-03-26), four days after this project started; the original `/tmp/jidoka-{session_id}.json` ferry was forced by that timing and is now obsolete. The hook either has the markdown or it doesn't; if it doesn't, it stays out of the way.
+There is no marker file, deny-loop, or `hook_behavior` knob — `ExitPlanMode` + `PreToolUse` shipped in Claude Code v2.1.85 (2026-03-26), four days after this project started; the original `/tmp/jidoka-{session_id}.json` ferry was forced by that timing and is now obsolete. The current harness sources the markdown from the plan-mode plan file (injected into `tool_input.plan`, with `planFilePath` as a path fallback). The hook resolves the plan from one of those; if neither yields content, it denies loudly so a broken wiring surfaces immediately instead of silently materializing nothing.
 
 ### Deny payloads
 
@@ -252,7 +256,7 @@ PreToolUse hooks block the tool if they return a non-zero exit code. The hook mu
 | Produce-only, no execution | The plan is a composable output. Users incorporate it into their existing workflows rather than being locked into a closed pipeline. |
 | Run the planning skill inline (no `context: fork`) | Inline, the skill sees the live plan-mode conversation — the developing task, codebase notes, user back-and-forth — which is the raw material decomposition needs. A forked subagent would start blind with only the skill file as its prompt. |
 | Skill + renderer split | LLM handles judgment (decomposition); renderer handles deterministic work (parsing, validation, materialization). Zero tokens spent on rendering. |
-| Markdown as contract | Single boundary between skill and renderer. Skill emits `# Title` + `## Unit NN:` + bodies; renderer parses, validates, materializes. Both sides validate independently. ExitPlanMode's `plan` arg + PreToolUse stdin carry the contract end-to-end with no temp file in between. |
+| Markdown as contract | Single boundary between skill and renderer. Skill emits `# Title` + `## Unit NN:` + bodies; renderer parses, validates, materializes. Both sides validate independently. The plan-mode plan file + PreToolUse stdin's `tool_input.plan` carry the contract end-to-end with no temp file in between. |
 | One-shot skill, agent-driven iteration | One-shot is a design choice, not a platform limit — the skill emits a complete plan in a single pass rather than prompting. The agent gathers feedback in the plan-mode loop and re-invokes; each adjustment is a full regeneration — no state to preserve. |
 | Single bundled Node entrypoint | esbuild produces a self-contained `dist/cli.js`; runtime deps (`commander`, `zod`, `eta`) are inlined. End users only need Node ≥ 20. |
 | Hook-driven enforcement via deny | Hooks can gate but can't invoke skills or call the LLM. The only way to trigger LLM work from a hook is to deny with an instruction. |
