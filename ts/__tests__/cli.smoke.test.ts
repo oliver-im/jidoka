@@ -136,6 +136,57 @@ describe("materialize", () => {
   });
 });
 
+describe("paths", () => {
+  it("prints the resolved convention paths as JSON (defaults)", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-paths-def-"));
+    try {
+      const r = run(["paths"], { env: { CLAUDE_PROJECT_DIR: tmp } });
+      expect(r.status).toBe(0);
+      expect(JSON.parse(r.stdout)).toEqual({
+        root: "docs/exec-plans",
+        backlog: "docs/exec-plans/backlog",
+        active: "docs/exec-plans/active",
+        completed: "docs/exec-plans/completed",
+        reference: "docs/discussions",
+      });
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("honors a project .jidoka.json override", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-paths-"));
+    try {
+      writeFileSync(
+        join(tmp, ".jidoka.json"),
+        JSON.stringify({ plan_dir_root: "notes/active", reference_dir: "wiki" }),
+      );
+      const r = run(["paths"], { env: { CLAUDE_PROJECT_DIR: tmp } });
+      expect(r.status).toBe(0);
+      const out = JSON.parse(r.stdout);
+      expect(out.backlog).toBe("notes/backlog");
+      expect(out.completed).toBe("notes/completed");
+      expect(out.active).toBe("notes/active");
+      expect(out.reference).toBe("wiki");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("--absolute joins paths under CLAUDE_PROJECT_DIR", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-paths-abs-"));
+    try {
+      const r = run(["paths", "--absolute"], { env: { CLAUDE_PROJECT_DIR: tmp } });
+      expect(r.status).toBe(0);
+      const out = JSON.parse(r.stdout);
+      expect(out.active).toBe(join(tmp, "docs/exec-plans/active"));
+      expect(out.reference).toBe(join(tmp, "docs/discussions"));
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("hook", () => {
   it("exits 0 even with malformed input", () => {
     const r = run(["hook"], { stdin: "not json" });

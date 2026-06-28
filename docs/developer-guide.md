@@ -95,6 +95,7 @@ Usage:
   jidoka materialize - < plan.md     Materialize plan markdown from stdin
                                        (legacy Plan JSON is also accepted; format auto-detected)
   jidoka hook                        Process ExitPlanMode hook from stdin
+  jidoka paths                       Print the resolved convention paths as JSON
 
 Options:
   -h, --help          Show this help message
@@ -109,6 +110,7 @@ Materialize subcommand options:
 
 - **Materialize mode** (`jidoka materialize`): Read a plan from file (or stdin when the file argument is `-`), auto-detect markdown vs legacy JSON by the first non-whitespace character (`{` → JSON, otherwise markdown), validate, write `<plan_dir_root>/<YYMMDD-N-slug>/{overview,progress,0N-*}.md`. Plans root resolves from `$CLAUDE_PROJECT_DIR/<plan_dir_root>` (PWD fallback with stderr warning). Exit 0 on success, 1 on error.
 - **Hook mode** (`jidoka hook`): Process ExitPlanMode PreToolUse hook input from stdin. See [Hook Integration](#hook-integration) for full details. Always exits 0 (never blocks ExitPlanMode).
+- **Paths mode** (`jidoka paths`): Print the resolved convention layout — `root`/`backlog`/`active`/`completed`/`reference` — as JSON, honoring layered config, so skills/docs read one resolver (`resolveConventionPaths`) instead of hardcoding `docs/exec-plans/...`. `active` *is* `plan_dir_root`; `backlog`/`completed` are its fixed-named siblings; `reference` is `reference_dir`. `--absolute` joins each project-relative path with `$CLAUDE_PROJECT_DIR` (PWD fallback). Read-only; never consulted by `materialize` (which stays convention-agnostic).
 
 ### Environment Variables
 
@@ -122,7 +124,8 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/jido
 
 | Key | Type | Default | Project override? | Notes |
 |---|---|---|---|---|
-| `plan_dir_root` | string | `docs/exec-plans/active` | yes (relative paths only, no `..`) | Where plan dirs land. Project paths are resolved against `$CLAUDE_PROJECT_DIR`. |
+| `plan_dir_root` | string | `docs/exec-plans/active` | yes (relative paths only, no `..`) | Where plan dirs land (the convention's `active/`). Project paths are resolved against `$CLAUDE_PROJECT_DIR`. `backlog`/`completed` derive as its siblings via `jidoka paths`; the leaf names are fixed (not configurable). |
+| `reference_dir` | string | `docs/discussions` | yes (relative paths only, no `..`) | The design-discussions reference area (the "what to build / why"), **outside** the lifecycle convention. Surfaced by `jidoka paths`; never consulted by `materialize`. |
 | `git_workflow` | bool | `false` | yes | When on, renders a `## Git workflow` block (the worktree-per-plan / branch-per-unit reminder) into `progress.md`. Shipped off — OSS opt-in; a committed `.jidoka.json` opts a repo in. |
 | `pre_review` | `ReviewStep[]` | `["/jidoka:pre-plan-review"]` | **no** | Pre-execution review steps. Each is a slash command or a `{ run, mode }` template (`ReviewStep`; see [data-model.md](data-model.md#review-commands)). Project-override **excluded** — global-config-only, the boundary that makes `exec` safe (a cloned repo's `.jidoka.json` can't inject shell). |
 | `unit_review` | `ReviewStep[]` | `["/code-review"]` | **no** | Per-unit review steps, same `ReviewStep` shape and global-only boundary. |
@@ -133,7 +136,8 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/jido
 - The global file is parsed as **JSONC** — `//` and `/* */` comments are stripped before `JSON.parse`. `jidoka:setup` writes an annotated template by default, so the in-file comments are the primary "what does this key do" reference.
 - Missing files are not errors: layer falls through silently.
 - Invalid JSON or shape mismatch on the global file: stderr warning, fall back to defaults.
-- Project file may only set the keys marked above. Other keys are warn-and-ignored. Non-boolean values for the boolean keys are warn-and-ignored. `plan_dir_root` strings are validated (`isAbsolute` and `..` segments rejected) before being applied.
+- Project file may only set the keys marked above. Other keys are warn-and-ignored. Non-boolean values for the boolean keys are warn-and-ignored. `plan_dir_root` and `reference_dir` strings are validated (`isAbsolute` and `..` segments rejected) before being applied.
+- `resolveConventionPaths(cfg)` is the one place that knows the convention's `{backlog,active,completed}` layout (and the separate `reference` area); it derives `backlog`/`completed` as siblings of `plan_dir_root` and is surfaced by `jidoka paths`. Keeping it out of `materialize` preserves the renderer's deliberate convention-agnosticism (see [Daily counter](#daily-counter)).
 - `mergeForWrite(base, cfg)` encodes the round-trip invariant for overwriting an existing global file — known keys are re-emitted while any manually added keys are preserved. It's exercised by the config tests; `jidoka:setup` edits the file directly rather than shelling into the CLI.
 
 ### Daily counter

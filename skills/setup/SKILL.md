@@ -11,11 +11,12 @@ Interactive first-run configuration for the jidoka plugin. Unlike `/jidoka` — 
 
 ## What you write
 
-A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/jidoka/config.json`. Every run writes all five top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
+A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/jidoka/config.json`. Every run writes all six top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
 
 | Key | Type | Default | Question to ask |
 |---|---|---|---|
 | `plan_dir_root` | string | `docs/exec-plans/active` | "Where should jidoka write plan dirs? (project-relative; defaults to `docs/exec-plans/active/` — the lifecycle convention's active slot. Simpler conventionless alternative: `plan/`.)" |
+| `reference_dir` | string | `docs/discussions` | "Where does this repo keep high-level design discussions (the 'what to build / why')? (project-relative; defaults to `docs/discussions/`. A repo whose reference area is a settled-fact wiki might use `wiki/`.)" |
 | `git_workflow` | bool | `false` | _(don't ask; write `false`. Set `true` by hand to opt into the worktree-per-plan / branch-per-unit workflow — jidoka then renders a `## Git workflow` reminder into each `progress.md`. Also settable per-repo in a committed `.jidoka.json`.)_ |
 | `pre_review` | ReviewStep[] | `["/jidoka:pre-plan-review"]` | _(don't ask; write the shipped default)_ |
 | `unit_review` | ReviewStep[] | `["/code-review"]` | _(don't ask; write the shipped default)_ |
@@ -45,8 +46,17 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
 {
   // Where jidoka writes plan dirs (project-relative). Defaults to the
   // lifecycle convention's active slot; "plan" is the simpler conventionless
-  // alternative.
+  // alternative. backlog/ and completed/ are NOT configured — they derive as
+  // siblings of plan_dir_root (run `jidoka paths` to see the resolved layout);
+  // the leaf names backlog/active/completed are fixed, only the root varies.
   "plan_dir_root": "docs/exec-plans/active",
+
+  // Where this repo keeps high-level design discussions (the "what to build /
+  // why" — living rationale, edited in place), project-relative. Outside the
+  // lifecycle convention; surfaced alongside the convention paths by
+  // `jidoka paths`. Defaults to docs/discussions; a settled-fact wiki might
+  // use "wiki".
+  "reference_dir": "docs/discussions",
 
   // Opt into the recommended execution workflow — each plan worked in its own
   // git worktree, one branch per unit (squash to the plan branch, --no-ff to
