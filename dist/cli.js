@@ -3487,7 +3487,7 @@ var {
 // ts/config.ts
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join } from "node:path";
+import { isAbsolute, join, posix as posixPath } from "node:path";
 
 // node_modules/strip-json-comments/index.js
 var singleComment = /* @__PURE__ */ Symbol("singleComment");
@@ -18161,8 +18161,8 @@ var defaultConfig = {
   plan_review: [{ run: 'codex exec -s read-only "{focus}"', mode: "exec" }]
 };
 var configSchema = external_exports.object({
-  plan_dir_root: external_exports.string().default(defaultConfig.plan_dir_root),
-  reference_dir: external_exports.string().default(defaultConfig.reference_dir),
+  plan_dir_root: external_exports.string().min(1).default(defaultConfig.plan_dir_root),
+  reference_dir: external_exports.string().min(1).default(defaultConfig.reference_dir),
   git_workflow: external_exports.boolean().default(defaultConfig.git_workflow),
   pre_review: external_exports.array(reviewStepSchema).default(defaultConfig.pre_review),
   unit_review: external_exports.array(reviewStepSchema).default(defaultConfig.unit_review),
@@ -18293,12 +18293,12 @@ function validateProjectPlanDirRoot(s) {
 }
 function resolveConventionPaths(cfg) {
   const active = cfg.plan_dir_root;
-  const root = dirname(active);
+  const root = posixPath.dirname(active);
   return {
     root,
-    backlog: join(root, "backlog"),
+    backlog: posixPath.join(root, "backlog"),
     active,
-    completed: join(root, "completed"),
+    completed: posixPath.join(root, "completed"),
     reference: cfg.reference_dir
   };
 }
@@ -18778,8 +18778,8 @@ var Eta = class extends Eta$1 {
 
 // ts/render-md.ts
 import { fileURLToPath } from "node:url";
-import { dirname as dirname3, join as join3 } from "node:path";
-var here = dirname3(fileURLToPath(import.meta.url));
+import { dirname as dirname2, join as join3 } from "node:path";
+var here = dirname2(fileURLToPath(import.meta.url));
 var templatesDir = join3(here, "..", "templates");
 var eta = new Eta({ views: templatesDir, autoEscape: false, cache: false });
 function unitIdPrefix(id) {

@@ -23,7 +23,7 @@ When you and the user hash out high-level direction — should we build X, which
 
 A discussion **evolves in place** while it is current truth — grep it freely; it is true *right now*. When a decision is **reversed**, it does not linger here as a stale graveyard entry: `git mv` it to `../exec-plans/completed/<slug>.md` and prepend the superseded stamp —
 
-```
+```text
 > STATUS: superseded · <YYYY-MM> · replaced-by <what>, kept as record
 ```
 

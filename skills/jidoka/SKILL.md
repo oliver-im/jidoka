@@ -94,7 +94,7 @@ In unit bodies, point at code by `path:symbol` (e.g. `ts/config.ts:defaultConfig
 
 ### Promoting a backlog item to a plan
 
-When the task traces back to an `exec-plans/backlog/<YYMMDD-N-slug>.md` entry (candidate work parked under the lifecycle convention), emitting a plan *is* that item's promotion: it graduates to `exec-plans/active/` the moment it acquires units. Name the source item in the overview's references so the plan's eventual archive can record what it realized. A backlog item with no units stays in the backlog.
+When the task traces back to a backlog item (`<backlog>/<YYMMDD-N-slug>.md`, candidate work parked under the lifecycle convention — `jidoka paths` resolves the configured `backlog`/`active` locations; the default layout is `docs/exec-plans/`), emitting a plan *is* that item's promotion: it graduates from the backlog to the active plan dir the moment it acquires units. Name the source item in the overview's references so the plan's eventual archive can record what it realized. A backlog item with no units stays in the backlog.
 
 ## Contract
 

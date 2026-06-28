@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join } from "node:path";
+import { isAbsolute, join, posix as posixPath } from "node:path";
 import stripJsonComments from "strip-json-comments";
 import { z } from "zod";
 import { reviewStepSchema, type ReviewStep } from "./types.js";
@@ -29,8 +29,8 @@ export const defaultConfig: Config = {
 };
 
 const configSchema = z.object({
-  plan_dir_root: z.string().default(defaultConfig.plan_dir_root),
-  reference_dir: z.string().default(defaultConfig.reference_dir),
+  plan_dir_root: z.string().min(1).default(defaultConfig.plan_dir_root),
+  reference_dir: z.string().min(1).default(defaultConfig.reference_dir),
   git_workflow: z.boolean().default(defaultConfig.git_workflow),
   pre_review: z.array(reviewStepSchema).default(defaultConfig.pre_review),
   unit_review: z.array(reviewStepSchema).default(defaultConfig.unit_review),
@@ -220,18 +220,20 @@ export interface ConventionPaths {
  * not configurable, so only the root location varies per project. `reference`
  * is the separate `reference_dir` (a different genre, outside the convention).
  *
- * Paths are returned exactly as configured (project-relative by default). This
- * is the opt-in convention *view*; the materialize path stays convention-
- * agnostic and never consults it.
+ * Configured values (`active`, `reference`) are returned verbatim; the derived
+ * siblings use posix `dirname`/`join` so the layout stays forward-slash on every
+ * platform (native `node:path` would emit `\` siblings on Windows). This is the
+ * opt-in convention *view*; the materialize path stays convention-agnostic and
+ * never consults it.
  */
 export function resolveConventionPaths(cfg: Config): ConventionPaths {
   const active = cfg.plan_dir_root;
-  const root = dirname(active);
+  const root = posixPath.dirname(active);
   return {
     root,
-    backlog: join(root, "backlog"),
+    backlog: posixPath.join(root, "backlog"),
     active,
-    completed: join(root, "completed"),
+    completed: posixPath.join(root, "completed"),
     reference: cfg.reference_dir,
   };
 }

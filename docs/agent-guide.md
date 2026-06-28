@@ -70,7 +70,7 @@ When a unit body needs to talk about existing code, reference it by `path:symbol
 
 ### Promoting a backlog item to a plan
 
-jidoka's lifecycle convention parks candidate work — open questions, proposals, spikes — as `exec-plans/backlog/<YYMMDD-N-slug>.md` entries (see `exec-plans/AGENTS.md` for the surrounding lifecycle). When the task you're decomposing traces back to such a backlog item, the plan you emit *is* its promotion: a backlog item graduates to `exec-plans/active/` the moment it acquires units. Name the source item in the overview's references so the plan's eventual archive stamp can record what it realized. A backlog item that never gets units stays in the backlog — open-ended drift is allowed there, not inside a plan.
+jidoka's lifecycle convention parks candidate work — open questions, proposals, spikes — as backlog entries (`<backlog>/<YYMMDD-N-slug>.md`; the default layout is `docs/exec-plans/backlog/`, but `jidoka paths` resolves the configured location — see `exec-plans/AGENTS.md` for the surrounding lifecycle). When the task you're decomposing traces back to such a backlog item, the plan you emit *is* its promotion: a backlog item graduates to the active plan dir the moment it acquires units. Name the source item in the overview's references so the plan's eventual archive stamp can record what it realized. A backlog item that never gets units stays in the backlog — open-ended drift is allowed there, not inside a plan.
 
 ## Hard Rules
 
