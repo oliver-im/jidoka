@@ -1,4 +1,4 @@
-# Review-pipeline direction after the June 2026 landscape shift
+# Review-pipeline direction — unit_review on the built-in /code-review (local diff, no --fix); plan_review opt-in via tool-agnostic templates
 
 Decisions and rationale for how jidoka's review pipeline should use the current
 Claude Code / codex review tooling. Companion to `codex-adversarial-review.md`

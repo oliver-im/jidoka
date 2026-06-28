@@ -1,41 +1,40 @@
 # The plan-lifecycle convention
 
-A small, tool-agnostic convention for keeping a repository **honest about what each document is** — a settled decision, work in progress, or a half-formed idea. The lifecycle status of every document is encoded in **which directory it lives in**, so finished work is never mistaken for current truth.
+A small, tool-agnostic convention for keeping a repository **honest about its in-flight work** — what's queued, what's being built, and what's finished — by encoding each piece of work's lifecycle status in **which directory it lives in**. Finished work is never mistaken for current truth, because a frozen record sits in a different folder from active work.
 
-It is three directories and two rules. You can adopt it in any repo by hand; the tooling at the end is optional.
+It is one directory with three states and two rules. You can adopt it in any repo by hand; the tooling at the end is optional.
+
+**Scope.** This convention governs exactly one thing: the **lifecycle of scoped, finishable work** — the funnel from "maybe" to "done." It deliberately says nothing about where a repo keeps its *settled reference* — specs, architecture decisions, glossaries, the durable "why is it built this way." That belongs in a `wiki/` (or `discussions/`, `design/`, or whatever the repo calls it), maintained as current truth, and is each repo's own business. One convention, one job.
 
 ## Why
 
-Repositories accumulate prose: design notes, plans, research, proposals. Most of it is written once and never moved. A year later the repo holds a confidently-worded plan describing an architecture you have since replaced — and nothing about the file says it is stale. A teammate greps it and trusts it. An AI agent reads it as fact and acts on it. (That is the sharp version of the problem: an agent's working context is whatever it can read in the repo, so a stale doc it *can* read is worse than no doc — it is "confidently wrong.")
+Repositories accumulate plans and notes about work. Most of it is written once and never moved. A year later the repo holds a confidently-worded plan describing an architecture you have since replaced — and nothing about the file says it is stale. A teammate greps it and trusts it. An AI agent reads it as fact and acts on it. (That is the sharp version of the problem: an agent's working context is whatever it can read in the repo, so a stale doc it *can* read is worse than no doc — it is "confidently wrong.")
 
-The usual fixes do not hold. A `status: deprecated` line in the front-matter is invisible to a grep for the topic. A wiki rots out of sync with the code. "We will remember it is old" does not survive turnover or a fresh agent session.
+The usual fixes do not hold. A `status: done` line in the front-matter is invisible to a grep for the topic. "We will remember it is old" does not survive turnover or a fresh agent session.
 
-The convention's bet: **carve documents by lifecycle status, and make the directory the status.** To know whether a doc is current you look at *where it is*, not at what it says about itself. Moving a file is the act of changing its status.
+The convention's bet: **carve work by lifecycle status, and make the directory the status.** To know whether a plan is current you look at *where it is*, not at what it says about itself. Moving a file is the act of changing its status.
 
-## The three kinds
+## The lifecycle: three states of one thing
 
-Three top-level peers (conventionally under `docs/`), each answering one question:
+A plan is a finishable piece of work, decomposed into reviewable units. It lives under `exec-plans/` and moves through three states — **the state is the directory**:
 
-| Kind | The question it answers | Status | May drift from the code? |
+| State | Directory | The question it answers | May drift from the code? |
 |---|---|---|---|
-| **`ideas/`** | "What if? Why? Should we?" | open | **Yes** — the folder is the disclaimer |
-| **`exec-plans/`** | "What are we building, and how far along?" | scoped work | Frozen once completed |
-| **`design-docs/`** | "Why is it built this way?" | settled truth | Maintained; reversed ones move aside |
+| **backlog** | `exec-plans/backlog/` | "Might we do this? What if? Should we?" | **Yes** — candidate, not started |
+| **active** | `exec-plans/active/` | "We're building this — how far along?" | In flight |
+| **completed** | `exec-plans/completed/` | "This is done." | **Frozen** record |
 
-### `ideas/` — open questions
+### `backlog/` — candidate work
 
-Half-formed thinking: explorations, problem analysis, "should we even do this." Nothing here is a promise. A reader — human or agent — should treat a file in `ideas/` as **thinking-in-progress, not current truth**; it is explicitly allowed to drift from the code. An idea either graduates (see the funnel) or gets pruned.
+The front of the funnel: a half-formed idea, a research spike, a scoped-but-not-started intention — anything from one line to a full proposal. Nothing here is a promise; a reader, human or agent, treats a backlog entry as **thinking-in-progress, not current truth**, and it is explicitly allowed to drift. A backlog item either graduates to `active/` (when it acquires units and someone starts building) or gets pruned. Maturity varies and is readable from the entry itself — the directory only tells you it isn't started.
 
-### `exec-plans/{active,completed}/` — scoped work
+### `active/` — in flight
 
-A plan is a finishable piece of work, decomposed into reviewable units. Two sub-directories carry the status:
+A plan being worked: decomposed into units, edited as progress is made. Under the optional execution workflow (below) it lives in its own git worktree.
 
-- `active/` — in flight.
-- `completed/` — finished. **Frozen historical records**, provenance-stamped (rule 1). A completed plan describes *what was intended and done at the time* — it is never groomed to match the current code, because that would destroy its value as a record of how the code got here.
+### `completed/` — finished
 
-### `design-docs/{,superseded}/` — settled decisions
-
-The durable "why" behind the system: the rationale a newcomer needs in order not to re-litigate a closed question. Unlike plans, these are **maintained as living truth**. When a decision is reversed, its doc moves to `superseded/` (kept as a record, not deleted) — so the top level of `design-docs/` is always exactly the current set of decisions.
+**Frozen historical records**, provenance-stamped (rule 1). A completed plan describes *what was intended and done at the time* — it is never groomed to match the current code, because that would destroy its value as a record of how the code got here. This is the repo's **only** home for frozen history, and it holds two kinds: finished plans, and **reversed decisions** archived out of the repo's reference area — its `wiki/` or `discussions/` (stamped `superseded` — see rule 1). So a decision overturned there doesn't linger as stale current-truth; it moves here as a record, and the reference area stays purely current.
 
 ## Status is the location
 
@@ -43,61 +42,58 @@ The one load-bearing rule, worth stating on its own:
 
 > **Never rely on a file's contents to know its lifecycle state. The directory is the status.**
 
-A plan in `completed/` is done. A decision in `superseded/` is reversed. An idea in `ideas/` may be nonsense. You learn this from the path, before reading a word — and a grep that surfaces a file surfaces its status along with it. Changing status means a `git mv`, not editing a header.
+A plan in `completed/` is done. An item in `backlog/` may be nonsense. You learn this from the path, before reading a word — and a grep that surfaces a file surfaces its status along with it. Changing status means a `git mv`, not editing a header.
 
 ## The funnel
 
-An idea flows into **either** a plan **or** a decision — which is why `ideas/` is a peer of both, not a sub-state of `exec-plans/`:
-
 ```
-                 ┌──►  exec-plans/active/   "we are going to build this"
-   ideas/  ──────┤
-                 ├──►  design-docs/         "we have decided this; nothing to build"
-                 │
-                 └──►  (pruned)             "never mind"
+   backlog/  ──►  active/  ──►  completed/      "maybe → building → done"
+      │
+      └──►  (pruned)        "never mind"
 ```
 
-When an idea graduates to a plan it **keeps its identity** — the file `260607-3-foo.md` becomes the directory `exec-plans/active/260607-3-foo/` (same id). A plan, when finished, moves `active/ → completed/`. A decision, when reversed, moves to `design-docs/superseded/`. Every transition is a move.
+A backlog item **keeps its identity** when it graduates — the file `260607-3-foo.md` becomes the directory `exec-plans/active/260607-3-foo/` (same id). A plan, when finished, moves `active/ → completed/`. Every transition is a move.
+
+(An item whose answer turns out to be "decided, nothing to build" doesn't go to `completed/` — there's no work to record. Its conclusion lands in the repo's reference docs (`wiki/`, `discussions/`, …) as settled reference, and the backlog item is pruned. That hand-off is outside this convention's scope.)
 
 ## The two rules
 
-**1. Provenance stamp on archive.** When a plan moves to `completed/` (or a decision to `superseded/`), prepend one line recording how current the record is:
+**1. Provenance stamp on archive.** When a plan moves to `completed/` — or a reversed decision is archived there from the repo's reference docs — prepend one line recording how current the record is:
 
 ```
-> STATUS: completed · <YYYY-MM> · realized-by <commit or range>
-> STATUS: superseded · <YYYY-MM> · kept as record
+> STATUS: completed  · <YYYY-MM> · realized-by <commit or range>
+> STATUS: superseded · <YYYY-MM> · replaced-by <what>, kept as record
 ```
 
 Add a sentence of context if the code has since moved past the record — the record stays frozen; the stamp tells a reader how to weight it.
 
-**2. Reference, don't paste.** In ideas and plans, point at code by `path:symbol` (e.g. `src/config.ts:defaultConfig`) instead of pasting snippets. These artifacts carry **durable intent**, which stays true; a pasted snippet captures a moment of code, which silently goes stale. Quote a line verbatim only when its exact wording *is* the thing being changed.
+**2. Reference, don't paste.** In backlog items and plans, point at code by `path:symbol` (e.g. `src/config.ts:defaultConfig`) instead of pasting snippets. These artifacts carry **durable intent**, which stays true; a pasted snippet captures a moment of code, which silently goes stale. Quote a line verbatim only when its exact wording *is* the thing being changed.
 
 ## Naming
 
-- **Temporal kinds** (`ideas/`, `exec-plans/`) use `YYMMDD-N-slug`:
+- Entries use `YYMMDD-N-slug`:
   - `YYMMDD` — the date the entry was started (local time, two-digit year).
-  - `N` — a per-day counter **shared across `ideas/` and `exec-plans/`** (so an idea can keep its id when it becomes a plan). To pick the next `N`, scan the day's existing `^<today>-(\d+)-` entries across the live kinds (`ideas/` and `active/` plans) and take max + 1. Frozen records (`completed/`, superseded) aren't rescanned, so a long-archived id can recur — the date + slug still disambiguate.
+  - `N` — a per-day counter **shared across `backlog/` and `active/`** (so an item can keep its id when it becomes a plan). To pick the next `N`, scan the day's existing `^<today>-(\d+)-` entries across the live states (`backlog/` and `active/` plans) and take max + 1. Frozen `completed/` isn't rescanned, so a long-archived id can recur — the date + slug still disambiguate.
   - `slug` — kebab-case, ≤ 60 chars, `^[a-z0-9-]+$`.
-  - A plan is a **directory**; its units are files `NN-unit-slug.md` with a plan-local counter from `01`.
-- **`design-docs/`** are **topic-named** (`cli-over-mcp.md`, not a date) — a decision is referenced by its subject, and its date lives inside the doc. Location (top level vs `superseded/`) carries the status.
-- **Every directory carries a self-documenting `index.md`** stating its kind and drift rule. (No `.gitkeep` — the `index.md` is what keeps an otherwise-empty directory in git.)
+  - A backlog item may be a single file; a plan is a **directory**, its units files `NN-unit-slug.md` with a plan-local counter from `01`.
+- **`index.md` is a re-derivable *catalog*, not hand-authored meta.** Each state directory's `index.md` lists its entries one line each — the entry's H1 summary — regenerated by grep, so it never drifts (the kind/drift rules live here in `CONVENTION.md`, not restated per directory). `backlog/` and `completed/` catalog their on-`main` entries; `active/`'s `index.md` just points at `git worktree list`, since in-flight plans live in worktrees. No `.gitkeep` — `index.md` keeps an otherwise-empty directory in git.
 
 ## Adopt this in a new repo
 
 The structure is just directories and this file:
 
 ```sh
-mkdir -p docs/{ideas,exec-plans/{active,completed},design-docs/superseded}
+mkdir -p docs/exec-plans/{backlog,active,completed}
 # drop this file in (jidoka is its canonical home):
 curl -sfo docs/CONVENTION.md https://raw.githubusercontent.com/oliver-im/jidoka/main/docs/CONVENTION.md
-# add a one-line index.md to each dir naming its kind + drift rule
+# add an index.md to each dir — a re-derivable catalog of its entries (see Naming)
 ```
 
-Then drop open questions into `docs/ideas/`, scoped work into `docs/exec-plans/active/`, and settled rationale into `docs/design-docs/`. Archive by `git mv` with a provenance stamp. That is the whole convention — everything below is optional.
+Then drop candidate work into `docs/exec-plans/backlog/`, scoped work into `docs/exec-plans/active/`, and archive by `git mv` to `completed/` with a provenance stamp. That is the whole convention — everything below is optional.
 
 ## Execution workflow (recommended, optional)
 
-> This is the **opinionated execution layer** — how *work flows through git* while a plan is in `active/`. It is genuinely optional: keep the three-kind docs structure and ignore all of this if you like. It is written down because it is what makes `active/` mean "in flight" precisely.
+> This is the **opinionated execution layer** — how *work flows through git* while a plan is in `active/`. It is genuinely optional: keep the backlog/active/completed structure and ignore all of this if you like. It is written down because it is what makes `active/` mean "in flight" precisely.
 
 The idea: **a plan is worked in its own git worktree, and each unit is a branch.**
 

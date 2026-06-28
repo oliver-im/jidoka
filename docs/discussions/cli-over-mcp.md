@@ -1,4 +1,4 @@
-# CLI vs MCP for Agent-Agnostic Design (March 2026)
+# CLI over MCP — the CLI binary is already the agent-agnostic interface; defer MCP to post-v1
 
 Whether jidoka's renderer needs an MCP server mode for agent-agnosticism, or whether the CLI binary is already the portable interface.
 
@@ -83,4 +83,4 @@ The [strategic review](strategic-review.md) recommendation #2 ("MCP server from 
 
 ## Impact on tech stack
 
-MCP SDK availability was weighted as a primary criterion in the [tech stack analysis](superseded/rust-runtime.md). With MCP deferred, this criterion drops to "nice to have" and the ranking simplifies to: binary size, startup time, JSON validation, string generation, compilation reliability.
+MCP SDK availability was weighted as a primary criterion in the [tech stack analysis](../exec-plans/completed/rust-runtime.md). With MCP deferred, this criterion drops to "nice to have" and the ranking simplifies to: binary size, startup time, JSON validation, string generation, compilation reliability.

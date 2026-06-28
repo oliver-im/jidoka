@@ -6,6 +6,7 @@ import {
   defaultConfig,
   loadFromPaths,
   mergeForWrite,
+  resolveConventionPaths,
   validateProjectPlanDirRoot,
 } from "../config.js";
 import { reviewStepLabel, reviewStepSchema } from "../types.js";
@@ -23,6 +24,7 @@ function makeTempDir(label: string): string {
 describe("defaults", () => {
   it("match spec", () => {
     expect(defaultConfig.plan_dir_root).toBe("docs/exec-plans/active");
+    expect(defaultConfig.reference_dir).toBe("docs/discussions");
     expect(defaultConfig.git_workflow).toBe(false);
   });
 
@@ -66,6 +68,25 @@ describe("loadFromPaths", () => {
     const cfg = loadFromPaths(undefined, path);
     expect(cfg.plan_dir_root).toBe("docs/plans");
     expect(cfg.git_workflow).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("project override accepts reference_dir", () => {
+    const dir = makeTempDir("refdir");
+    const path = join(dir, ".jidoka.json");
+    writeFileSync(path, JSON.stringify({ reference_dir: "wiki" }));
+    const cfg = loadFromPaths(undefined, path);
+    expect(cfg.reference_dir).toBe("wiki");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("rejects absolute / traversal reference_dir in project override", () => {
+    const dir = makeTempDir("refbad");
+    const path = join(dir, ".jidoka.json");
+    writeFileSync(path, JSON.stringify({ reference_dir: "/etc/x" }));
+    expect(loadFromPaths(undefined, path).reference_dir).toBe("docs/discussions");
+    writeFileSync(path, JSON.stringify({ reference_dir: "../escape" }));
+    expect(loadFromPaths(undefined, path).reference_dir).toBe("docs/discussions");
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -257,6 +278,7 @@ describe("mergeForWrite", () => {
   it("starts from empty when base undefined", () => {
     const merged = mergeForWrite(undefined, defaultConfig);
     expect(merged.plan_dir_root).toBe("docs/exec-plans/active");
+    expect(merged.reference_dir).toBe("docs/discussions");
     expect(merged.unit_review).toEqual(defaultConfig.unit_review);
     expect(merged.plan_review).toEqual(defaultConfig.plan_review);
     expect(merged.pre_review).toEqual(defaultConfig.pre_review);
@@ -323,6 +345,39 @@ describe("mergeForWrite", () => {
     expect(merged.unit_review).toEqual(cfg.unit_review);
     expect(merged.plan_review).toEqual(cfg.plan_review);
     rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("resolveConventionPaths", () => {
+  it("derives backlog/completed as siblings of the default active slot", () => {
+    expect(resolveConventionPaths(defaultConfig)).toEqual({
+      root: "docs/exec-plans",
+      backlog: "docs/exec-plans/backlog",
+      active: "docs/exec-plans/active",
+      completed: "docs/exec-plans/completed",
+      reference: "docs/discussions",
+    });
+  });
+
+  it("tracks a custom plan_dir_root and reference_dir", () => {
+    const paths = resolveConventionPaths({
+      ...defaultConfig,
+      plan_dir_root: "notes/plans/active",
+      reference_dir: "wiki",
+    });
+    expect(paths.root).toBe("notes/plans");
+    expect(paths.backlog).toBe("notes/plans/backlog");
+    expect(paths.completed).toBe("notes/plans/completed");
+    expect(paths.active).toBe("notes/plans/active");
+    expect(paths.reference).toBe("wiki");
+  });
+
+  it("normalizes a conventionless flat plan_dir_root (siblings at repo root)", () => {
+    const paths = resolveConventionPaths({ ...defaultConfig, plan_dir_root: "plan" });
+    expect(paths.root).toBe(".");
+    expect(paths.backlog).toBe("backlog");
+    expect(paths.completed).toBe("completed");
+    expect(paths.active).toBe("plan");
   });
 });
 

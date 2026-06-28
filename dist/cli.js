@@ -3487,7 +3487,7 @@ var {
 // ts/config.ts
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { isAbsolute, join } from "node:path";
+import { isAbsolute, join, posix as posixPath } from "node:path";
 
 // node_modules/strip-json-comments/index.js
 var singleComment = /* @__PURE__ */ Symbol("singleComment");
@@ -18154,13 +18154,15 @@ function parsePlanJson(json2) {
 // ts/config.ts
 var defaultConfig = {
   plan_dir_root: "docs/exec-plans/active",
+  reference_dir: "docs/discussions",
   git_workflow: false,
   pre_review: ["/jidoka:pre-plan-review"],
   unit_review: ["/code-review"],
   plan_review: [{ run: 'codex exec -s read-only "{focus}"', mode: "exec" }]
 };
 var configSchema = external_exports.object({
-  plan_dir_root: external_exports.string().default(defaultConfig.plan_dir_root),
+  plan_dir_root: external_exports.string().min(1).default(defaultConfig.plan_dir_root),
+  reference_dir: external_exports.string().min(1).default(defaultConfig.reference_dir),
   git_workflow: external_exports.boolean().default(defaultConfig.git_workflow),
   pre_review: external_exports.array(reviewStepSchema).default(defaultConfig.pre_review),
   unit_review: external_exports.array(reviewStepSchema).default(defaultConfig.unit_review),
@@ -18222,6 +18224,7 @@ function readJson(path2) {
 }
 var PROJECT_OVERRIDE_KEYS = [
   "plan_dir_root",
+  "reference_dir",
   "git_workflow"
 ];
 function applyProjectOverrides(cfg, value, path2) {
@@ -18249,6 +18252,22 @@ function applyProjectOverrides(cfg, value, path2) {
         continue;
       }
       cfg.plan_dir_root = val;
+    } else if (key === "reference_dir") {
+      if (typeof val !== "string" || val.length === 0) {
+        process.stderr.write(
+          "jidoka: project override 'reference_dir' must be a non-empty string; ignoring\n"
+        );
+        continue;
+      }
+      const reason = validateProjectPlanDirRoot(val);
+      if (reason !== void 0) {
+        process.stderr.write(
+          `jidoka: project override 'reference_dir' rejected (${reason}); ignoring
+`
+        );
+        continue;
+      }
+      cfg.reference_dir = val;
     } else if (key === "git_workflow") {
       if (typeof val !== "boolean") {
         process.stderr.write(
@@ -18271,6 +18290,17 @@ function validateProjectPlanDirRoot(s) {
     if (part === "..") return "'..' segments are not allowed in project overrides";
   }
   return void 0;
+}
+function resolveConventionPaths(cfg) {
+  const active = cfg.plan_dir_root;
+  const root = posixPath.dirname(active);
+  return {
+    root,
+    backlog: posixPath.join(root, "backlog"),
+    active,
+    completed: posixPath.join(root, "completed"),
+    reference: cfg.reference_dir
+  };
 }
 
 // ts/hook.ts
@@ -19534,6 +19564,24 @@ program2.command("materialize <file>").description(
   "\nNote: `materialize` is the in-tree / recovery path \u2014 it never sets up the\nper-plan worktree or `plan/<id>` branch that the ExitPlanMode `hook` creates\nunder git_workflow. It is therefore NOT a drop-in for the hook flow. If you\nused it to recover a plan that should live in a worktree, create the worktree\nyourself (e.g. `git worktree add worktrees/<id> -b plan/<id> <trunk>`) and move\nthe materialized dir into it."
 ).action((file2, opts) => {
   runMaterialize(file2, opts);
+});
+program2.command("paths").description(
+  "Print the resolved convention paths (root/backlog/active/completed/reference) for this project as JSON, honoring layered config (~/.claude/plugins/jidoka/config.json < ./.jidoka.json). Read these instead of hardcoding docs/exec-plans/... so paths stay per-project-configurable."
+).option(
+  "--absolute",
+  "Join project-relative paths with CLAUDE_PROJECT_DIR (or cwd) and emit absolute paths"
+).action((opts) => {
+  const projectDir = process.env["CLAUDE_PROJECT_DIR"] ?? process.cwd();
+  const cfg = loadConfig(projectDir);
+  const paths = resolveConventionPaths(cfg);
+  const out = opts.absolute ? Object.fromEntries(
+    Object.entries(paths).map(([k, v]) => [
+      k,
+      isAbsolute5(v) ? v : join6(projectDir, v)
+    ])
+  ) : paths;
+  process.stdout.write(`${JSON.stringify(out, null, 2)}
+`);
 });
 function runMaterialize(file2, opts) {
   let input;

@@ -1,4 +1,4 @@
-# Codex Adversarial Review on Large Diffs (May 2026)
+# Codex adversarial review on large diffs — always trigger self-collect; never rely on the inline-diff path
 
 How `/codex:adversarial-review` behaves on large diffs, why it rejects, and how jidoka should invoke it.
 

@@ -1,8 +1,15 @@
-# exec-plans/active/
+# active/
 
-In-flight plans — one directory per plan (`YYMMDD-N-slug/`), each holding `overview.md`, `progress.md`, and the per-unit `NN-slug.md` files.
+In-flight plans live in **git worktrees**, not on `main` — so there is no static catalog here. The live index is:
 
-**Intended workflow (pure-worktree).** A plan is worked inside a git worktree — `worktrees/<plan-id>/` on branch `plan/<plan-id>` — so on `main` this directory normally stays **empty** and **`git worktree list` is the live index of in-flight plans**. `main` only ever gains plans under `../completed/` (via `--no-ff` merge). This is the documented convention agents are expected to follow (see `../AGENTS.md`) — not a guarantee hard-enforced by tooling.
+```sh
+git worktree list
+```
 
-- **Status: active / mutable** — the one place plan files are edited as work proceeds (cursor, Done, Blockers in `progress.md`).
-- **Naming:** `YYMMDD-N-slug/`, shared daily counter with `../ideas/`.
+For the one-line summary of what each in-flight plan is about, grep the worktrees:
+
+```sh
+find worktrees -path '*/active/*/overview.md' -exec grep -hm1 '^# ' {} + | sed 's/^# /- /' | sort
+```
+
+(This file is just a pointer; it keeps the otherwise-empty `active/` directory tracked on `main`.)

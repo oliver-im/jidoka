@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { Command } from "commander";
-import { loadConfig } from "./config.js";
+import { loadConfig, resolveConventionPaths } from "./config.js";
 import { runHook } from "./hook.js";
 import { materialize, todayYymmddLocal } from "./materialize.js";
 import { parsePlanMarkdown } from "./parse-markdown.js";
@@ -47,6 +47,30 @@ program
   )
   .action((file: string, opts: { plansRoot?: string; today?: string }) => {
     runMaterialize(file, opts);
+  });
+
+program
+  .command("paths")
+  .description(
+    "Print the resolved convention paths (root/backlog/active/completed/reference) for this project as JSON, honoring layered config (~/.claude/plugins/jidoka/config.json < ./.jidoka.json). Read these instead of hardcoding docs/exec-plans/... so paths stay per-project-configurable.",
+  )
+  .option(
+    "--absolute",
+    "Join project-relative paths with CLAUDE_PROJECT_DIR (or cwd) and emit absolute paths",
+  )
+  .action((opts: { absolute?: boolean }) => {
+    const projectDir = process.env["CLAUDE_PROJECT_DIR"] ?? process.cwd();
+    const cfg = loadConfig(projectDir);
+    const paths = resolveConventionPaths(cfg);
+    const out = opts.absolute
+      ? Object.fromEntries(
+          Object.entries(paths).map(([k, v]) => [
+            k,
+            isAbsolute(v) ? v : join(projectDir, v),
+          ]),
+        )
+      : paths;
+    process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
   });
 
 function runMaterialize(
