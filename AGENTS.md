@@ -15,7 +15,7 @@ The contract between them: the skill writes the plan markdown to the plan-mode p
 
 `npm run build` produces `dist/cli.js` (bundled, committed); `npm test` runs the suite via vitest. The ExitPlanMode hook is declared in `hooks/hooks.json` (the plugin-native hook location) and invokes `node "$CLAUDE_PLUGIN_ROOT/dist/cli.js" hook`. Active plans live in worktrees under `docs/exec-plans/active/`; see `docs/exec-plans/AGENTS.md` (resume protocol + git workflow) and `docs/CONVENTION.md` (the portable lifecycle). Reference docs:
 
-- `docs/CONVENTION.md` — the portable plan-lifecycle convention (three kinds, status-as-location, the two rules); standalone and jidoka-independent — adopt it in any repo
+- `docs/CONVENTION.md` — the portable plan-lifecycle convention (the backlog → active → completed lifecycle, status-as-location, the two rules); standalone and jidoka-independent — adopt it in any repo
 - `docs/data-model.md` — JSON schema, field semantics, review-step model (shared by both audiences)
 - `docs/agent-guide.md` — skill config, heuristics, hard rules (for LLM agents)
 - `docs/developer-guide.md` — architecture, validation rules, algorithms, CLI, hooks, design decisions (for developers building the renderer)

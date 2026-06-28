@@ -4,11 +4,11 @@
 
 ## Decision
 
-jidoka's shipped default `plan_dir_root` is `docs/exec-plans/active` — the `active/` slot of the three-kind lifecycle convention (`ideas/`, `exec-plans/{active,completed}/`, `design-docs/`). It used to be `plan/`: a flat, conventionless directory at the repo root.
+jidoka's shipped default `plan_dir_root` is `docs/exec-plans/active` — the `active/` slot of the lifecycle convention (`exec-plans/{backlog,active,completed}/`). It used to be `plan/`: a flat, conventionless directory at the repo root.
 
 ## Why
 
-The lifecycle convention *is* jidoka's point of view — status-as-location, frozen-and-stamped archives, "reference, don't paste." Shipping `plan/` as the default handed a fresh install none of that: just a flat folder of plan dirs, no `completed/`, no archive discipline, no surrounding `ideas/`/`design-docs/` homes. The convention lived only in this repo's own scaffolding.
+The lifecycle convention *is* jidoka's point of view — status-as-location, frozen-and-stamped archives, "reference, don't paste." Shipping `plan/` as the default handed a fresh install none of that: just a flat folder of plan dirs, no `completed/`, no archive discipline, no surrounding `backlog/` queue. The convention lived only in this repo's own scaffolding.
 
 Making `docs/exec-plans/active` the default makes jidoka **batteries-included**: every fresh install lands plans in the convention's active slot, and `/jidoka:setup` scaffolds the rest. The opinion ships with the tool instead of living in one repo's docs.
 

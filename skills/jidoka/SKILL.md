@@ -92,9 +92,9 @@ You don't emit review info at all. Review pipelines come from the user's config 
 
 In unit bodies, point at code by `path:symbol` (e.g. `ts/config.ts:defaultConfig`, `ts/materialize.ts:resolveTargetDir`) instead of pasting source snippets. A plan outlives the code it describes: a pasted snippet silently drifts out of date, while a `path:symbol` reference stays a pointer the reader resolves against current truth. Quote a line verbatim only when its exact wording *is* the subject of the change.
 
-### Promoting an idea to a plan
+### Promoting a backlog item to a plan
 
-When the task traces back to an `ideas/<YYMMDD-N-slug>.md` entry (an open question parked under the lifecycle convention), emitting a plan *is* that idea's promotion: it graduates to `exec-plans/active/` the moment it acquires units. Name the source idea in the overview's references so the plan's eventual archive can record what it realized. An idea with no units stays an idea.
+When the task traces back to an `exec-plans/backlog/<YYMMDD-N-slug>.md` entry (candidate work parked under the lifecycle convention), emitting a plan *is* that item's promotion: it graduates to `exec-plans/active/` the moment it acquires units. Name the source item in the overview's references so the plan's eventual archive can record what it realized. A backlog item with no units stays in the backlog.
 
 ## Contract
 

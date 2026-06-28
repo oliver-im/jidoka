@@ -138,7 +138,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/jido
 
 ### Daily counter
 
-`materialize.ts` picks the next `N` as max + 1 over entries matching `^<today>-(\d+)-`. The normal in-tree path (`resolveTargetDir`) scans `plansRoot` only; with `git_workflow` on, `setupWorktree` instead scans the main checkout's `worktrees/` **and** in-tree `active/` (so same-day worktree plans still increment). Other dirs — `ideas/`, `completed/`, a `backlog/`, an archived-plan tree — are deliberately **not** scanned: the user's filing convention does not belong in the code, and the convention's *shared-with-`ideas/`* counter is upheld by the agent at id-assignment time, not by the renderer. An `N` freed by an entry since moved out of the scanned set (e.g. a plan archived to `completed/`) can therefore reappear; rename at move-time if it bothers you.
+`materialize.ts` picks the next `N` as max + 1 over entries matching `^<today>-(\d+)-`. The normal in-tree path (`resolveTargetDir`) scans `plansRoot` only; with `git_workflow` on, `setupWorktree` instead scans the main checkout's `worktrees/` **and** in-tree `active/` (so same-day worktree plans still increment). Other dirs — `backlog/`, `completed/`, an archived-plan tree — are deliberately **not** scanned: the user's filing convention does not belong in the code, and the convention's *shared-with-`backlog/`* counter is upheld by the agent at id-assignment time, not by the renderer. An `N` freed by an entry since moved out of the scanned set (e.g. a plan archived to `completed/`) can therefore reappear; rename at move-time if it bothers you.
 
 ### Skills
 
@@ -264,7 +264,7 @@ PreToolUse hooks block the tool if they return a non-zero exit code. The hook mu
 
 ### Post-v1: MCP Server
 
-Deferred per [design-docs/cli-over-mcp.md](design-docs/cli-over-mcp.md). The CLI binary (`jidoka materialize`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
+Deferred per [wiki/cli-over-mcp.md](wiki/cli-over-mcp.md). The CLI binary (`jidoka materialize`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
 
 ## Development Setup
 
