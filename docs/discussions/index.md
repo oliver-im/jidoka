@@ -14,6 +14,7 @@ _Re-derive: `find docs/discussions -name '*.md' ! -name 'index.md' ! -name 'AGEN
 
 - CLI over MCP — the CLI binary is already the agent-agnostic interface; defer MCP to post-v1
 - Codex adversarial review on large diffs — always trigger self-collect; never rely on the inline-diff path
+- Convention adoption across repos — config-driven paths (configure the surface, fix the shape); enforce hard at create, soft at transition
 - Convention carrier — CONVENTION.md lives in jidoka and travels by copy; no separate repo yet
 - Default plan_dir_root = docs/exec-plans/active — ship the convention batteries-included, not a neutral plan/
 - googleworkspace/cli as a productization reference — copy the discipline (CLI-first, self-describing, distribution), not the surface area
