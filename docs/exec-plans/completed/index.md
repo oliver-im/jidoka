@@ -13,7 +13,7 @@ _Re-derive: `grep -rhm1 '^# ' --include='overview.md' docs/exec-plans/completed/
 
 ## Reversed decisions
 
-_Archived here from `wiki/` (stamped `superseded`); few and frozen, so listed by hand._
+_Archived here from `discussions/` (stamped `superseded`); few and frozen, so listed by hand._
 
 - rust-runtime.md *(superseded)* — Renderer language/runtime comparison (Rust/Go/Bun/…); chose Rust, later reimplemented in TypeScript.
 - mermaid-rendering.md *(superseded)* — Diagram-backend evaluation; chose Mermaid for V1, excised with the topology/HTML subsystem.

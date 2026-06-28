@@ -1,4 +1,4 @@
-# Reference Project Review: `googleworkspace/cli` (March 2026)
+# googleworkspace/cli as a productization reference — copy the discipline (CLI-first, self-describing, distribution), not the surface area
 
 What jidoka can learn from [`googleworkspace/cli`](https://github.com/googleworkspace/cli), and what should remain specific to jidoka's much smaller scope.
 

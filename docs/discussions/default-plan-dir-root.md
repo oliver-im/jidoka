@@ -1,4 +1,4 @@
-# Opinionated default: `plan_dir_root` = `docs/exec-plans/active`
+# Default plan_dir_root = docs/exec-plans/active — ship the convention batteries-included, not a neutral plan/
 
 > Settled 2026-06 (plan `260607-0-plan-lifecycle-convention`, Unit 04). Reverses the neutral `plan/` default jidoka shipped from v0.1.
 

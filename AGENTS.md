@@ -19,6 +19,7 @@ The contract between them: the skill writes the plan markdown to the plan-mode p
 - `docs/data-model.md` — JSON schema, field semantics, review-step model (shared by both audiences)
 - `docs/agent-guide.md` — skill config, heuristics, hard rules (for LLM agents)
 - `docs/developer-guide.md` — architecture, validation rules, algorithms, CLI, hooks, design decisions (for developers building the renderer)
+- `docs/discussions/` — high-level design discussions: living rationale for *what to build and why* (CLI-over-MCP, review-pipeline direction, …). When you hash out direction with the user, **the conclusion is written here** — edited in place as thinking matures; a reversed one `git mv`s to `docs/exec-plans/completed/` stamped `superseded`. Not governed by the convention (which covers only `exec-plans/`); see `docs/discussions/AGENTS.md`
 
 ## Git workflow
 

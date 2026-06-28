@@ -1,4 +1,4 @@
-# Skill Distribution and Local Testing (March 2026)
+# Skill distribution — one canonical source copied into per-agent dirs (not symlinks); three-layer local testing
 
 How jidoka should distribute a single skill set across multiple coding agents without relying on symlinks, and how to test those skills locally after making repo changes.
 

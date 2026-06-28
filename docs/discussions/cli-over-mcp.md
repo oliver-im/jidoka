@@ -1,4 +1,4 @@
-# CLI vs MCP for Agent-Agnostic Design (March 2026)
+# CLI over MCP — the CLI binary is already the agent-agnostic interface; defer MCP to post-v1
 
 Whether jidoka's renderer needs an MCP server mode for agent-agnosticism, or whether the CLI binary is already the portable interface.
 

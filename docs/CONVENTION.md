@@ -4,7 +4,7 @@ A small, tool-agnostic convention for keeping a repository **honest about its in
 
 It is one directory with three states and two rules. You can adopt it in any repo by hand; the tooling at the end is optional.
 
-**Scope.** This convention governs exactly one thing: the **lifecycle of scoped, finishable work** — the funnel from "maybe" to "done." It deliberately says nothing about where a repo keeps its *settled reference* — specs, architecture decisions, glossaries, the durable "why is it built this way." That belongs in a `wiki/` (or `design/`, or whatever the repo calls it), maintained as current truth, and is each repo's own business. One convention, one job.
+**Scope.** This convention governs exactly one thing: the **lifecycle of scoped, finishable work** — the funnel from "maybe" to "done." It deliberately says nothing about where a repo keeps its *settled reference* — specs, architecture decisions, glossaries, the durable "why is it built this way." That belongs in a `wiki/` (or `discussions/`, `design/`, or whatever the repo calls it), maintained as current truth, and is each repo's own business. One convention, one job.
 
 ## Why
 
@@ -34,7 +34,7 @@ A plan being worked: decomposed into units, edited as progress is made. Under th
 
 ### `completed/` — finished
 
-**Frozen historical records**, provenance-stamped (rule 1). A completed plan describes *what was intended and done at the time* — it is never groomed to match the current code, because that would destroy its value as a record of how the code got here. This is the repo's **only** home for frozen history, and it holds two kinds: finished plans, and **reversed decisions** archived out of the repo's `wiki/` (stamped `superseded` — see rule 1). So a decision overturned in the `wiki/` doesn't linger there as stale current-truth; it moves here as a record, and the `wiki/` stays purely current.
+**Frozen historical records**, provenance-stamped (rule 1). A completed plan describes *what was intended and done at the time* — it is never groomed to match the current code, because that would destroy its value as a record of how the code got here. This is the repo's **only** home for frozen history, and it holds two kinds: finished plans, and **reversed decisions** archived out of the repo's reference area — its `wiki/` or `discussions/` (stamped `superseded` — see rule 1). So a decision overturned there doesn't linger as stale current-truth; it moves here as a record, and the reference area stays purely current.
 
 ## Status is the location
 
@@ -54,11 +54,11 @@ A plan in `completed/` is done. An item in `backlog/` may be nonsense. You learn
 
 A backlog item **keeps its identity** when it graduates — the file `260607-3-foo.md` becomes the directory `exec-plans/active/260607-3-foo/` (same id). A plan, when finished, moves `active/ → completed/`. Every transition is a move.
 
-(An item whose answer turns out to be "decided, nothing to build" doesn't go to `completed/` — there's no work to record. Its conclusion lands in the repo's `wiki/` as settled reference, and the backlog item is pruned. That hand-off is outside this convention's scope.)
+(An item whose answer turns out to be "decided, nothing to build" doesn't go to `completed/` — there's no work to record. Its conclusion lands in the repo's reference docs (`wiki/`, `discussions/`, …) as settled reference, and the backlog item is pruned. That hand-off is outside this convention's scope.)
 
 ## The two rules
 
-**1. Provenance stamp on archive.** When a plan moves to `completed/` — or a reversed decision is archived there from the repo's `wiki/` — prepend one line recording how current the record is:
+**1. Provenance stamp on archive.** When a plan moves to `completed/` — or a reversed decision is archived there from the repo's reference docs — prepend one line recording how current the record is:
 
 ```
 > STATUS: completed  · <YYYY-MM> · realized-by <commit or range>

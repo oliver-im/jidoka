@@ -1,4 +1,4 @@
-# Strategic Review (March 2026)
+# Strategic review — proceed: no strategic blocker; defer MCP, keep the skill Claude-specific, don't over-invest in polish
 
 > **Update (2026-06):** jidoka no longer renders visualizations — the topology/Mermaid/HTML subsystem was excised; it is now a pure plan-markdown → reviewable-markdown-units materializer. §1 (differentiation from a *visualization* tool) and §2 (native-visualization risk) assess a risk that no longer applies to the product; they're kept for the decision history. The live verdicts still stand: §3 (plan-mode longevity), §4 (the renderer is the portable asset; skills are platform adapters), and the Recommendations (proceed; defer MCP per [cli-over-mcp.md](cli-over-mcp.md); keep the skill Claude-specific; don't over-invest in aesthetics).
 

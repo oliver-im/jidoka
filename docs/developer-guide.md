@@ -264,7 +264,7 @@ PreToolUse hooks block the tool if they return a non-zero exit code. The hook mu
 
 ### Post-v1: MCP Server
 
-Deferred per [wiki/cli-over-mcp.md](wiki/cli-over-mcp.md). The CLI binary (`jidoka materialize`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
+Deferred per [discussions/cli-over-mcp.md](discussions/cli-over-mcp.md). The CLI binary (`jidoka materialize`) is already the agent-agnostic interface — any agent that can shell out can use it. An MCP server wrapping the same binary is the natural next step for agents that prefer tool-calling over subprocess invocation, but adds no capability that the CLI doesn't already provide.
 
 ## Development Setup
 

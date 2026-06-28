@@ -1,4 +1,4 @@
-# Carrier: jidoka bundles `CONVENTION.md`, no separate repo (for now)
+# Convention carrier — CONVENTION.md lives in jidoka and travels by copy; no separate repo yet
 
 > Settled 2026-06 (plan `260607-0-plan-lifecycle-convention`, Unit 05).
 
