@@ -179,8 +179,13 @@ describe("paths", () => {
       const r = run(["paths", "--absolute"], { env: { CLAUDE_PROJECT_DIR: tmp } });
       expect(r.status).toBe(0);
       const out = JSON.parse(r.stdout);
-      expect(out.active).toBe(join(tmp, "docs/exec-plans/active"));
-      expect(out.reference).toBe(join(tmp, "docs/discussions"));
+      expect(out).toEqual({
+        root: join(tmp, "docs/exec-plans"),
+        backlog: join(tmp, "docs/exec-plans/backlog"),
+        active: join(tmp, "docs/exec-plans/active"),
+        completed: join(tmp, "docs/exec-plans/completed"),
+        reference: join(tmp, "docs/discussions"),
+      });
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

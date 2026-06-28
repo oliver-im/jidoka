@@ -168,9 +168,9 @@ function applyProjectOverrides(cfg: Config, value: unknown, path: string): void 
 }
 
 /**
- * Per-project overrides may only set `plan_dir_root` to a project-relative
- * path that stays inside the project root. Returns an error reason or
- * undefined if valid.
+ * Validates a project-relative override path (`plan_dir_root` or
+ * `reference_dir`): it must stay inside the project root — no absolute paths,
+ * no `..` segments. Returns an error reason, or undefined if valid.
  */
 export function validateProjectPlanDirRoot(s: string): string | undefined {
   if (isAbsolute(s)) return "absolute paths are not allowed in project overrides";

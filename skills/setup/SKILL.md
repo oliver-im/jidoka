@@ -118,7 +118,7 @@ These defaults give you a sensible review pipeline out of the box: `/jidoka:pre-
 
 1. Check whether `~/.claude/plugins/jidoka/config.json` already exists (Read or Bash with `test -f`). If it does, show its contents and ask the user whether to overwrite it or keep what's there. If they want surgical edits, point them at the file path and the README's "Editing review commands" section.
 2. Walk through each user-facing setting in order using `AskUserQuestion`. Show the default in the prompt; accept Enter-for-default. Validate input as you go (no empty `plan_dir_root`, etc.). The auto-populated keys (`git_workflow`, `pre_review`, `unit_review`, `plan_review`) are not asked; they get written at their defaults.
-3. Show a preview of the resulting JSONC (template above with the `plan_dir_root` answer substituted in, comments preserved). Ask `confirm / edit / abort`.
+3. Show a preview of the resulting JSONC (template above with the `plan_dir_root` **and `reference_dir`** answers substituted in, comments preserved). Ask `confirm / edit / abort`.
 4. On `confirm`: `mkdir -p ~/.claude/plugins/jidoka && write the file`. Print the path. Mention that customizing review commands is a direct edit of this file — the inline comments document the schema, and the README's "Editing review commands" section has additional examples.
 5. On `edit`: jump back to the question whose answer the user wants to change.
 6. On `abort`: write nothing.
