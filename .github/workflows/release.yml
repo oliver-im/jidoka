@@ -35,13 +35,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
           fetch-depth: 0 # need full history + tags for the existence check and notes
           ssh-key: ${{ secrets.DEPLOY_KEY }} # push to protected main via bypass deploy key; GITHUB_TOKEN is blocked by the ruleset
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
