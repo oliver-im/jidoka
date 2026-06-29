@@ -103,6 +103,7 @@ jobs:
           # so push directly to the ssh URL instead.
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          trap 'rm -f ~/.ssh/deploy_key' EXIT # wipe the key when this step ends, pass or fail, so later steps can't read it
           printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
