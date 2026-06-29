@@ -36,6 +36,6 @@ _None._
 
 After the last unit's review lands and is committed, run the **`/jidoka:plan-review-prompt`** composer against the cumulative plan diff — don't run the vehicle(s) below directly. The composer aims a cross-unit focus and drives whatever is configured: it injects jidoka's own plan-level review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the focus into a slash command for you. Configured vehicle(s):
 
-- [ ] `codex exec -s read-only "{focus}"` — **exec**: the resuming agent runs this via the Bash tool, then surfaces the findings
+- [x] `codex exec -s read-only "{focus}"` — **exec**: ran via `/jidoka:plan-review-prompt` composer against the cumulative `main...HEAD` diff (focus: the embed producer↔consumer↔committed-bundle seam, version coherence, command doc-vs-impl wiring, retired-stance contradictions, catalog invariant). **Verdict: Ship — no material findings.** Codex independently extracted the embedded spec from the committed `dist/cli.js` and confirmed it equals `docs/CONVENTION.md` byte-for-byte (10074 chars, matching trailing newline), the command is registered + print-only, all live versions agree on 0.4.0, the discussion catalog matches the re-derived H1 list, and no live doc still asserts the retired copy-carrier stance.
 
 _Template steps are recorded verbatim; the **resuming agent** substitutes their placeholders per the resume protocol before running — the renderer never substitutes._
