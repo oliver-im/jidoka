@@ -1,6 +1,6 @@
 # Convention adoption across repos — config-driven paths (configure the surface, fix the shape); enforce hard at create, soft at transition
 
-> Living discussion. Current stance up top; open threads at the end. Companion to `convention-carrier.md` (how `CONVENTION.md` the *document* travels) — this doc is about the *plugin* carrying, configuring, and enforcing the convention inside a consuming repo.
+> Living discussion. Current stance up top; open threads at the end. Companion to `convention-carrier.md` (how `CONVENTION.md` the *document* is carried — now plugin-owned, surfaced via `jidoka convention`) — this doc is about the *plugin* carrying, configuring, and enforcing the convention inside a consuming repo.
 
 ## Current stance
 
@@ -30,7 +30,7 @@ For a solo multi-repo setup whose agent always reads `AGENTS.md`, **deterministi
 
 ## Open threads / deferred
 
-- **Adopt command.** `setup` writes config but does **not** scaffold the `{backlog,active,completed}/` skeleton or copy the bundled `CONVENTION.md` + operational `AGENTS.md` docs (today that's a manual `mkdir` + `curl`). A `jidoka adopt` that does — copying jidoka's *bundled* doc rather than a `curl` — would close the copy-drift loop `convention-carrier.md` flags. Highest-leverage next step.
+- **Adopt command.** The *surfacing* half is now done: `jidoka convention` prints the plugin-owned spec on demand (read it live, or pin a refreshable snapshot with `jidoka convention > docs/CONVENTION.md`), which closes the copy-drift loop `convention-carrier.md` flags. What stays open is the *scaffolding* half — `setup` writes config but does **not** create the `{backlog,active,completed}/` skeleton or drop in the operational `AGENTS.md` docs (today still a manual `mkdir`). A `jidoka adopt` that scaffolds the skeleton and writes those files — sourcing the spec from `jidoka convention`, not a `curl` — is the remaining step.
 - **Mechanical transition commands.** `jidoka archive <id>` (git mv `active→completed` + prepend the stamp) and `jidoka index [--check]` (regenerate / verify the catalogs) convert the drift-prone soft steps into commands that can't be done wrong. `--check` is the optional CI/hook gate — *available*, not on by default.
 - **How hard to enforce?** Current lean: soft-plus-helpers, not hard gates. Revisit if drift actually bites.
 - **Does the plugin own the reference area?** The convention scopes itself to `exec-plans/`; `reference_dir` is surfaced, but the reference area is "the repo's own business." Whether `adopt` scaffolds `discussions/` (+ its `AGENTS.md`) is open — convenience, not mandate.
@@ -41,6 +41,6 @@ Hardcoding `docs/exec-plans/...` in skill/doc prose forces every consuming repo 
 
 ## Cross-references
 
-- `convention-carrier.md` — how `CONVENTION.md` the document travels (copy-from-jidoka).
+- `convention-carrier.md` — how `CONVENTION.md` the document is carried (plugin-owned, surfaced via `jidoka convention`).
 - `default-plan-dir-root.md` — why the renderer ships the convention as its default yet stays convention-agnostic.
 - `../CONVENTION.md` — the portable lifecycle (governs `exec-plans/` only; the reference area is each repo's own business).
