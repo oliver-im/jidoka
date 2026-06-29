@@ -1,12 +1,12 @@
 # 260629-0-add-a-jidoka-convention-command-for-the-embedded-spec — Progress
 
-**Cursor:** 01-embed-convention-md-and-add-the-convention-subcommand (not started).
+**Cursor:** 02-realign-docs-and-discussion-to-plugin-owned-bump-version (not started).
 
 ## Pre-execution review
 
 On the first session, before starting Unit 01, the **resuming agent** works through the step(s) below against the freshly materialized plan dir, then **stops** to wait for your go-ahead — it does not roll straight into Unit 01. Follow each step's routing: **auto-run** the agent-invocable ones (the default `/jidoka:pre-plan-review`, or an `exec` template) and surface their findings; for a `print` template or an operator-run slash command, **surface the command and stop** for you to run it:
 
-- [ ] `/jidoka:pre-plan-review`
+- [x] `/jidoka:pre-plan-review` — ran first session; 2 LOW notes (no-`process.exit` flush; `convention-carrier.md` `Settled`/`Revisit-when` rewrite), no blockers. Surfaced, user approved execution.
 
 ## Git workflow
 
@@ -18,7 +18,7 @@ This plan is worked in its own git worktree, one branch per unit:
 
 ## Done
 
-_Nothing yet._
+- **Unit 01 — Embed CONVENTION.md and add the convention subcommand** (2026-06-29). `scripts/build.mjs` reads `docs/CONVENTION.md` and injects it as `__JIDOKA_CONVENTION__` via the esbuild `define` block (mirroring `__JIDOKA_VERSION__`); `ts/cli.ts` adds a print-only `convention` subcommand modeled on `paths` that writes the embedded spec verbatim (no added newline, no `process.exit` — avoids piped-stdout truncation); `cli.smoke.test.ts` asserts exit 0 + H1 present + byte-for-byte match with the source (staleness guard, kept honest by `pretest: npm run build`). Gate green: typecheck 0, **206 tests pass**, `convention` output shasum-matches the source. Reviews: codex exec (read-only) — no findings + independently verified exit 0/stdout==source; `/code-review` (9-angle) — no findings. Squash-merged as `f08ba97`. Version stays 0.3.3 (the bump is Unit 02).
 
 ## Blockers
 
