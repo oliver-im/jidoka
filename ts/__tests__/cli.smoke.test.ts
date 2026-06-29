@@ -192,6 +192,26 @@ describe("paths", () => {
   });
 });
 
+describe("convention", () => {
+  it("prints the embedded plan-lifecycle convention spec (exit 0, H1 present)", () => {
+    const r = run(["convention"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("# The plan-lifecycle convention");
+  });
+
+  it("embeds docs/CONVENTION.md verbatim (staleness guard)", () => {
+    const r = run(["convention"]);
+    expect(r.status).toBe(0);
+    // The embed is generated from docs/CONVENTION.md at build time (esbuild
+    // `define`), and `pretest` rebuilds the bundle before this runs — so a
+    // drifted embed fails here instead of shipping silently. Byte-for-byte:
+    // the action writes the constant verbatim; this reads the same source the
+    // build read.
+    const source = readFileSync(join(repoRoot, "docs", "CONVENTION.md"), "utf8");
+    expect(r.stdout).toBe(source);
+  });
+});
+
 describe("hook", () => {
   it("exits 0 even with malformed input", () => {
     const r = run(["hook"], { stdin: "not json" });

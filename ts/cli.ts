@@ -9,6 +9,7 @@ import { type ParseResult, type Plan, parsePlanJson } from "./types.js";
 import { formatError, validatePlan } from "./validate.js";
 
 declare const __JIDOKA_VERSION__: string;
+declare const __JIDOKA_CONVENTION__: string;
 
 const program = new Command();
 program
@@ -71,6 +72,20 @@ program
         )
       : paths;
     process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
+  });
+
+program
+  .command("convention")
+  .description(
+    "Print jidoka's canonical plan-lifecycle convention (the embedded docs/CONVENTION.md) to stdout. The plugin owns the spec and surfaces it on demand, the same way `paths` surfaces the resolved layout — consuming repos read this instead of vendoring a CONVENTION.md copy that silently drifts.",
+  )
+  .action(() => {
+    // Write the build-embedded spec verbatim (no added newline) and return.
+    // Like `paths`, never call process.exit here: exiting right after a large
+    // write to a pipe can truncate it, and the byte-for-byte embed-match smoke
+    // test depends on the whole spec reaching stdout. Letting parseAsync drain
+    // naturally flushes it.
+    process.stdout.write(__JIDOKA_CONVENTION__);
   });
 
 function runMaterialize(
