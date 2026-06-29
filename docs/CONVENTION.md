@@ -84,7 +84,10 @@ The structure is just directories and this file:
 
 ```sh
 mkdir -p docs/exec-plans/{backlog,active,completed}
-# drop this file in (jidoka is its canonical home):
+# Drop this file in (jidoka is its canonical home). Two ways:
+#   - with the jidoka plugin, read it live or pin a refreshable snapshot
+#     (re-run to update, never a hand-edited fork):  jidoka convention > docs/CONVENTION.md
+#   - without the plugin, fetch the raw file:
 curl -sfo docs/CONVENTION.md https://raw.githubusercontent.com/oliver-im/jidoka/main/docs/CONVENTION.md
 # add an index.md to each dir — a re-derivable catalog of its entries (see Naming)
 ```

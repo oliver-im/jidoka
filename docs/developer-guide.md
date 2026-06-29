@@ -96,6 +96,7 @@ Usage:
                                        (legacy Plan JSON is also accepted; format auto-detected)
   jidoka hook                        Process ExitPlanMode hook from stdin
   jidoka paths                       Print the resolved convention paths as JSON
+  jidoka convention                  Print the embedded plan-lifecycle convention spec
 
 Options:
   -h, --help          Show this help message
@@ -111,6 +112,7 @@ Materialize subcommand options:
 - **Materialize mode** (`jidoka materialize`): Read a plan from file (or stdin when the file argument is `-`), auto-detect markdown vs legacy JSON by the first non-whitespace character (`{` → JSON, otherwise markdown), validate, write `<plan_dir_root>/<YYMMDD-N-slug>/{overview,progress,0N-*}.md`. Plans root resolves from `$CLAUDE_PROJECT_DIR/<plan_dir_root>` (PWD fallback with stderr warning). Exit 0 on success, 1 on error.
 - **Hook mode** (`jidoka hook`): Process ExitPlanMode PreToolUse hook input from stdin. See [Hook Integration](#hook-integration) for full details. Always exits 0 (never blocks ExitPlanMode).
 - **Paths mode** (`jidoka paths`): Print the resolved convention layout — `root`/`backlog`/`active`/`completed`/`reference` — as JSON, honoring layered config, so skills/docs read one resolver (`resolveConventionPaths`) instead of hardcoding `docs/exec-plans/...`. `active` *is* `plan_dir_root`; `backlog`/`completed` are its fixed-named siblings; `reference` is `reference_dir`. `--absolute` joins each project-relative path with `$CLAUDE_PROJECT_DIR` (PWD fallback). Read-only; never consulted by `materialize` (which stays convention-agnostic).
+- **Convention mode** (`jidoka convention`): Print jidoka's canonical plan-lifecycle convention — the embedded `docs/CONVENTION.md` — to stdout. The spec is embedded into `dist/cli.js` at build time via esbuild `define` (the same mechanism that injects `__JIDOKA_VERSION__`), generated from `docs/CONVENTION.md` on every build and asserted byte-identical by a smoke test. So the plugin **owns** the convention and surfaces it on demand — consuming repos read it instead of vendoring a copy that silently drifts, the same way `paths` surfaces the resolved layout. Print-only (no `--check`); reads no config or cwd.
 
 ### Environment Variables
 
