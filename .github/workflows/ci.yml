@@ -20,8 +20,10 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false # CI never uses git after checkout; don't leave the token in git config
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm

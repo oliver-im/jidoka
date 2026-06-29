@@ -35,13 +35,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
           fetch-depth: 0 # need full history + tags for the existence check and notes
-          ssh-key: ${{ secrets.DEPLOY_KEY }} # push to protected main via bypass deploy key; GITHUB_TOKEN is blocked by the ruleset
+          persist-credentials: false # public repo: read-clone needs no creds, and the bypass deploy key must NOT linger for npm ci/test — it's loaded only at push time below
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -91,13 +91,23 @@ jobs:
       - name: Commit, tag, and push
         env:
           TAG: ${{ steps.ver.outputs.tag }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }} # protected-main bypass key; loaded only here so npm ci/test above never run with push-to-main creds
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "release: $TAG"
           git tag -a "$TAG" -m "$TAG"
-          git push origin HEAD:main --follow-tags
+          # Load the bypass deploy key now and scope it to this single push via
+          # GIT_SSH_COMMAND; `origin` is the credential-less https URL from checkout,
+          # so push directly to the ssh URL instead.
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          trap 'rm -f ~/.ssh/deploy_key' EXIT # wipe the key when this step ends, pass or fail, so later steps can't read it
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
+            git push "git@github.com:${GITHUB_REPOSITORY}.git" HEAD:main --follow-tags
 
       - name: Create GitHub Release
         env:
