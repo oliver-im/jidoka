@@ -1,6 +1,8 @@
+> **STATUS: completed · 2026-06 · realized-by the jidoka-convention-command series (`f08ba97`→`1b313bc`), landed on `main` via PR.** Made jidoka's plan-lifecycle convention plugin-owned and surfaced on demand. Unit 01 embedded `docs/CONVENTION.md` into `dist/cli.js` at build (esbuild `define`, mirroring `__JIDOKA_VERSION__`) and added a print-only `jidoka convention` subcommand with a byte-for-byte embed-match smoke test. Unit 02 flipped the carrier discussion + docs from "travels by copy" to "plugin-owned, surfaced by `jidoka convention`" — recording the traceclip evidence (a stale older-generation copy that had silently forked the model) — reframed `CONVENTION.md`'s adopt recipe (plugin-native `jidoka convention` + `curl` fallback), and bumped 0.3.3 → 0.4.0 across the three manifests + the rebuilt bundle. Per-unit reviews (`/code-review` + codex) and the plan-level review (codex on the cumulative diff — independently confirmed the committed bundle embeds the edited spec byte-for-byte) all came back clean.
+
 # 260629-0-add-a-jidoka-convention-command-for-the-embedded-spec — Progress
 
-**Cursor:** all units complete — Unit 01 and Unit 02 landed; plan-level review pending (see below), then archive + PR.
+**Cursor:** complete — both units landed, plan-level review clean (codex: Ship), archived to `completed/` and landed via PR.
 
 ## Pre-execution review
 
