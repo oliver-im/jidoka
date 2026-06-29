@@ -1,6 +1,6 @@
 # 260629-0-add-a-jidoka-convention-command-for-the-embedded-spec — Progress
 
-**Cursor:** 02-realign-docs-and-discussion-to-plugin-owned-bump-version (not started).
+**Cursor:** all units complete — Unit 01 and Unit 02 landed; plan-level review pending (see below), then archive + PR.
 
 ## Pre-execution review
 
@@ -18,6 +18,7 @@ This plan is worked in its own git worktree, one branch per unit:
 
 ## Done
 
+- **Unit 02 — Realign docs and discussion to plugin-owned, bump version** (2026-06-30). Flipped `convention-carrier.md` (H1 stance + body) from "travels by copy" to "the plugin owns it, surfaced by `jidoka convention`"; recorded the traceclip staleness evidence (stale older-generation "three kinds" copy vs the shipped "three states" model, ~80/110 lines diverged) and resolved the now-fired Revisit-when trigger (separate `plan-lifecycle` repo stays deferred). Consistency pass on `convention-adoption.md` (companion note + cross-ref reframed to plugin-owned; adopt open-thread split into surfacing-done / scaffolding-open); regenerated the `index.md` carrier catalog line (byte-stable vs the re-derive recipe). Updated `CONVENTION.md`'s "Adopt this in a new repo" recipe (plugin-native `jidoka convention` + curl fallback; "a plan is a **directory**" left untouched), `developer-guide.md` (CLI usage line + Convention-mode bullet), and one `README.md` sentence. Bumped 0.3.3 → 0.4.0 across the three manifests and rebuilt `dist/cli.js` (re-embeds the edited spec + re-stamps version). Gate green: typecheck 0, **206 tests pass**, embed byte-matches source, check-version "All manifests agree on 0.4.0". Reviews: `/code-review` (focused multi-angle + fresh sweep) — no blockers, one optional "vendor" wording tightened in place; codex exec (read-only) — no findings (independently verified the byte-match, version agreement, and re-derived index line). Squash-merged as `1b313bc`.
 - **Unit 01 — Embed CONVENTION.md and add the convention subcommand** (2026-06-29). `scripts/build.mjs` reads `docs/CONVENTION.md` and injects it as `__JIDOKA_CONVENTION__` via the esbuild `define` block (mirroring `__JIDOKA_VERSION__`); `ts/cli.ts` adds a print-only `convention` subcommand modeled on `paths` that writes the embedded spec verbatim (no added newline, no `process.exit` — avoids piped-stdout truncation); `cli.smoke.test.ts` asserts exit 0 + H1 present + byte-for-byte match with the source (staleness guard, kept honest by `pretest: npm run build`). Gate green: typecheck 0, **206 tests pass**, `convention` output shasum-matches the source. Reviews: codex exec (read-only) — no findings + independently verified exit 0/stdout==source; `/code-review` (9-angle) — no findings. Squash-merged as `f08ba97`. Version stays 0.3.3 (the bump is Unit 02).
 
 ## Blockers
