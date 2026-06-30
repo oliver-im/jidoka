@@ -25,7 +25,14 @@ export const defaultConfig: Config = {
   git_workflow: false,
   pre_review: ["/jidoka:pre-plan-review"],
   unit_review: ["/code-review"],
-  plan_review: [{ run: "codex exec -s read-only \"{focus}\"", mode: "exec" }],
+  // `< /dev/null` is the stdin hang-guard: `codex exec [PROMPT]` appends stdin as
+  // a `<stdin>` block whenever stdin is a pipe (per `codex exec --help`), so an
+  // unattended/non-TTY `exec` run (the Bash tool, a backgrounded shell) blocks
+  // forever on the open pipe. Closing stdin makes codex just use the arg; it is a
+  // no-op on a foreground TTY. See skills/plan-review-prompt/SKILL.md, step 5.
+  plan_review: [
+    { run: "codex exec -s read-only \"{focus}\" < /dev/null", mode: "exec" },
+  ],
 };
 
 const configSchema = z.object({

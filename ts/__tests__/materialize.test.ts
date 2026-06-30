@@ -122,7 +122,9 @@ describe("materialize", () => {
     expect(progress).toContain("## Pre-execution review");
     expect(progress).toContain("- [ ] `/jidoka:pre-plan-review`");
     expect(progress).toContain("## Plan-level review");
-    expect(progress).toContain('codex exec -s read-only "{focus}"');
+    // The rendered default carries the `< /dev/null` stdin hang-guard verbatim,
+    // so the command surfaced to a resuming agent is hang-proof unattended.
+    expect(progress).toContain('codex exec -s read-only "{focus}" < /dev/null');
     expect(progress).not.toContain("## Git workflow");
 
     const u01 = readFileSync(join(target, "01-prep.md"), "utf8");
