@@ -131,7 +131,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/jido
 | `git_workflow` | bool | `false` | yes | When on, renders a `## Git workflow` block (the worktree-per-plan / branch-per-unit reminder) into `progress.md`. Shipped off — OSS opt-in; a committed `.jidoka.json` opts a repo in. |
 | `pre_review` | `ReviewStep[]` | `["/jidoka:pre-plan-review"]` | **no** | Pre-execution review steps. Each is a slash command or a `{ run, mode }` template (`ReviewStep`; see [data-model.md](data-model.md#review-commands)). Project-override **excluded** — global-config-only, the boundary that makes `exec` safe (a cloned repo's `.jidoka.json` can't inject shell). |
 | `unit_review` | `ReviewStep[]` | `["/code-review"]` | **no** | Per-unit review steps, same `ReviewStep` shape and global-only boundary. |
-| `plan_review` | `ReviewStep[]` | `[{ run: "codex exec -s read-only \"{focus}\"", mode: "exec" }]` | **no** | Plan-level review steps (ships on — a `codex exec` template, agent-run via `/jidoka:plan-review-prompt`; set `[]` to disable), same `ReviewStep` shape and global-only boundary. |
+| `plan_review` | `ReviewStep[]` | `[{ run: "codex exec -s read-only \"{focus}\" < /dev/null", mode: "exec" }]` | **no** | Plan-level review steps (ships on — a `codex exec` template, agent-run via `/jidoka:plan-review-prompt`; set `[]` to disable), same `ReviewStep` shape and global-only boundary. The trailing `< /dev/null` is the stdin hang-guard so an unattended `exec` run can't block on an open stdin pipe (`codex exec` appends piped stdin as a `<stdin>` block); see [data-model.md](data-model.md#command-semantics--invocation). |
 
 ### Loader behavior
 

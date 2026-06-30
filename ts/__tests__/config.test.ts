@@ -30,8 +30,10 @@ describe("defaults", () => {
 
   it("ships a unit-level pipeline matching today's behavior", () => {
     expect(defaultConfig.unit_review).toEqual(["/code-review"]);
+    // The default plan_review carries the `< /dev/null` stdin hang-guard so an
+    // unattended `exec` run can't block on an open stdin pipe (see config.ts).
     expect(defaultConfig.plan_review).toEqual([
-      { run: "codex exec -s read-only \"{focus}\"", mode: "exec" },
+      { run: "codex exec -s read-only \"{focus}\" < /dev/null", mode: "exec" },
     ]);
   });
 

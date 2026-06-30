@@ -20,7 +20,7 @@ A JSONC file (JSON with `//` comments — the reader strips them before parsing)
 | `git_workflow` | bool | `false` | _(don't ask; write `false`. Set `true` by hand to opt into the worktree-per-plan / branch-per-unit workflow — jidoka then renders a `## Git workflow` reminder into each `progress.md`. Also settable per-repo in a committed `.jidoka.json`.)_ |
 | `pre_review` | ReviewStep[] | `["/jidoka:pre-plan-review"]` | _(don't ask; write the shipped default)_ |
 | `unit_review` | ReviewStep[] | `["/code-review"]` | _(don't ask; write the shipped default)_ |
-| `plan_review` | ReviewStep[] | `[{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }]` | _(don't ask; write the shipped default)_ |
+| `plan_review` | ReviewStep[] | `[{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }]` | _(don't ask; write the shipped default)_ |
 
 ### Review step forms
 
@@ -28,9 +28,11 @@ Each entry in `pre_review` / `unit_review` / `plan_review` is a **review step**,
 
 - a **slash command** string — e.g. `"/code-review"`, `"/jidoka:pre-plan-review"`. Whether the resuming agent runs it or hands it to you depends on that command's own `disable-model-invocation` (codex's review commands are operator-run).
 - a **`{ run, mode }` bash template** — a tool-agnostic command. Worked examples:
-  - codex (agentic — fetches the diff itself, scales to large diffs): `{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }`
+  - codex (agentic — fetches the diff itself, scales to large diffs): `{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }`
   - cursor-agent: `{ "run": "agent -p --mode ask \"{focus}\"", "mode": "exec" }`
   - feed-the-diff form, for a tool that can't run shell: `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }` (the whole diff lands in the model's context — fine for small/medium plans)
+
+  ⚠️ **codex `exec`-mode stdin pitfall.** `codex exec [PROMPT]` appends stdin as a `<stdin>` block whenever stdin is a pipe (per `codex exec --help`), so when the agent runs an `exec` template unattended (the Bash tool / a backgrounded shell — stdin is an open pipe with no EOF), codex **blocks forever** waiting on stdin. Redirect stdin from `/dev/null` (`codex exec … "{focus}" < /dev/null`) whenever the prompt is passed as an **argument** — it's a no-op on a foreground TTY. The **feed-the-diff** form above already closes stdin (the pipe ends), so it needs no guard.
 
   `run` may contain these **placeholders**, filled by the resuming agent at run time (the renderer records them verbatim — there's no diff at materialize time): `{plan_dir}` (the materialized plan dir — the only one meaningful in `pre_review`, which runs before any diff exists), `{base}` (the branch the plan forked from), `{diff_range}` (`merge-base(<base>,HEAD)..HEAD`), `{focus}` (a composed review focus; plan-level, filled by the `/jidoka:plan-review-prompt` composer). Exact per-stage applicability lives in the resume protocol (`docs/exec-plans/AGENTS.md`).
 
@@ -99,16 +101,20 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
   // Set this to your review VEHICLE; the resuming agent runs the bundled
   // "/jidoka:plan-review-prompt" composer, which reads the plan + cumulative
   // diff, aims a hostile cross-unit focus, and drives the vehicle. Tool-agnostic:
-  //   - codex (template): { "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }
+  //   - codex (template): { "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }
   //     codex fetches the diff itself (scales to large diffs); jidoka injects
   //     its OWN review prompt; exec runs it, print would hand you the command.
+  //     The `< /dev/null` is the stdin hang-guard: `codex exec [PROMPT]` appends
+  //     stdin as a `<stdin>` block whenever stdin is a pipe (per `codex exec
+  //     --help`), so an unattended exec run (non-TTY Bash / backgrounded) would
+  //     otherwise block forever on the open stdin pipe. No-op on a foreground TTY.
   //   - codex (slash, legacy): "/codex:adversarial-review" — operator-run
   //     (disable-model-invocation), so the composer hands you the command.
   //   - any other tool: a { run, mode } template (see "Review step forms" above).
   // codex needs /codex:setup + `codex login` first. Leaving this [] but still
   // running the composer falls back to a default codex command.
-  // Example: [{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }]
-  "plan_review": [{ "run": "codex exec -s read-only \"{focus}\"", "mode": "exec" }]
+  // Example: [{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }]
+  "plan_review": [{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }]
 }
 ```
 
