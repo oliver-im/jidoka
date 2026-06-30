@@ -19556,7 +19556,7 @@ function isValidSessionId(id) {
 var program2 = new Command();
 program2.name("jidoka").description(
   "Materialize plan-mode output as reviewable markdown units on ExitPlanMode"
-).version("0.4.1", "-v, --version", "Show version number");
+).version("0.4.2", "-v, --version", "Show version number");
 program2.command("hook").description("Process ExitPlanMode hook from stdin").action(async () => {
   const code = await runHook();
   process.exit(code);
