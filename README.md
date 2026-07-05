@@ -6,6 +6,9 @@ The following is 100% written by a human.
 
 > Jidoka is an opinionated Claude Code plugin that builds on top of native plan mode, turning the plan into reviewable units.
 
+![Jidoka: the plan dir on disk (a tree of reviewable markdown units) and a review gate after every unit](docs/assets/jidoka-workflow-light.png#gh-light-mode-only)
+![Jidoka: the plan dir on disk (a tree of reviewable markdown units) and a review gate after every unit](docs/assets/jidoka-workflow-dark.png#gh-dark-mode-only)
+
 ### What is Jidoka
 Jidoka(`自働化`) is "automation with a human touch". Developed from Toyota, the concept became popular in the 90s as a way to practice lean manufacturing. The high level concept is surprisingly applicable with agent driven software development.
 
@@ -49,8 +52,6 @@ Plan mode is invoked when the task on hand is large enough that it should be exe
 - Using different models/harness for planning, implementation, and review is increasingly becoming standard practice, but plan mode does not support this.
 
 ### Solution: Jidoka
-![Jidoka: the plan dir on disk (a tree of reviewable markdown units) and a review gate after every unit](docs/assets/jidoka-workflow-light.png#gh-light-mode-only)
-![Jidoka: the plan dir on disk (a tree of reviewable markdown units) and a review gate after every unit](docs/assets/jidoka-workflow-dark.png#gh-dark-mode-only)
 
 Jidoka is not a replacement for plan mode, but rather builds on top of it. More specifically we enforce that the skill is called in Plan Mode by blocking the `ExitPlanMode` call with `PreToolUse`, and block the plan mode exit if the jidoka skill is not used. The [prompt](https://github.com/oliver-im/jidoka/blob/main/skills/jidoka/SKILL.md) inside the skill has the instructions to divide the plan into units, where the plan is divided into reviewable, executable parts. Since this is done automatically, the jidoka skill is not possible to invoke manually (via `user-invocable: false`).
 
