@@ -12,10 +12,11 @@ _Re-derive: `grep -rhm1 '^# ' --include='overview.md' docs/exec-plans/completed/
 - 260616-0-excise-the-topology-and-html-rendering-subsystem — Excise the topology and HTML rendering subsystem
 - 260629-0-add-a-jidoka-convention-command-for-the-embedded-spec — Add a jidoka convention command for the embedded spec
 
-## Reversed decisions
+## Reversed decisions & closed investigations
 
-_Archived here from `discussions/` (stamped `superseded`); few and frozen, so listed by hand._
+_Loose non-plan records, listed by hand: decisions archived from `discussions/` (stamped `superseded`), and backlog items explored and closed without shipping (stamped `completed`; rationale in `../../discussions/`)._
 
 - rust-runtime.md *(superseded)* — Renderer language/runtime comparison (Rust/Go/Bun/…); chose Rust, later reimplemented in TypeScript.
 - mermaid-rendering.md *(superseded)* — Diagram-backend evaluation; chose Mermaid for V1, excised with the topology/HTML subsystem.
 - browser-debugging.md *(superseded)* — Chrome DevTools/Playwright MCP for debugging rendered HTML; obsolete once the HTML subsystem was excised.
+- 260708-1-workflow-loop-until-dry-plan-review.md *(no-go)* — Workflow-backed loop-until-dry plan_review; spiked over the topology-excision diff, lost to the single pass on cost + recall.
