@@ -54,7 +54,10 @@ export function buildProgressMd(plan: Plan, dirName: string): string {
     dirName,
     plan.git_workflow ?? false,
   );
-  const planReviewBlock = renderPlanReviewBlock(plan.plan_review);
+  const planReviewBlock = renderPlanReviewBlock(
+    plan.plan_review,
+    plan.review_reconverge ?? false,
+  );
   return eta.render("progress.md.eta", {
     dirName,
     cursor,
@@ -194,6 +197,10 @@ function renderReReviewNote(): string {
   );
 }
 
+// The `## Pre-execution review` block. Deliberately does NOT carry the
+// re-review-to-convergence note (unlike unit_review / plan_review): pre-plan
+// review is surface-don't-revise and reads the plan md, not a code-fix diff, so
+// there is nothing to converge on. See `renderReReviewNote`.
 function renderPreReviewBlock(steps: ReviewStep[] | undefined): string {
   let out = "## Pre-execution review\n\n";
   if (steps === undefined || steps.length === 0) {
@@ -236,7 +243,10 @@ function renderGitWorkflowBlock(planId: string, enabled: boolean): string {
   );
 }
 
-function renderPlanReviewBlock(steps: ReviewStep[] | undefined): string {
+function renderPlanReviewBlock(
+  steps: ReviewStep[] | undefined,
+  reReview: boolean,
+): string {
   let out = "## Plan-level review\n\n";
   if (steps === undefined || steps.length === 0) {
     out +=
@@ -250,6 +260,9 @@ function renderPlanReviewBlock(steps: ReviewStep[] | undefined): string {
     "review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the " +
     "focus into a slash command for you. Configured vehicle(s):\n\n";
   out += renderPipelineChecklist(steps);
+  // steps is non-empty here (the empty case returned early), so gate on the flag
+  // alone — a configured plan_review converges the same way a unit_review does.
+  if (reReview) out += renderReReviewNote();
   return out;
 }
 

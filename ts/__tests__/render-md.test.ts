@@ -357,6 +357,63 @@ describe("buildUnitMd re-review-to-convergence note", () => {
   });
 });
 
+describe("buildProgressMd re-review-to-convergence note", () => {
+  const planWith = (over: Partial<Plan>): Plan => ({
+    task_summary: "x",
+    slug: "x",
+    units: [minimalUnit("01-prep")],
+    ...over,
+  });
+
+  it("appends the note inside the plan-level block when plan_review is set and the flag is on", () => {
+    const md = buildProgressMd(
+      planWith({
+        plan_review: ["/codex:adversarial-review"],
+        review_reconverge: true,
+      }),
+      "260709-0-x",
+    );
+    expect(md).toContain("**Re-review to convergence.**");
+    expect(md.indexOf("**Re-review to convergence.**")).toBeGreaterThan(
+      md.indexOf("## Plan-level review"),
+    );
+  });
+
+  it("omits the note when the flag is off", () => {
+    const md = buildProgressMd(
+      planWith({
+        plan_review: ["/codex:adversarial-review"],
+        review_reconverge: false,
+      }),
+      "260709-0-x",
+    );
+    expect(md).not.toContain("Re-review to convergence.");
+  });
+
+  it("omits the note when no plan_review is configured", () => {
+    const md = buildProgressMd(
+      planWith({ plan_review: [], review_reconverge: true }),
+      "260709-0-x",
+    );
+    expect(md).not.toContain("Re-review to convergence.");
+  });
+
+  it("never adds the note to the pre-execution review block", () => {
+    // pre_review present, plan_review empty, flag on: the only block that could
+    // emit the note is pre-execution — and it must not.
+    const md = buildProgressMd(
+      planWith({
+        pre_review: ["/jidoka:pre-plan-review"],
+        plan_review: [],
+        review_reconverge: true,
+      }),
+      "260709-0-x",
+    );
+    expect(md).toContain("## Pre-execution review");
+    expect(md).not.toContain("Re-review to convergence.");
+  });
+});
+
 describe("buildOverviewMd from real fixtures", () => {
   it("valid_plan_minimal renders", () => {
     const plan = loadPlan("valid_plan_minimal.json");

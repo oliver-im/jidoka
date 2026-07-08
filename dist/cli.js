@@ -18820,7 +18820,10 @@ function buildProgressMd(plan, dirName) {
     dirName,
     plan.git_workflow ?? false
   );
-  const planReviewBlock = renderPlanReviewBlock(plan.plan_review);
+  const planReviewBlock = renderPlanReviewBlock(
+    plan.plan_review,
+    plan.review_reconverge ?? false
+  );
   return eta.render("progress.md.eta", {
     dirName,
     cursor,
@@ -18910,7 +18913,7 @@ This plan is worked in its own git worktree, one branch per unit:
 
 `;
 }
-function renderPlanReviewBlock(steps) {
+function renderPlanReviewBlock(steps, reReview) {
   let out = "## Plan-level review\n\n";
   if (steps === void 0 || steps.length === 0) {
     out += "_No plan-level reviews configured. After the last unit, surface a summary and ask the user before archiving._\n";
@@ -18918,6 +18921,7 @@ function renderPlanReviewBlock(steps) {
   }
   out += "After the last unit's review lands and is committed, run the **`/jidoka:plan-review-prompt`** composer against the cumulative plan diff \u2014 don't run the vehicle(s) below directly. The composer aims a cross-unit focus and drives whatever is configured: it injects jidoka's own plan-level review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the focus into a slash command for you. Configured vehicle(s):\n\n";
   out += renderPipelineChecklist(steps);
+  if (reReview) out += renderReReviewNote();
   return out;
 }
 function overviewReviewsCell(steps) {
