@@ -39,7 +39,7 @@ Each entry in `pre_review` / `unit_review` / `plan_review` is a **review step**,
 
   `mode` is `"print"` (**default** — surface the ready-to-run command and stop for you to run it) or `"exec"` (opt-in — the resuming agent runs it via the Bash tool). The default is `print` on purpose: expensive/external review (codex) stays operator-run unless you deliberately opt a step into `exec`.
 
-**Security — review steps are global-config-only.** The per-repo `.jidoka.json` override allow-list **excludes** the three review arrays, so cloning a repo can never make your agent run shell its committed config specifies — only this file, under your home dir, defines review steps. That boundary is what makes `exec` safe; keep review steps here.
+**Security — review steps are global-config-only.** The per-repo `.jidoka.json` override allow-list **excludes** the three review arrays (and `review_reconverge`), so cloning a repo can never make your agent run shell its committed config specifies — nor silently flip your review behavior; only this file, under your home dir, defines review steps and the convergence toggle. That boundary is what makes `exec` safe; keep them here.
 
 ### Template to write
 
