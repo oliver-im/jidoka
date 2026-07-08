@@ -11,7 +11,7 @@ Interactive first-run configuration for the jidoka plugin. Unlike `/jidoka` — 
 
 ## What you write
 
-A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/jidoka/config.json`. Every run writes all six top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
+A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/jidoka/config.json`. Every run writes all seven top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
 
 | Key | Type | Default | Question to ask |
 |---|---|---|---|
