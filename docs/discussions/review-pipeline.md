@@ -1,4 +1,4 @@
-# Review-pipeline direction — unit_review on the built-in /code-review (local diff, no --fix); plan_review opt-in via tool-agnostic templates
+# Review-pipeline direction — unit_review on the built-in /code-review (local diff, no --fix); plan_review opt-in via tool-agnostic templates; re-review to convergence, gated on the reviewer's own middle-tier severity
 
 Decisions and rationale for how jidoka's review pipeline should use the current
 Claude Code / codex review tooling. Companion to `codex-adversarial-review.md`
@@ -227,3 +227,73 @@ installable alongside the stock official codex plugin, and `print`/operator-run 
 default for the heavyweight codex review.
 
 Realized by plan `260608-0-tool-agnostic-review-command-templates-with-opt-in-exec`.
+
+## Re-review to convergence (2026-07 update — new stage-agnostic property)
+
+Prompted by dogfooding a real `unit_review` (in a sibling repo): one `/code-review` pass
+surfaced ~20 confirmed defects, folded in across **two fix commits** — two of them
+consequential. The gap that leaves: **the fix commits are themselves unreviewed code.**
+Nothing reviewed the fixes. A *productive* review produces a large unreviewed delta, and a
+bad or partial fix (or a fresh regression) sails straight to the seam.
+
+**The property.** After a review, if it flagged anything material, **re-run the same review
+on the post-fix diff** — repeat until a pass comes back clean. It is "auto enough" without
+new machinery: the review→fix cycle is *already* agent-driven (jidoka renders the step, the
+agent runs it and addresses findings); this just extends it one turn. It stays
+**produce-only** — the instruction is prose rendered into the review section (Unit md /
+`progress.md`); jidoka renders it, the agent runs the loop. No workflow, no schema change.
+And it **strengthens the seam** rather than removing the human: the human gates a state that
+already survived N review generations, not a raw first-fix state.
+
+**Better than `/goal` for this job** (the framing that surfaced it): agent-runnable
+(`/goal` is user-initiated only — *Trigger* #1 / *Deferred*); the stop signal is the
+**review artifact itself**, not a Haiku transcript-judge proxy; and there is no goal string
+to craft. Not a general `/goal` replacement — a better fit for *this* completion condition.
+
+**Not the shelved fan-out** (`../exec-plans/completed/260708-1-workflow-loop-until-dry-plan-review.md`,
+`dynamic-workflows.md`). That was *parallel fan-out within one snapshot* — finder agents +
+an adversarial refuter panel, looping until finders go dry over a *fixed* diff — a no-go on
+cost and recall. This is *serial re-review across snapshots*, and it inherits the spike's
+**winner** (the single pass) while dodging both of its failure modes: (1) it only re-reviews
+a *dirty* diff (the spike proved a clean diff isn't worth re-running), and (2) it has **no
+refuter panel**, so it keeps the single pass's recall.
+
+**Making "material" specific without a rubric.** Don't ask the agent to re-judge
+materiality; **read the severity the reviewer already emits** (`/code-review` and codex both
+tag findings). Gate and stop on the reviewer's own middle "should-fix" tier:
+
+> Re-review iff the last pass reported ≥1 finding **at or above middle tier** — MEDIUM
+> (HIGH/MEDIUM/LOW), Major (Critical/Major/Minor), P1 (P0/P1/P2). Otherwise stop.
+
+This relocates the subjectivity to a label the reviewer already assigns with a calibrated
+rubric, rather than a fresh per-loop call — a field read, not a rubric written. Pin the tier
+with *examples*, not a taxonomy: **below the bar** (don't loop) — formatting, naming,
+comment/docstring wording, test-only style; **at or above** (loop) — behavior, a
+contract/interface, an invariant, error handling, or a change that would flip a test
+outcome. Fallback for a reviewer with no severity vocabulary: "the finding required a code
+change beyond formatting/naming/comments." Severity gates **whether you loop**, never which
+findings surface — every pass still reports and fixes everything it finds (avoiding the
+spike's recall mistake).
+
+**Scope v0 — one extra pass, one guardrail.** Ship the minimal shape: after a review, if it
+flagged a ≥middle-tier finding, re-run it **once** on the post-fix diff (K fixed at 2),
+gated as above. The other two guardrails only *co-arise* if this generalizes to an unbounded
+loop: a materiality-driven *termination* test (the same predicate, re-applied each round —
+so the "substantive gate" and the "stop condition" are one rule, not two) and a hard cap `K`
+(the oscillation backstop — fix-A-spawns-B-spawns-A never terminates on materiality alone).
+**Defer** that unbounded form until there is evidence a *second* extra pass keeps finding
+material things — the spike's own round-1 dryness says it usually won't. Don't build
+machinery for a round you may never reach.
+
+**Stage-agnostic.** Unlike the fan-out (which bit only at `plan_review`), serial re-review
+bites wherever a review is *productive* — the motivating case was `unit_review`. It composes
+with the `print`/`exec` model above: it needs an agent-run (`exec` / agent-invocable) review
+to loop unattended; a `print` operator-run step converges across the operator's manual
+re-runs instead.
+
+**Status:** Realized (2026-07) by plan
+`260709-0-add-opt-in-re-review-to-convergence-to-the-review-pipeline` — shipped as the
+global-config toggle `review_reconverge` (default on), rendered by `renderReReviewNote` into
+the unit `## Review pipeline` and the `progress.md` `## Plan-level review` block (`pre_review`
+excluded). v0 is one extra pass gated on the reviewer's own middle-tier severity; the
+unbounded loop stays deferred.

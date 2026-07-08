@@ -28,7 +28,8 @@ export class MaterializeError extends Error {
  * `pre_review` (plan-level pre-execution), `plan_review` (plan-level
  * post-execution), and per-unit `unit_review`, each recorded verbatim with no
  * tool lookup or substitution — plus the `git_workflow` flag that gates the
- * `## Git workflow` block in progress.md.
+ * `## Git workflow` block in progress.md, and the `review_reconverge` flag that
+ * gates the re-review-to-convergence note in the rendered review sections.
  */
 export function resolvePipelines(plan: Plan, config: Config): void {
   for (const unit of plan.units) {
@@ -37,6 +38,7 @@ export function resolvePipelines(plan: Plan, config: Config): void {
   plan.pre_review = [...config.pre_review];
   plan.plan_review = [...config.plan_review];
   plan.git_workflow = config.git_workflow;
+  plan.review_reconverge = config.review_reconverge;
 }
 
 /**
@@ -147,7 +149,10 @@ export function materializeAt(
   atomicWrite(join(targetDir, "overview.md"), buildOverviewMd(plan, dirName));
   atomicWrite(join(targetDir, "progress.md"), buildProgressMd(plan, dirName));
   for (const unit of plan.units) {
-    atomicWrite(join(targetDir, `${unit.id}.md`), buildUnitMd(unit));
+    atomicWrite(
+      join(targetDir, `${unit.id}.md`),
+      buildUnitMd(unit, plan.review_reconverge ?? false),
+    );
   }
 }
 

@@ -11,7 +11,7 @@ Interactive first-run configuration for the jidoka plugin. Unlike `/jidoka` — 
 
 ## What you write
 
-A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/jidoka/config.json`. Every run writes all six top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
+A JSONC file (JSON with `//` comments — the reader strips them before parsing) at `~/.claude/plugins/jidoka/config.json`. Every run writes all seven top-level keys plus the inline comments below, so a user opening the file later can read what each key does without checking the README.
 
 | Key | Type | Default | Question to ask |
 |---|---|---|---|
@@ -21,6 +21,7 @@ A JSONC file (JSON with `//` comments — the reader strips them before parsing)
 | `pre_review` | ReviewStep[] | `["/jidoka:pre-plan-review"]` | _(don't ask; write the shipped default)_ |
 | `unit_review` | ReviewStep[] | `["/code-review"]` | _(don't ask; write the shipped default)_ |
 | `plan_review` | ReviewStep[] | `[{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }]` | _(don't ask; write the shipped default)_ |
+| `review_reconverge` | bool | `true` | _(don't ask; write `true`. Set `false` by hand to drop the re-review-to-convergence note jidoka renders into each `unit_review`/`plan_review` section. Global-config-only.)_ |
 
 ### Review step forms
 
@@ -38,7 +39,7 @@ Each entry in `pre_review` / `unit_review` / `plan_review` is a **review step**,
 
   `mode` is `"print"` (**default** — surface the ready-to-run command and stop for you to run it) or `"exec"` (opt-in — the resuming agent runs it via the Bash tool). The default is `print` on purpose: expensive/external review (codex) stays operator-run unless you deliberately opt a step into `exec`.
 
-**Security — review steps are global-config-only.** The per-repo `.jidoka.json` override allow-list **excludes** the three review arrays, so cloning a repo can never make your agent run shell its committed config specifies — only this file, under your home dir, defines review steps. That boundary is what makes `exec` safe; keep review steps here.
+**Security — review steps are global-config-only.** The per-repo `.jidoka.json` override allow-list **excludes** the three review arrays (and `review_reconverge`), so cloning a repo can never make your agent run shell its committed config specifies — nor silently flip your review behavior; only this file, under your home dir, defines review steps and the convergence toggle. That boundary is what makes `exec` safe; keep them here.
 
 ### Template to write
 
@@ -114,7 +115,13 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
   // codex needs /codex:setup + `codex login` first. Leaving this [] but still
   // running the composer falls back to a default codex command.
   // Example: [{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }]
-  "plan_review": [{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }]
+  "plan_review": [{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }],
+
+  // Re-review to convergence (default true): after a review flags a finding at
+  // or above the reviewer's own middle "should-fix" severity, re-run that
+  // review once on the post-fix diff (the fixes are otherwise unreviewed code).
+  // Rendered into each unit_review / plan_review section; set false to omit.
+  "review_reconverge": true
 }
 ```
 
@@ -123,7 +130,7 @@ These defaults give you a sensible review pipeline out of the box: `/jidoka:pre-
 ## Process
 
 1. Check whether `~/.claude/plugins/jidoka/config.json` already exists (Read or Bash with `test -f`). If it does, show its contents and ask the user whether to overwrite it or keep what's there. If they want surgical edits, point them at the file path and the README's "Editing review commands" section.
-2. Walk through each user-facing setting in order using `AskUserQuestion`. Show the default in the prompt; accept Enter-for-default. Validate input as you go (no empty `plan_dir_root`, etc.). The auto-populated keys (`git_workflow`, `pre_review`, `unit_review`, `plan_review`) are not asked; they get written at their defaults.
+2. Walk through each user-facing setting in order using `AskUserQuestion`. Show the default in the prompt; accept Enter-for-default. Validate input as you go (no empty `plan_dir_root`, etc.). The auto-populated keys (`git_workflow`, `pre_review`, `unit_review`, `plan_review`, `review_reconverge`) are not asked; they get written at their defaults.
 3. Show a preview of the resulting JSONC (template above with the `plan_dir_root` **and `reference_dir`** answers substituted in, comments preserved). Ask `confirm / edit / abort`.
 4. On `confirm`: `mkdir -p ~/.claude/plugins/jidoka && write the file`. Print the path. Mention that customizing review commands is a direct edit of this file — the inline comments document the schema, and the README's "Editing review commands" section has additional examples.
 5. On `edit`: jump back to the question whose answer the user wants to change.

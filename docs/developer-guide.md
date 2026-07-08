@@ -48,6 +48,8 @@ plan markdown (from PreToolUse stdin's tool_input.plan, or from a file/stdin)
             -> atomic_write per file
 ```
 
+`build_unit_md` and `build_progress_md` also append the opt-in re-review-to-convergence note (`render_re_review_note`) to a stage's review section when the `review_reconverge` flag is on (default) and that stage has ≥1 review step — the flag rides on the Plan via `resolve_pipelines`, exactly like `git_workflow`; `pre_review` is deliberately excluded. The renderer still only emits fixed strings — it never runs a review.
+
 ### The Contracts
 
 **Hook contract** (the primary path):
@@ -132,6 +134,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/jido
 | `pre_review` | `ReviewStep[]` | `["/jidoka:pre-plan-review"]` | **no** | Pre-execution review steps. Each is a slash command or a `{ run, mode }` template (`ReviewStep`; see [data-model.md](data-model.md#review-commands)). Project-override **excluded** — global-config-only, the boundary that makes `exec` safe (a cloned repo's `.jidoka.json` can't inject shell). |
 | `unit_review` | `ReviewStep[]` | `["/code-review"]` | **no** | Per-unit review steps, same `ReviewStep` shape and global-only boundary. |
 | `plan_review` | `ReviewStep[]` | `[{ run: "codex exec -s read-only \"{focus}\" < /dev/null", mode: "exec" }]` | **no** | Plan-level review steps (ships on — a `codex exec` template, agent-run via `/jidoka:plan-review-prompt`; set `[]` to disable), same `ReviewStep` shape and global-only boundary. The trailing `< /dev/null` is the stdin hang-guard so an unattended `exec` run can't block on an open stdin pipe (`codex exec` appends piped stdin as a `<stdin>` block); see [data-model.md](data-model.md#command-semantics--invocation). |
+| `review_reconverge` | bool | `true` | **no** | Renders the opt-in re-review-to-convergence note into each `unit_review`/`plan_review` section (default on; see [data-model.md](data-model.md#re-review-to-convergence)). Global-config-only — same boundary as the review arrays; carried onto the Plan at materialize time like `git_workflow`, then read by `renderReReviewNote` (see the Renderer section above). |
 
 ### Loader behavior
 

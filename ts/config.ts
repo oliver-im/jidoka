@@ -17,6 +17,12 @@ export interface Config {
   pre_review: ReviewStep[];
   unit_review: ReviewStep[];
   plan_review: ReviewStep[];
+  // When true (default), the rendered unit_review / plan_review sections carry a
+  // re-review-to-convergence instruction: after a review flags a material
+  // finding (≥ the reviewer's middle "should-fix" tier), re-run that review on
+  // the post-fix diff (v0: one extra pass). Global-config-only, like the review
+  // arrays — deliberately not project-overridable.
+  review_reconverge: boolean;
 }
 
 export const defaultConfig: Config = {
@@ -33,6 +39,7 @@ export const defaultConfig: Config = {
   plan_review: [
     { run: "codex exec -s read-only \"{focus}\" < /dev/null", mode: "exec" },
   ],
+  review_reconverge: true,
 };
 
 const configSchema = z.object({
@@ -42,6 +49,7 @@ const configSchema = z.object({
   pre_review: z.array(reviewStepSchema).default(defaultConfig.pre_review),
   unit_review: z.array(reviewStepSchema).default(defaultConfig.unit_review),
   plan_review: z.array(reviewStepSchema).default(defaultConfig.plan_review),
+  review_reconverge: z.boolean().default(defaultConfig.review_reconverge),
 });
 
 export function globalConfigPath(): string | undefined {
@@ -201,6 +209,7 @@ export function mergeForWrite(
   out.pre_review = [...cfg.pre_review];
   out.unit_review = [...cfg.unit_review];
   out.plan_review = [...cfg.plan_review];
+  out.review_reconverge = cfg.review_reconverge;
   return out;
 }
 

@@ -86,6 +86,14 @@ diff where fan-out recall beats the single pass by enough to justify ~5x — and
 then, a gentler verify. Numbers + the run (`wf_2a94afd9-ec2`) in backlog `260708-1`
 *Spike result*.
 
+**Don't conflate this with serial re-review-to-convergence (2026-07).** A later idea in
+the same thread — after a *productive* review, re-run it on the post-fix diff until a pass
+comes back clean-above-severity — is a **different axis**: serial convergence *across*
+snapshots, not parallel fan-out *within* one. It reuses this spike's **winner** (the single
+pass) and avoids both failure modes that sank the fan-out (it re-reviews only a *dirty*
+diff; no refuter panel, so no recall loss), needs no workflow, and stays produce-only. It
+lives in `review-pipeline.md` (§*Re-review to convergence*) — **not** filed under `260708-1`.
+
 ## Why NOT add a "use workflows if necessary" prompt to jidoka
 
 Tempting reasoning: plan mode fires on large tasks → jidoka runs on large tasks →

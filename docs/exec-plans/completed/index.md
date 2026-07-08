@@ -11,6 +11,7 @@ _Re-derive: `grep -rhm1 '^# ' --include='overview.md' docs/exec-plans/completed/
 - 260608-0-tool-agnostic-review-command-templates-with-opt-in-exec — Tool-agnostic review command templates with opt-in exec
 - 260616-0-excise-the-topology-and-html-rendering-subsystem — Excise the topology and HTML rendering subsystem
 - 260629-0-add-a-jidoka-convention-command-for-the-embedded-spec — Add a jidoka convention command for the embedded spec
+- 260709-0-add-opt-in-re-review-to-convergence-to-the-review-pipeline — Add opt-in re-review-to-convergence to the review pipeline
 
 ## Reversed decisions & closed investigations
 

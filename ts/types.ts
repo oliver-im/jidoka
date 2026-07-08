@@ -94,6 +94,10 @@ export interface Plan {
   // Materializer-attached: a copy of config.git_workflow. Never present on
   // parsed input; set by `resolvePipelines` after schema validation.
   git_workflow?: boolean;
+  // Materializer-attached: a copy of config.review_reconverge. Never present on
+  // parsed input; set by `resolvePipelines` after schema validation. Gates the
+  // re-review-to-convergence note in the rendered review sections.
+  review_reconverge?: boolean;
 }
 
 export const planSchema: z.ZodType<Plan> = z.object({

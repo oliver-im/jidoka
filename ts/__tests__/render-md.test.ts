@@ -196,7 +196,7 @@ describe("buildProgressMd", () => {
       ...minimalUnit("01-x"),
       review: [{ run: "agent -p --mode ask {focus}", mode: "exec" }],
     };
-    const md = buildUnitMd(u);
+    const md = buildUnitMd(u, false);
     expect(md).toContain(
       "- [ ] `agent -p --mode ask {focus}` — **exec**",
     );
@@ -207,7 +207,7 @@ describe("buildProgressMd", () => {
       ...minimalUnit("01-x"),
       review: [{ run: "codex exec review", mode: "exec" }],
     };
-    const md = buildUnitMd(u);
+    const md = buildUnitMd(u, false);
     expect(md).toContain("- [ ] `codex exec review` — **exec**");
     expect(md).not.toContain("substitutes their placeholders");
   });
@@ -217,7 +217,7 @@ describe("buildProgressMd", () => {
       ...minimalUnit("01-x"),
       review: [{ run: "codex exec review", mode: "print" }],
     };
-    const md = buildUnitMd(u);
+    const md = buildUnitMd(u, false);
     expect(md).toContain("- [ ] `codex exec review` — **print**");
     expect(md).not.toContain("substitutes their placeholders");
   });
@@ -227,7 +227,7 @@ describe("buildProgressMd", () => {
       ...minimalUnit("01-x"),
       review: [{ run: "git log | awk '{print $1}'", mode: "exec" }],
     };
-    const md = buildUnitMd(u);
+    const md = buildUnitMd(u, false);
     // `{print $1}` is not one of the known stage-scoped placeholders.
     expect(md).not.toContain("substitutes their placeholders");
   });
@@ -237,7 +237,7 @@ describe("buildProgressMd", () => {
       ...minimalUnit("01-x"),
       review: [{ run: "codex exec --base `git mb`", mode: "exec" }],
     };
-    const md = buildUnitMd(u);
+    const md = buildUnitMd(u, false);
     // GFM escapes a literal backtick by widening the fence to `` and padding.
     expect(md).toContain("`` codex exec --base `git mb` ``");
   });
@@ -298,7 +298,7 @@ describe("buildProgressMd", () => {
 
 describe("buildUnitMd", () => {
   it("renders title, blocked_by, agents", () => {
-    const md = buildUnitMd(minimalUnit("01-foo"));
+    const md = buildUnitMd(minimalUnit("01-foo"), false);
     expect(md).toContain("# Unit 01 — Title for 01-foo");
     expect(md).toContain("**Blocked by:** none");
     expect(md).toContain("**Agents involved:** main only");
@@ -315,23 +315,102 @@ describe("buildUnitMd", () => {
 
   it("renders blocked_by as comma-joined", () => {
     const u = minimalUnit("02-bar", ["01-a", "01-b"]);
-    expect(buildUnitMd(u)).toContain("**Blocked by:** 01-a, 01-b");
+    expect(buildUnitMd(u, false)).toContain("**Blocked by:** 01-a, 01-b");
   });
 
   it("renders agents_involved when present", () => {
     const u: Unit = { ...minimalUnit("01-x"), agents_involved: ["a", "b"] };
-    expect(buildUnitMd(u)).toContain("**Agents involved:** a, b");
+    expect(buildUnitMd(u, false)).toContain("**Agents involved:** a, b");
   });
 
   it("emits no review steps placeholder when review list is empty", () => {
     const u: Unit = { ...minimalUnit("01-x"), review: [] };
-    expect(buildUnitMd(u)).toContain("- [ ] _No review steps configured._");
+    expect(buildUnitMd(u, false)).toContain("- [ ] _No review steps configured._");
   });
 
   it("emits no review steps placeholder when review is absent", () => {
     const u: Unit = { ...minimalUnit("01-x") };
     delete u.review;
-    expect(buildUnitMd(u)).toContain("- [ ] _No review steps configured._");
+    expect(buildUnitMd(u, false)).toContain("- [ ] _No review steps configured._");
+  });
+});
+
+describe("buildUnitMd re-review-to-convergence note", () => {
+  it("appends the note when review steps exist and reReview is on", () => {
+    const md = buildUnitMd(minimalUnit("01-foo"), true);
+    expect(md).toContain("**Re-review to convergence.**");
+    expect(md).toContain('middle "should-fix" tier');
+  });
+
+  it("omits the note when reReview is off", () => {
+    expect(buildUnitMd(minimalUnit("01-foo"), false)).not.toContain(
+      "Re-review to convergence.",
+    );
+  });
+
+  it("omits the note when the unit has no review steps, even if reReview is on", () => {
+    const empty: Unit = { ...minimalUnit("01-x"), review: [] };
+    expect(buildUnitMd(empty, true)).not.toContain("Re-review to convergence.");
+    const absent: Unit = { ...minimalUnit("01-x") };
+    delete absent.review;
+    expect(buildUnitMd(absent, true)).not.toContain("Re-review to convergence.");
+  });
+});
+
+describe("buildProgressMd re-review-to-convergence note", () => {
+  const planWith = (over: Partial<Plan>): Plan => ({
+    task_summary: "x",
+    slug: "x",
+    units: [minimalUnit("01-prep")],
+    ...over,
+  });
+
+  it("appends the note inside the plan-level block when plan_review is set and the flag is on", () => {
+    const md = buildProgressMd(
+      planWith({
+        plan_review: ["/codex:adversarial-review"],
+        review_reconverge: true,
+      }),
+      "260709-0-x",
+    );
+    expect(md).toContain("**Re-review to convergence.**");
+    expect(md.indexOf("**Re-review to convergence.**")).toBeGreaterThan(
+      md.indexOf("## Plan-level review"),
+    );
+  });
+
+  it("omits the note when the flag is off", () => {
+    const md = buildProgressMd(
+      planWith({
+        plan_review: ["/codex:adversarial-review"],
+        review_reconverge: false,
+      }),
+      "260709-0-x",
+    );
+    expect(md).not.toContain("Re-review to convergence.");
+  });
+
+  it("omits the note when no plan_review is configured", () => {
+    const md = buildProgressMd(
+      planWith({ plan_review: [], review_reconverge: true }),
+      "260709-0-x",
+    );
+    expect(md).not.toContain("Re-review to convergence.");
+  });
+
+  it("never adds the note to the pre-execution review block", () => {
+    // pre_review present, plan_review empty, flag on: the only block that could
+    // emit the note is pre-execution — and it must not.
+    const md = buildProgressMd(
+      planWith({
+        pre_review: ["/jidoka:pre-plan-review"],
+        plan_review: [],
+        review_reconverge: true,
+      }),
+      "260709-0-x",
+    );
+    expect(md).toContain("## Pre-execution review");
+    expect(md).not.toContain("Re-review to convergence.");
   });
 });
 

@@ -26,6 +26,7 @@ describe("defaults", () => {
     expect(defaultConfig.plan_dir_root).toBe("docs/exec-plans/active");
     expect(defaultConfig.reference_dir).toBe("docs/discussions");
     expect(defaultConfig.git_workflow).toBe(false);
+    expect(defaultConfig.review_reconverge).toBe(true);
   });
 
   it("ships a unit-level pipeline matching today's behavior", () => {
@@ -233,6 +234,33 @@ describe("loadFromPaths", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it("respects a global review_reconverge: false override", () => {
+    const dir = makeTempDir("reconverge-off");
+    const path = join(dir, "config.json");
+    writeFileSync(path, JSON.stringify({ review_reconverge: false }));
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.review_reconverge).toBe(false);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("defaults review_reconverge to true when the global config omits it", () => {
+    const dir = makeTempDir("reconverge-default");
+    const path = join(dir, "config.json");
+    writeFileSync(path, JSON.stringify({ plan_dir_root: "x" }));
+    const cfg = loadFromPaths(path, undefined);
+    expect(cfg.review_reconverge).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("rejects review_reconverge as a project override (global-config-only)", () => {
+    const dir = makeTempDir("reconverge-scope");
+    const path = join(dir, ".jidoka.json");
+    writeFileSync(path, JSON.stringify({ review_reconverge: false }));
+    const cfg = loadFromPaths(undefined, path);
+    expect(cfg.review_reconverge).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it("rejects unit_review / plan_review / pre_review as project overrides", () => {
     const dir = makeTempDir("scope");
     const path = join(dir, ".jidoka.json");
@@ -285,6 +313,7 @@ describe("mergeForWrite", () => {
     expect(merged.plan_review).toEqual(defaultConfig.plan_review);
     expect(merged.pre_review).toEqual(defaultConfig.pre_review);
     expect(merged.git_workflow).toBe(false);
+    expect(merged.review_reconverge).toBe(true);
   });
 
   it("writes git_workflow from cfg, overwriting a stale base value", () => {
