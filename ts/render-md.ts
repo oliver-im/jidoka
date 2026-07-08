@@ -64,7 +64,7 @@ export function buildProgressMd(plan: Plan, dirName: string): string {
   });
 }
 
-export function buildUnitMd(unit: Unit): string {
+export function buildUnitMd(unit: Unit, reReview: boolean): string {
   const prefix = unitIdPrefix(unit.id) ?? unit.id;
   const blockedBy =
     unit.blocked_by.length === 0 ? "none" : unit.blocked_by.join(", ");
@@ -86,7 +86,10 @@ export function buildUnitMd(unit: Unit): string {
     bodyBlock += "\n";
   }
 
-  const reviewItems = renderPipelineChecklist(unit.review);
+  let reviewItems = renderPipelineChecklist(unit.review);
+  if (reReview && unit.review !== undefined && unit.review.length > 0) {
+    reviewItems += renderReReviewNote();
+  }
 
   return eta.render("unit.md.eta", {
     prefix,
@@ -158,6 +161,37 @@ function renderPipelineChecklist(steps: ReviewStep[] | undefined): string {
       "per the resume protocol before running — the renderer never substitutes._\n";
   }
   return out;
+}
+
+/**
+ * The re-review-to-convergence instruction (v0: one extra pass), appended to a
+ * stage's review section when that stage has ≥1 configured step and the
+ * `review_reconverge` toggle is on. Fixed prose, no per-plan data: a review's
+ * fix commits are themselves unreviewed code, so after a *material* finding the
+ * reviewer runs once more over the post-fix diff. The gate reads the reviewer's
+ * OWN severity label (not a fresh judgment) and decides only *whether to
+ * re-run*, never which findings surface. Deliberately shared by unit_review and
+ * plan_review, and deliberately NOT used by pre_review (surface-don't-revise —
+ * there is no code-fix diff to converge on). Rationale + the deferred
+ * unbounded-loop form: docs/discussions/review-pipeline.md (§Re-review to
+ * convergence).
+ */
+function renderReReviewNote(): string {
+  return (
+    "\n**Re-review to convergence.** The fixes you just made are themselves " +
+    "unreviewed code. If this pass reported **≥1 finding at or above the " +
+    'reviewer\'s middle "should-fix" tier** (MEDIUM in HIGH/MEDIUM/LOW, Major ' +
+    "in Critical/Major/Minor, P1 in P0/P1/P2), **re-run this same review once** " +
+    "on the post-fix diff and re-triage, then stop. Below-the-bar findings " +
+    "(formatting, naming, comment/docstring wording, test-only style) don't " +
+    "trigger a re-run; at-or-above ones (behavior, a contract/interface, an " +
+    "invariant, error handling, or a change that flips a test outcome) do. If " +
+    'the reviewer emits no severities, use "required a code change beyond ' +
+    'formatting/naming/comments" as the bar. Severity gates *whether you ' +
+    "re-run*, never which findings surface — every pass still reports and fixes " +
+    "everything it finds. (Rationale: `docs/discussions/review-pipeline.md` " +
+    "§Re-review to convergence.)\n"
+  );
 }
 
 function renderPreReviewBlock(steps: ReviewStep[] | undefined): string {

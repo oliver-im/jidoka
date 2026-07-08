@@ -18165,7 +18165,8 @@ var defaultConfig = {
   // no-op on a foreground TTY. See skills/plan-review-prompt/SKILL.md, step 5.
   plan_review: [
     { run: 'codex exec -s read-only "{focus}" < /dev/null', mode: "exec" }
-  ]
+  ],
+  review_reconverge: true
 };
 var configSchema = external_exports.object({
   plan_dir_root: external_exports.string().min(1).default(defaultConfig.plan_dir_root),
@@ -18173,7 +18174,8 @@ var configSchema = external_exports.object({
   git_workflow: external_exports.boolean().default(defaultConfig.git_workflow),
   pre_review: external_exports.array(reviewStepSchema).default(defaultConfig.pre_review),
   unit_review: external_exports.array(reviewStepSchema).default(defaultConfig.unit_review),
-  plan_review: external_exports.array(reviewStepSchema).default(defaultConfig.plan_review)
+  plan_review: external_exports.array(reviewStepSchema).default(defaultConfig.plan_review),
+  review_reconverge: external_exports.boolean().default(defaultConfig.review_reconverge)
 });
 function globalConfigPath() {
   const home = homedir();
@@ -18827,7 +18829,7 @@ function buildProgressMd(plan, dirName) {
     planReviewBlock
   });
 }
-function buildUnitMd(unit) {
+function buildUnitMd(unit, reReview) {
   const prefix = unitIdPrefix(unit.id) ?? unit.id;
   const blockedBy = unit.blocked_by.length === 0 ? "none" : unit.blocked_by.join(", ");
   const agents = unit.agents_involved && unit.agents_involved.length > 0 ? unit.agents_involved.join(", ") : "main only";
@@ -18842,7 +18844,10 @@ function buildUnitMd(unit) {
     if (!bodyBlock.endsWith("\n")) bodyBlock += "\n";
     bodyBlock += "\n";
   }
-  const reviewItems = renderPipelineChecklist(unit.review);
+  let reviewItems = renderPipelineChecklist(unit.review);
+  if (reReview && unit.review !== void 0 && unit.review.length > 0) {
+    reviewItems += renderReReviewNote();
+  }
   return eta.render("unit.md.eta", {
     prefix,
     title: unit.title,
@@ -18879,6 +18884,9 @@ function renderPipelineChecklist(steps) {
     out += "\n_Template steps are recorded verbatim; the **resuming agent** substitutes their placeholders per the resume protocol before running \u2014 the renderer never substitutes._\n";
   }
   return out;
+}
+function renderReReviewNote() {
+  return '\n**Re-review to convergence.** The fixes you just made are themselves unreviewed code. If this pass reported **\u22651 finding at or above the reviewer\'s middle "should-fix" tier** (MEDIUM in HIGH/MEDIUM/LOW, Major in Critical/Major/Minor, P1 in P0/P1/P2), **re-run this same review once** on the post-fix diff and re-triage, then stop. Below-the-bar findings (formatting, naming, comment/docstring wording, test-only style) don\'t trigger a re-run; at-or-above ones (behavior, a contract/interface, an invariant, error handling, or a change that flips a test outcome) do. If the reviewer emits no severities, use "required a code change beyond formatting/naming/comments" as the bar. Severity gates *whether you re-run*, never which findings surface \u2014 every pass still reports and fixes everything it finds. (Rationale: `docs/discussions/review-pipeline.md` \xA7Re-review to convergence.)\n';
 }
 function renderPreReviewBlock(steps) {
   let out = "## Pre-execution review\n\n";
@@ -18935,6 +18943,7 @@ function resolvePipelines(plan, config2) {
   plan.pre_review = [...config2.pre_review];
   plan.plan_review = [...config2.plan_review];
   plan.git_workflow = config2.git_workflow;
+  plan.review_reconverge = config2.review_reconverge;
 }
 function resolveTargetDir(plan, plansRoot, today) {
   const n = nextCounter(plansRoot, today);
@@ -18996,7 +19005,10 @@ function materializeAt(plan, targetDir, config2, dirNameOverride) {
   atomicWrite(join4(targetDir, "overview.md"), buildOverviewMd(plan, dirName));
   atomicWrite(join4(targetDir, "progress.md"), buildProgressMd(plan, dirName));
   for (const unit of plan.units) {
-    atomicWrite(join4(targetDir, `${unit.id}.md`), buildUnitMd(unit));
+    atomicWrite(
+      join4(targetDir, `${unit.id}.md`),
+      buildUnitMd(unit, plan.review_reconverge ?? false)
+    );
   }
 }
 function atomicWrite(path2, contents) {
