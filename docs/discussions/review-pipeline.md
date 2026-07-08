@@ -291,5 +291,9 @@ with the `print`/`exec` model above: it needs an agent-run (`exec` / agent-invoc
 to loop unattended; a `print` operator-run step converges across the operator's manual
 re-runs instead.
 
-**Status:** design captured; v0 is buildable (render the re-review instruction into the
-review section / step templates in `ts/`). Not yet built — spawn a backlog item to ship it.
+**Status:** Realized (2026-07) by plan
+`260709-0-add-opt-in-re-review-to-convergence-to-the-review-pipeline` — shipped as the
+global-config toggle `review_reconverge` (default on), rendered by `renderReReviewNote` into
+the unit `## Review pipeline` and the `progress.md` `## Plan-level review` block (`pre_review`
+excluded). v0 is one extra pass gated on the reviewer's own middle-tier severity; the
+unbounded loop stays deferred.

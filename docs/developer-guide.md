@@ -48,6 +48,8 @@ plan markdown (from PreToolUse stdin's tool_input.plan, or from a file/stdin)
             -> atomic_write per file
 ```
 
+`build_unit_md` and `build_progress_md` also append the opt-in re-review-to-convergence note (`render_re_review_note`) to a stage's review section when the `review_reconverge` flag is on (default) and that stage has ≥1 review step — the flag rides on the Plan via `resolve_pipelines`, exactly like `git_workflow`; `pre_review` is deliberately excluded. The renderer still only emits fixed strings — it never runs a review.
+
 ### The Contracts
 
 **Hook contract** (the primary path):

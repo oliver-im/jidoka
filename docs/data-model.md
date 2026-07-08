@@ -130,6 +130,7 @@ interface Config {
   pre_review: ReviewStep[];    // runs after materialize, before Unit 01
   unit_review: ReviewStep[];   // runs after each Unit lands
   plan_review: ReviewStep[];   // runs after the last Unit's review
+  review_reconverge: boolean;  // default true; gates the re-review-to-convergence note (below)
 }
 ```
 
@@ -148,11 +149,15 @@ Object form (not a prefix-tagged string) because a bash template can legitimatel
 | Per-unit | `unit_review` | Each `<id>.md` (`## Review pipeline`) | `["/code-review"]` | After the unit's diff lands and before it's committed. Local correctness gate on the unit's working-tree diff. |
 | Plan-level | `plan_review` | `progress.md` (`## Plan-level review`, below Notes) | `[{ run: "codex exec -s read-only \"{focus}\" < /dev/null", mode: "exec" }]` | After the last unit's review lands and is committed. Adversarial pass against the cumulative *committed* plan diff — the completeness net for cross-unit issues. (The `< /dev/null` is the stdin hang-guard — see *Command semantics & invocation*.) |
 
+### Re-review to convergence
+
+When `review_reconverge` is `true` (the default), the rendered `unit_review` and `plan_review` sections carry a **re-review-to-convergence** instruction: after a review flags a finding **at or above the reviewer's own middle "should-fix" severity tier** (MEDIUM / Major / P1), re-run that same review once on the post-fix diff and re-triage. The rationale is that a review's fix commits are themselves *unreviewed* code — a productive review leaves a large unreviewed delta that would otherwise sail straight to the human seam. v0 is deliberately **one extra pass** gated on that single severity signal: the gate reads the reviewer's own label rather than a fresh "material?" judgment, and decides only *whether to re-run*, never which findings surface. `pre_review` is excluded (it is surface-don't-revise and reads the plan md, not a code-fix diff). `review_reconverge` is **global-config-only** (like the review arrays) and, like `git_workflow`, is copied onto the Plan at materialize time; the renderer emits fixed prose and runs nothing. Rationale + the deferred unbounded-loop form: `docs/discussions/review-pipeline.md` (§Re-review to convergence).
+
 ### Validation
 
 The materializer denies the ExitPlanMode hook (or fails the `materialize` CLI) when an entry is neither a non-empty string starting with `/` nor a `{ run, mode }` template (`run` a non-empty string; `mode` one of `print`/`exec`, defaulting to `print`; no unknown keys). Otherwise every entry is rendered verbatim — the renderer never substitutes placeholders or runs anything.
 
-Review steps are **global-config-only**: the per-repo `.jidoka.json` override allow-list excludes `pre_review`/`unit_review`/`plan_review`, so a cloned repo's committed config can never make a resuming agent run arbitrary shell. This is the security boundary that makes `exec` (below) safe.
+Review steps are **global-config-only**: the per-repo `.jidoka.json` override allow-list excludes `pre_review`/`unit_review`/`plan_review` (and `review_reconverge`), so a cloned repo's committed config can never make a resuming agent run arbitrary shell. This is the security boundary that makes `exec` (below) safe.
 
 ### Command semantics & invocation
 
