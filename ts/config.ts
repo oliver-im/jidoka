@@ -31,13 +31,21 @@ export const defaultConfig: Config = {
   git_workflow: false,
   pre_review: ["/jidoka:pre-plan-review"],
   unit_review: ["/code-review"],
-  // `< /dev/null` is the stdin hang-guard: `codex exec [PROMPT]` appends stdin as
-  // a `<stdin>` block whenever stdin is a pipe (per `codex exec --help`), so an
-  // unattended/non-TTY `exec` run (the Bash tool, a backgrounded shell) blocks
-  // forever on the open pipe. Closing stdin makes codex just use the arg; it is a
-  // no-op on a foreground TTY. See skills/plan-review-prompt/SKILL.md, step 5.
+  // `-c model_reasoning_summary=detailed` asks codex for its fullest reasoning
+  // summary (a summary — not raw chain-of-thought, which stays hidden), so a
+  // plan-level review surfaces *why* it flagged (or cleared) a cross-unit seam,
+  // not just a bare verdict; the relay stays findings-first (see
+  // skills/plan-review-prompt/SKILL.md, step 6). `< /dev/null` is the stdin
+  // hang-guard: `codex exec [PROMPT]` appends stdin as a `<stdin>` block whenever
+  // stdin is a pipe (per `codex exec --help`), so an unattended/non-TTY `exec`
+  // run (the Bash tool, a backgrounded shell) blocks forever on the open pipe.
+  // Closing stdin makes codex just use the arg; it is a no-op on a foreground
+  // TTY. See skills/plan-review-prompt/SKILL.md, step 5.
   plan_review: [
-    { run: "codex exec -s read-only \"{focus}\" < /dev/null", mode: "exec" },
+    {
+      run: "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null",
+      mode: "exec",
+    },
   ],
   review_reconverge: true,
 };

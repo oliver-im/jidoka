@@ -20,7 +20,7 @@ A JSONC file (JSON with `//` comments — the reader strips them before parsing)
 | `git_workflow` | bool | `false` | _(don't ask; write `false`. Set `true` by hand to opt into the worktree-per-plan / branch-per-unit workflow — jidoka then renders a `## Git workflow` reminder into each `progress.md`. Also settable per-repo in a committed `.jidoka.json`.)_ |
 | `pre_review` | ReviewStep[] | `["/jidoka:pre-plan-review"]` | _(don't ask; write the shipped default)_ |
 | `unit_review` | ReviewStep[] | `["/code-review"]` | _(don't ask; write the shipped default)_ |
-| `plan_review` | ReviewStep[] | `[{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }]` | _(don't ask; write the shipped default)_ |
+| `plan_review` | ReviewStep[] | `[{ "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }]` | _(don't ask; write the shipped default)_ |
 | `review_reconverge` | bool | `true` | _(don't ask; write `true`. Set `false` by hand to drop the re-review-to-convergence note jidoka renders into each `unit_review`/`plan_review` section. Global-config-only.)_ |
 
 ### Review step forms
@@ -29,7 +29,7 @@ Each entry in `pre_review` / `unit_review` / `plan_review` is a **review step**,
 
 - a **slash command** string — e.g. `"/code-review"`, `"/jidoka:pre-plan-review"`. Whether the resuming agent runs it or hands it to you depends on that command's own `disable-model-invocation` (codex's review commands are operator-run).
 - a **`{ run, mode }` bash template** — a tool-agnostic command. Worked examples:
-  - codex (agentic — fetches the diff itself, scales to large diffs): `{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }`
+  - codex (agentic — fetches the diff itself, scales to large diffs): `{ "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }` (`-c model_reasoning_summary=detailed` asks codex for its fullest reasoning summary, so the review shows *why* it flagged a seam, not just a verdict)
   - cursor-agent: `{ "run": "agent -p --mode ask \"{focus}\"", "mode": "exec" }`
   - feed-the-diff form, for a tool that can't run shell: `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }` (the whole diff lands in the model's context — fine for small/medium plans)
 
@@ -102,9 +102,12 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
   // Set this to your review VEHICLE; the resuming agent runs the bundled
   // "/jidoka:plan-review-prompt" composer, which reads the plan + cumulative
   // diff, aims a hostile cross-unit focus, and drives the vehicle. Tool-agnostic:
-  //   - codex (template): { "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }
+  //   - codex (template): { "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }
   //     codex fetches the diff itself (scales to large diffs); jidoka injects
   //     its OWN review prompt; exec runs it, print would hand you the command.
+  //     `-c model_reasoning_summary=detailed` asks codex for its fullest reasoning
+  //     summary (a summary, not raw chain-of-thought) so the review shows *why* it
+  //     flagged/cleared a seam, not just a verdict.
   //     The `< /dev/null` is the stdin hang-guard: `codex exec [PROMPT]` appends
   //     stdin as a `<stdin>` block whenever stdin is a pipe (per `codex exec
   //     --help`), so an unattended exec run (non-TTY Bash / backgrounded) would
@@ -114,8 +117,8 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
   //   - any other tool: a { run, mode } template (see "Review step forms" above).
   // codex needs /codex:setup + `codex login` first. Leaving this [] but still
   // running the composer falls back to a default codex command.
-  // Example: [{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }]
-  "plan_review": [{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }],
+  // Example: [{ "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }]
+  "plan_review": [{ "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }],
 
   // Re-review to convergence (default true): after a review flags a finding at
   // or above the reviewer's own middle "should-fix" severity, re-run that

@@ -26,7 +26,7 @@ The review vehicle is **configurable and tool-agnostic**: codex is one option, n
 
 Read `~/.claude/plugins/jidoka/config.json` — it is **JSONC** (strip both `//` line and `/* */` block comments before parsing, matching the renderer's loader). If it is missing or unreadable, treat `plan_review` as empty (no configured vehicle — fall back to case C). Take the `plan_review` array. Each entry is a `ReviewStep` in one of two forms:
 
-- a **`{ run, mode }` template** — a tool-agnostic bash command. For an agentic tool that fetches the diff itself: `{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }` (the `< /dev/null` is the stdin hang-guard — see step 5 under *Drive the vehicle*); to feed the diff in to a non-agentic tool: `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }`. `run` may contain the placeholders `{plan_dir}`, `{base}`, `{diff_range}`, `{focus}`; `mode` is `"print"` (default) or `"exec"`.
+- a **`{ run, mode }` template** — a tool-agnostic bash command. For an agentic tool that fetches the diff itself: `{ "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }` (`-c model_reasoning_summary=detailed` asks codex for its fullest reasoning summary — see step 6 under *Drive the vehicle*; the `< /dev/null` is the stdin hang-guard — see step 5); to feed the diff in to a non-agentic tool: `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }`. `run` may contain the placeholders `{plan_dir}`, `{base}`, `{diff_range}`, `{focus}`; `mode` is `"print"` (default) or `"exec"`.
 - a **slash command string** (e.g. `"/codex:adversarial-review"`).
 
 **First drop any entry equal to this composer itself** (`/jidoka:plan-review-prompt`) — a legacy/self-referential config that would recurse. Then drive **each remaining step** (usually one), branching on its form (see **Drive the vehicle**). If nothing remains — the array was empty, or held only the composer — there is **no concrete vehicle**: fall back (case C).
@@ -78,6 +78,7 @@ The tool brings the *model*; jidoka brings the *prompt*. So `{focus}` here is th
 6. Then honor `mode`:
    - **`print`** (default): present the fully-substituted command in a copy-paste block and **stop** for the operator to run. Do not run it. This is the deliberate checkpoint.
    - **`exec`**: run the substituted command via the **Bash** tool, capture its output, and surface the reviewer's findings (don't editorialize — relay them, noting the base/range you used). The Bash tool's stdin is not a TTY, so the arg form **must** carry `< /dev/null` (step 5) or this call hangs indefinitely. If the tool needs auth/setup (e.g. `codex login`) and isn't ready, say so and fall back to presenting the command for the operator.
+     - **Findings-first relay, reasoning on demand.** When the template asks for a detailed reasoning summary (the default `-c model_reasoning_summary=detailed`), codex's output interleaves that reasoning with its findings. Relay the **findings** as the product — don't paste the whole reasoning trace by default (it buries the actionable signal). Do consult the reasoning yourself, and surface it *selectively*: for a **borderline** finding, quote the sentence or two showing whether codex actually examined the seam vs. skimmed it; and surface more if the user asks. The reasoning is a model-generated **summary**, not raw chain-of-thought — cite it as supporting evidence for a finding, not as proof of what the model "really did".
 
 ### B. Slash command (e.g. `/codex:adversarial-review`)
 
@@ -91,7 +92,7 @@ State the base; tell the user to swap `--base` if the plan branched elsewhere. (
 
 ### C. No concrete vehicle (empty, or only this composer)
 
-There's nothing tool-specific configured. Preserve the out-of-box behavior: compose as in **B** with `/codex:adversarial-review` as the default suggested command, and add one line telling the user they can set a `{ run, mode }` template in `plan_review` (e.g. `{ "run": "codex exec -s read-only \"{focus}\" < /dev/null", "mode": "exec" }`, which lets codex fetch the diff itself and scales to large diffs — the `< /dev/null` keeps it from hanging in an unattended run) to use any tool — or keep `"mode": "print"` to have the command handed to you instead of run.
+There's nothing tool-specific configured. Preserve the out-of-box behavior: compose as in **B** with `/codex:adversarial-review` as the default suggested command, and add one line telling the user they can set a `{ run, mode }` template in `plan_review` (e.g. `{ "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }`, which lets codex fetch the diff itself and scales to large diffs — `-c model_reasoning_summary=detailed` asks for its fullest reasoning summary, and the `< /dev/null` keeps it from hanging in an unattended run) to use any tool — or keep `"mode": "print"` to have the command handed to you instead of run.
 
 ## Fallbacks
 
