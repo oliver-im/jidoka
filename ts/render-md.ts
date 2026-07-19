@@ -236,13 +236,23 @@ function renderGitWorkflowBlock(planId: string, enabled: boolean): string {
     "- **Per unit:** branch `unit/NN-slug` off the plan branch → work + review → " +
     "`git merge --squash unit/NN-slug` into the plan branch as one " +
     "`Unit NN: <title>` commit → `git branch -D unit/NN-slug` → advance the cursor.\n" +
-    "- **At the end:** `git mv` the plan dir `active/ → completed/` (+ provenance " +
+    "- **At the end, on the operator's close-out go-ahead** (after the Plan-level review " +
+    "below has been surfaced): `git mv` the plan dir `active/ → completed/` (+ provenance " +
     `stamp), commit, then \`git checkout main && git merge --no-ff plan/${planId}\`, ` +
     `\`git worktree remove worktrees/${planId}\`.\n` +
     "\n"
   );
 }
 
+/**
+ * The `## Plan-level review` block. Both branches carry the terminal-unit
+ * operator gate: the last unit's session extends through this review to
+ * convergence, then stops — the next go-ahead buys only the close-out
+ * (archive, merge), never review-plus-merge in one motion. The empty branch
+ * always said "ask the user before archiving"; the configured branch states
+ * the same gate explicitly, so a single blanket go-ahead can't carry an agent
+ * from review findings straight past `main`.
+ */
 function renderPlanReviewBlock(
   steps: ReviewStep[] | undefined,
   reReview: boolean,
@@ -254,11 +264,17 @@ function renderPlanReviewBlock(
     return out;
   }
   out +=
-    "After the last unit's review lands and is committed, run the **`/jidoka:plan-review-prompt`** " +
-    "composer against the cumulative plan diff — don't run the vehicle(s) below directly. The composer " +
-    "aims a cross-unit focus and drives whatever is configured: it injects jidoka's own plan-level " +
-    "review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the " +
-    "focus into a slash command for you. Configured vehicle(s):\n\n";
+    "Run this **in the same session as the last unit** — once its review lands and is committed, " +
+    "roll straight into this section without stopping for a go-ahead. Run the " +
+    "**`/jidoka:plan-review-prompt`** composer against the cumulative plan diff — don't run the " +
+    "vehicle(s) below directly. The composer aims a cross-unit focus and drives whatever is " +
+    "configured: it injects jidoka's own plan-level review prompt into a `{ run, mode }` template " +
+    "(then `print`/`exec` per its mode), or composes the focus into a slash command for you. " +
+    "Resolve material findings to convergence, then **stop**: surface the findings, their " +
+    "resolutions, and the convergence verdict, and wait for the operator's go-ahead — it covers " +
+    "only the close-out (archive, merge), nothing else. If the review doesn't converge, or a " +
+    "finding is too big for a targeted in-session fix, stop and surface where it stands instead " +
+    "of pressing on. Configured vehicle(s):\n\n";
   out += renderPipelineChecklist(steps);
   // steps is non-empty here (the empty case returned early), so gate on the flag
   // alone — a configured plan_review converges the same way a unit_review does.

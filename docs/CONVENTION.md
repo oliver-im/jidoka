@@ -102,7 +102,7 @@ The idea: **a plan is worked in its own git worktree, and each unit is a branch.
 
 - **Per plan** — a worktree `worktrees/<plan-id>/` on a branch `plan/<plan-id>`, off `main`. The plan's `active/<plan-id>/` directory physically lives *inside that worktree*. Consequence: `active/` is empty on `main`, and **`git worktree list` is the live index of in-flight plans**.
 - **Per unit** — a branch `unit/NN-slug` off the plan branch. Do the unit's work there, review it, then **squash-merge** into the plan branch as one `Unit NN: <title>` commit. The squash absorbs the review→fix churn, so the plan branch carries exactly one clean commit per unit.
-- **At the end** — `git mv active/<plan-id> completed/<plan-id>`, add the provenance stamp, commit, then merge the plan branch to `main` with `--no-ff` and remove the worktree. **`main` only ever gains plans under `completed/`** — never under `active/`.
+- **At the end** — `git mv active/<plan-id> completed/<plan-id>`, add the provenance stamp, commit, then merge the plan branch to `main` with `--no-ff` and remove the worktree. The close-out gets its **own go-ahead**: surface the finished plan — and any plan-level review's outcome — and wait for it before archiving and merging, rather than riding the last unit's momentum. **`main` only ever gains plans under `completed/`** — never under `active/`.
 
 The payoff: `main` stays clean of in-flight churn, completed work lands atomically as a frozen record, and the set of active plans is a `git` command rather than a directory you have to garden. By hand this is a `git worktree add` plus a few merges; a driver tool can render the steps into each plan and create the worktree for you (see below).
 

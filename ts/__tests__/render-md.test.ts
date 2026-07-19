@@ -92,6 +92,9 @@ describe("buildProgressMd", () => {
     expect(md).toContain("## Done");
     expect(md).toContain("## Blockers");
     expect(md).toContain("## Notes");
+    // the last-unit exception renders unconditionally — with no plan_review it
+    // degrades to "work through" the surface-and-ask sentence below
+    expect(md).toContain("**Exception — the last unit:**");
     expect(md).toContain("## Pre-execution review");
     expect(md).toContain("_No pre-execution review configured.");
     expect(md).toContain("## Plan-level review");
@@ -112,9 +115,7 @@ describe("buildProgressMd", () => {
     };
     const md = buildProgressMd(plan, "260505-0-x");
     expect(md).toContain("## Plan-level review");
-    expect(md).toContain(
-      "After the last unit's review lands and is committed",
-    );
+    expect(md).toContain("in the same session as the last unit");
     expect(md).toContain("- [ ] `/code-review:code-review`");
     expect(md).toContain("- [ ] `/codex:adversarial-review`");
   });
@@ -168,6 +169,29 @@ describe("buildProgressMd", () => {
     expect(md).toContain("don't run the vehicle(s) below directly");
     // The vehicle still renders as a checklist entry the composer will drive.
     expect(md).toContain("- [ ] `codex exec {diff_range}` — **print**");
+  });
+
+  // terminal-unit stop gate: the configured branch must carry the operator gate
+  // the empty branch always had. Without it, one blanket go-ahead lets plan
+  // review → fixes → archive → merge run as a single motion and the operator
+  // first sees the findings after `main` has moved.
+  it("gates the close-out behind a stop after the plan-level review converges", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      plan_review: ["/codex:adversarial-review"],
+      git_workflow: true,
+    };
+    const md = buildProgressMd(plan, "260505-0-x");
+    // same-session coupling + the stop, in the plan-review preamble
+    expect(md).toContain("in the same session as the last unit");
+    expect(md).toContain("then **stop**");
+    expect(md).toContain("covers only the close-out");
+    // the Notes carry the matching last-unit exception for the resuming agent
+    expect(md).toContain("**Exception — the last unit:**");
+    // the git-workflow close-out chain is conditioned on that go-ahead
+    expect(md).toContain("**At the end, on the operator's close-out go-ahead**");
   });
 
   it("renders template review steps with a print/exec mode badge", () => {
