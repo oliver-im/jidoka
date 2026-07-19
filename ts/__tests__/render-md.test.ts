@@ -92,6 +92,9 @@ describe("buildProgressMd", () => {
     expect(md).toContain("## Done");
     expect(md).toContain("## Blockers");
     expect(md).toContain("## Notes");
+    // the last-unit exception renders unconditionally — with no plan_review it
+    // degrades to "work through" the surface-and-ask sentence below
+    expect(md).toContain("**Exception — the last unit:**");
     expect(md).toContain("## Pre-execution review");
     expect(md).toContain("_No pre-execution review configured.");
     expect(md).toContain("## Plan-level review");
@@ -112,9 +115,14 @@ describe("buildProgressMd", () => {
     };
     const md = buildProgressMd(plan, "260505-0-x");
     expect(md).toContain("## Plan-level review");
+    expect(md).toContain("in the same session as the last unit");
+    // no git workflow on this plan: the close-out scope must not promise a
+    // merge the document never defines, and must spell out the archive move
+    // itself (no rendered section defines it here)
     expect(md).toContain(
-      "After the last unit's review lands and is committed",
+      "covers only the close-out (moving the plan dir to `completed/`), nothing else",
     );
+    expect(md).not.toContain("(archive, merge)");
     expect(md).toContain("- [ ] `/code-review:code-review`");
     expect(md).toContain("- [ ] `/codex:adversarial-review`");
   });
@@ -168,6 +176,40 @@ describe("buildProgressMd", () => {
     expect(md).toContain("don't run the vehicle(s) below directly");
     // The vehicle still renders as a checklist entry the composer will drive.
     expect(md).toContain("- [ ] `codex exec {diff_range}` — **print**");
+  });
+
+  // terminal-unit stop gate: the configured branch must carry the operator gate
+  // the empty branch always had. Without it, one blanket go-ahead lets plan
+  // review → fixes → archive → merge run as a single motion and the operator
+  // first sees the findings after `main` has moved.
+  it("gates the close-out behind a stop after the plan-level review converges", () => {
+    const plan: Plan = {
+      task_summary: "x",
+      slug: "x",
+      units: [minimalUnit("01-prep")],
+      plan_review: ["/codex:adversarial-review"],
+      git_workflow: true,
+    };
+    const md = buildProgressMd(plan, "260505-0-x");
+    // same-session coupling + the committed precondition + the stop, in the
+    // plan-review preamble
+    expect(md).toContain("in the same session as the last unit");
+    expect(md).toContain("once its review lands and is committed");
+    expect(md).toContain("then **stop**");
+    // the go-ahead scope, pinned with its preamble-unique lead-in — the Notes
+    // bullet carries the same clause, so a bare clause pin couldn't catch the
+    // preamble dropping it
+    expect(md).toContain(
+      "The operator's next go-ahead covers only the close-out (archive, merge), nothing else.",
+    );
+    // the Notes carry the matching last-unit exception, its clause wired
+    // through the template slot
+    expect(md).toContain("**Exception — the last unit:**");
+    expect(md).toContain(
+      "The go-ahead that follows covers only the close-out (archive, merge), nothing else.",
+    );
+    // the git-workflow close-out chain is conditioned on that go-ahead
+    expect(md).toContain("**At the end, on the operator's close-out go-ahead**");
   });
 
   it("renders template review steps with a print/exec mode badge", () => {
@@ -377,6 +419,8 @@ describe("buildProgressMd re-review-to-convergence note", () => {
     expect(md.indexOf("**Re-review to convergence.**")).toBeGreaterThan(
       md.indexOf("## Plan-level review"),
     );
+    // with the note present, the preamble may demand a convergence verdict
+    expect(md).toContain("the convergence verdict");
   });
 
   it("omits the note when the flag is off", () => {
@@ -388,6 +432,9 @@ describe("buildProgressMd re-review-to-convergence note", () => {
       "260709-0-x",
     );
     expect(md).not.toContain("Re-review to convergence.");
+    // the flag-off render must not demand "convergence" anywhere — the note
+    // that defines it is the thing the operator turned off
+    expect(md).not.toContain("convergence");
   });
 
   it("omits the note when no plan_review is configured", () => {

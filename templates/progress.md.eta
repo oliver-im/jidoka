@@ -19,5 +19,6 @@ _None._
 - On the **first session**, run the Pre-execution review checklist above before starting the cursor unit. Surface findings and revise the plan if anything material lands.
 - Work one unit at a time. After finishing the cursor unit, run its review steps, then update this file: move the unit into Done with a one-liner and advance the cursor to the next unit id.
 - Stop after each unit. Surface a brief summary to the user and wait for explicit go-ahead before starting the next unit. If the unit is blocked, record it under Blockers and stop without advancing the cursor.
+- **Exception — the last unit:** don't stop after it; work through the Plan-level review section below in the same session, then stop with its outcome in your summary. The go-ahead that follows <%= it.closeOutScope %>.
 
 <%= it.planReviewBlock -%>

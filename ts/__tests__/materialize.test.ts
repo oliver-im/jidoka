@@ -182,9 +182,8 @@ describe("materialize", () => {
     const target = materialize(samplePlan(), plansRoot, "260505", cfg);
     const progress = readFileSync(join(target, "progress.md"), "utf8");
     expect(progress).toContain("## Plan-level review");
-    expect(progress).toContain(
-      "After the last unit's review lands and is committed",
-    );
+    expect(progress).toContain("in the same session as the last unit");
+    expect(progress).toContain("once its review lands and is committed");
     expect(progress).toContain("- [ ] `/code-review:code-review`");
     expect(progress).toContain("- [ ] `/codex:adversarial-review`");
     rmSync(base, { recursive: true, force: true });
