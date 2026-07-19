@@ -50,13 +50,12 @@ export function buildOverviewMd(plan: Plan, dirName: string): string {
 export function buildProgressMd(plan: Plan, dirName: string): string {
   const cursor = plan.units[0]?.id ?? "(no units)";
   const preReviewBlock = renderPreReviewBlock(plan.pre_review);
-  const gitWorkflowBlock = renderGitWorkflowBlock(
-    dirName,
-    plan.git_workflow ?? false,
-  );
+  const gitWorkflow = plan.git_workflow ?? false;
+  const gitWorkflowBlock = renderGitWorkflowBlock(dirName, gitWorkflow);
   const planReviewBlock = renderPlanReviewBlock(
     plan.plan_review,
     plan.review_reconverge ?? false,
+    gitWorkflow,
   );
   return eta.render("progress.md.eta", {
     dirName,
@@ -64,6 +63,7 @@ export function buildProgressMd(plan: Plan, dirName: string): string {
     preReviewBlock,
     gitWorkflowBlock,
     planReviewBlock,
+    closeOutScope: closeOutScopeClause(gitWorkflow),
   });
 }
 
@@ -245,17 +245,32 @@ function renderGitWorkflowBlock(planId: string, enabled: boolean): string {
 }
 
 /**
+ * The go-ahead-scope clause, byte-identical everywhere the close-out gate is
+ * stated — the plan-review preamble and the Notes exception bullet render into
+ * the same progress.md, and two hand-synced copies would drift. What the
+ * close-out contains depends on the git workflow: with it on, the archive move
+ * and the merge to `main`; without it, the archive move is the only close-out
+ * step the document defines, so the clause must not promise a merge.
+ */
+function closeOutScopeClause(gitWorkflow: boolean): string {
+  return gitWorkflow
+    ? "covers only the close-out (archive, merge), nothing else"
+    : "covers only the close-out (archive), nothing else";
+}
+
+/**
  * The `## Plan-level review` block. Both branches carry the terminal-unit
  * operator gate: the last unit's session extends through this review to
- * convergence, then stops — the next go-ahead buys only the close-out
- * (archive, merge), never review-plus-merge in one motion. The empty branch
- * always said "ask the user before archiving"; the configured branch states
- * the same gate explicitly, so a single blanket go-ahead can't carry an agent
- * from review findings straight past `main`.
+ * convergence, then stops — the next go-ahead buys only the close-out (the
+ * `closeOutScopeClause`), never review-plus-merge in one motion. The empty
+ * branch always said "ask the user before archiving"; the configured branch
+ * states the same gate explicitly, so a single blanket go-ahead can't carry an
+ * agent from review findings straight past `main`.
  */
 function renderPlanReviewBlock(
   steps: ReviewStep[] | undefined,
   reReview: boolean,
+  gitWorkflow: boolean,
 ): string {
   let out = "## Plan-level review\n\n";
   if (steps === undefined || steps.length === 0) {
@@ -263,6 +278,15 @@ function renderPlanReviewBlock(
       "_No plan-level reviews configured. After the last unit, surface a summary and ask the user before archiving._\n";
     return out;
   }
+  // The stop-and-surface sentence names "convergence" only when the re-review
+  // note below actually defines it (the flag is on) — a flag-off render must
+  // not demand re-review passes the operator opted out of.
+  const stopSentence = reReview
+    ? "Resolve material findings to convergence, then **stop** and surface the findings, their " +
+      "resolutions, and the convergence verdict — or, if the review didn't converge or a finding " +
+      "outgrows a targeted in-session fix, exactly where it stands."
+    : "Resolve material findings, then **stop** and surface the findings and their resolutions — " +
+      "or, if a finding outgrows a targeted in-session fix, exactly where it stands.";
   out +=
     "Run this **in the same session as the last unit** — once its review lands and is committed, " +
     "roll straight into this section without stopping for a go-ahead. Run the " +
@@ -270,11 +294,10 @@ function renderPlanReviewBlock(
     "vehicle(s) below directly. The composer aims a cross-unit focus and drives whatever is " +
     "configured: it injects jidoka's own plan-level review prompt into a `{ run, mode }` template " +
     "(then `print`/`exec` per its mode), or composes the focus into a slash command for you. " +
-    "Resolve material findings to convergence, then **stop**: surface the findings, their " +
-    "resolutions, and the convergence verdict, and wait for the operator's go-ahead — it covers " +
-    "only the close-out (archive, merge), nothing else. If the review doesn't converge, or a " +
-    "finding is too big for a targeted in-session fix, stop and surface where it stands instead " +
-    "of pressing on. Configured vehicle(s):\n\n";
+    stopSentence +
+    " The operator's next go-ahead " +
+    closeOutScopeClause(gitWorkflow) +
+    ". Configured vehicle(s):\n\n";
   out += renderPipelineChecklist(steps);
   // steps is non-empty here (the empty case returned early), so gate on the flag
   // alone — a configured plan_review converges the same way a unit_review does.

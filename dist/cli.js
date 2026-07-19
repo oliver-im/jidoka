@@ -18824,20 +18824,20 @@ function buildOverviewMd(plan, dirName) {
 function buildProgressMd(plan, dirName) {
   const cursor = plan.units[0]?.id ?? "(no units)";
   const preReviewBlock = renderPreReviewBlock(plan.pre_review);
-  const gitWorkflowBlock = renderGitWorkflowBlock(
-    dirName,
-    plan.git_workflow ?? false
-  );
+  const gitWorkflow = plan.git_workflow ?? false;
+  const gitWorkflowBlock = renderGitWorkflowBlock(dirName, gitWorkflow);
   const planReviewBlock = renderPlanReviewBlock(
     plan.plan_review,
-    plan.review_reconverge ?? false
+    plan.review_reconverge ?? false,
+    gitWorkflow
   );
   return eta.render("progress.md.eta", {
     dirName,
     cursor,
     preReviewBlock,
     gitWorkflowBlock,
-    planReviewBlock
+    planReviewBlock,
+    closeOutScope: closeOutScopeClause(gitWorkflow)
   });
 }
 function buildUnitMd(unit, reReview) {
@@ -18921,13 +18921,17 @@ This plan is worked in its own git worktree, one branch per unit:
 
 `;
 }
-function renderPlanReviewBlock(steps, reReview) {
+function closeOutScopeClause(gitWorkflow) {
+  return gitWorkflow ? "covers only the close-out (archive, merge), nothing else" : "covers only the close-out (archive), nothing else";
+}
+function renderPlanReviewBlock(steps, reReview, gitWorkflow) {
   let out = "## Plan-level review\n\n";
   if (steps === void 0 || steps.length === 0) {
     out += "_No plan-level reviews configured. After the last unit, surface a summary and ask the user before archiving._\n";
     return out;
   }
-  out += "Run this **in the same session as the last unit** \u2014 once its review lands and is committed, roll straight into this section without stopping for a go-ahead. Run the **`/jidoka:plan-review-prompt`** composer against the cumulative plan diff \u2014 don't run the vehicle(s) below directly. The composer aims a cross-unit focus and drives whatever is configured: it injects jidoka's own plan-level review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the focus into a slash command for you. Resolve material findings to convergence, then **stop**: surface the findings, their resolutions, and the convergence verdict, and wait for the operator's go-ahead \u2014 it covers only the close-out (archive, merge), nothing else. If the review doesn't converge, or a finding is too big for a targeted in-session fix, stop and surface where it stands instead of pressing on. Configured vehicle(s):\n\n";
+  const stopSentence = reReview ? "Resolve material findings to convergence, then **stop** and surface the findings, their resolutions, and the convergence verdict \u2014 or, if the review didn't converge or a finding outgrows a targeted in-session fix, exactly where it stands." : "Resolve material findings, then **stop** and surface the findings and their resolutions \u2014 or, if a finding outgrows a targeted in-session fix, exactly where it stands.";
+  out += "Run this **in the same session as the last unit** \u2014 once its review lands and is committed, roll straight into this section without stopping for a go-ahead. Run the **`/jidoka:plan-review-prompt`** composer against the cumulative plan diff \u2014 don't run the vehicle(s) below directly. The composer aims a cross-unit focus and drives whatever is configured: it injects jidoka's own plan-level review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the focus into a slash command for you. " + stopSentence + " The operator's next go-ahead " + closeOutScopeClause(gitWorkflow) + ". Configured vehicle(s):\n\n";
   out += renderPipelineChecklist(steps);
   if (reReview) out += renderReReviewNote();
   return out;
