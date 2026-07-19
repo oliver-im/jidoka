@@ -29,7 +29,7 @@ Each entry in `pre_review` / `unit_review` / `plan_review` is a **review step**,
 
 - a **slash command** string — e.g. `"/code-review"`, `"/jidoka:pre-plan-review"`. Whether the resuming agent runs it or hands it to you depends on that command's own `disable-model-invocation` (codex's review commands are operator-run).
 - a **`{ run, mode }` bash template** — a tool-agnostic command. Worked examples:
-  - codex (agentic — fetches the diff itself, scales to large diffs): `{ "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }` (`-c model_reasoning_summary=detailed` asks codex for its fullest reasoning summary, so the review shows *why* it flagged a seam, not just a verdict)
+  - codex (agentic — fetches the diff itself, scales to large diffs): `{ "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }` (`-c model_reasoning_summary=detailed` adds codex's reasoning narration to the saved transcript for on-demand inspection; the *why flagged/cleared* itself is required in the reviewer's output — findings + per-target dispositions)
   - cursor-agent: `{ "run": "agent -p --mode ask \"{focus}\"", "mode": "exec" }`
   - feed-the-diff form, for a tool that can't run shell: `{ "run": "git diff {diff_range} | codex exec \"{focus}\"", "mode": "print" }` (the whole diff lands in the model's context — fine for small/medium plans)
 
@@ -105,9 +105,10 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
   //   - codex (template): { "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }
   //     codex fetches the diff itself (scales to large diffs); jidoka injects
   //     its OWN review prompt; exec runs it, print would hand you the command.
-  //     `-c model_reasoning_summary=detailed` asks codex for its fullest reasoning
-  //     summary (a summary, not raw chain-of-thought) so the review shows *why* it
-  //     flagged/cleared a seam, not just a verdict.
+  //     `-c model_reasoning_summary=detailed` adds codex's reasoning narration
+  //     (a summary, not raw chain-of-thought) to the saved transcript for
+  //     on-demand inspection; the *why flagged/cleared* itself lands in the
+  //     reviewer's required output (findings + per-target dispositions).
   //     The `< /dev/null` is the stdin hang-guard: `codex exec [PROMPT]` appends
   //     stdin as a `<stdin>` block whenever stdin is a pipe (per `codex exec
   //     --help`), so an unattended exec run (non-TTY Bash / backgrounded) would

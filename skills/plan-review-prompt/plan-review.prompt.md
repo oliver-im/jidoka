@@ -61,7 +61,15 @@ Fix: <concrete change>
 
 Fix: <concrete change>
 
-(repeat per finding; if there are none, write "No material findings." and skip to Summary)
+(repeat per finding; if there are none, write "No material findings.")
+
+### Focus dispositions
+
+- <target 1> — clean — <evidence: the file:line / seam you examined and what showed it holds>
+- <target 2> — flagged: [MED] <file>:<line-range> (cite the finding's heading — findings are not numbered)
+- <target 3> — unconfirmed — <what you could not obtain>
+
+(one line per target the focus names; if the focus named none, one line per "What to attack" category)
 
 ### Summary
 <1–2 sentences. Ship/no-ship: "No-ship — <blocking issue>" if any HIGH; "Ship with fixes" if only MED; "Ship" if clean.>
@@ -73,9 +81,11 @@ Severities:
 - **MED** — likely ships, but carries avoidable risk: a coverage gap (e.g. a delivered feature with no tests or docs), or a seam that works today but is fragile.
 - **LOW** — minor; worth noting, not blocking. Use sparingly.
 
+The **Focus dispositions** section is the review's negative space — why what you *didn't* flag is actually fine — and it is held to the same evidence bar as a finding: a **clean** verdict is a claim, so cite the specific place you checked and what showed the target holds, never a bare "looked fine." If you did not actually examine a target, write `not examined` (and treat that as a Summary-worthy gap), not `clean`.
+
 ## Grounding
 
-Every finding must be defensible from the diff (and focus) you were given. Quote the specific lines. Do not invent files, symbols, units, or call sites that aren't in the diff. If a conclusion rests on an inference — e.g. "the use site is probably in a file not included here" — state the inference and keep the severity honest: an unconfirmed seam is a MED "couldn't verify," not a HIGH "broken."
+Every finding must be defensible from the diff (and focus) you were given. Quote the specific lines. Do not invent files, symbols, units, or call sites that aren't in the diff. If a conclusion rests on an inference — e.g. "the use site is probably in a file not included here" — state the inference and keep the severity honest: an unconfirmed seam is a MED "couldn't verify," not a HIGH "broken." The same applies to dispositions: `clean` only with a citation, `unconfirmed` when you could not obtain what verification needed.
 
 ## Calibration
 
@@ -89,3 +99,5 @@ Before returning, verify each finding is:
 - anchored to specific diff lines (file + line range) and the units/symbols involved
 - a plausible failure once the units are combined
 - fixable with a concrete, named change
+
+and that **every focus target has a disposition line** — `clean` ones with a citation, unexamined ones honestly marked.
