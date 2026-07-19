@@ -18922,7 +18922,7 @@ This plan is worked in its own git worktree, one branch per unit:
 `;
 }
 function closeOutScopeClause(gitWorkflow) {
-  return gitWorkflow ? "covers only the close-out (archive, merge), nothing else" : "covers only the close-out (archive), nothing else";
+  return gitWorkflow ? "covers only the close-out (archive, merge), nothing else" : "covers only the close-out (moving the plan dir to `completed/`), nothing else";
 }
 function renderPlanReviewBlock(steps, reReview, gitWorkflow) {
   let out = "## Plan-level review\n\n";
@@ -18930,7 +18930,7 @@ function renderPlanReviewBlock(steps, reReview, gitWorkflow) {
     out += "_No plan-level reviews configured. After the last unit, surface a summary and ask the user before archiving._\n";
     return out;
   }
-  const stopSentence = reReview ? "Resolve material findings to convergence, then **stop** and surface the findings, their resolutions, and the convergence verdict \u2014 or, if the review didn't converge or a finding outgrows a targeted in-session fix, exactly where it stands." : "Resolve material findings, then **stop** and surface the findings and their resolutions \u2014 or, if a finding outgrows a targeted in-session fix, exactly where it stands.";
+  const stopSentence = reReview ? "Resolve material findings to convergence (commit the fixes), then **stop** and surface the findings, their resolutions, and the convergence verdict \u2014 or, if the review didn't converge or a finding outgrows a targeted in-session fix, exactly where it stands." : "Resolve material findings (commit the fixes), then **stop** and surface the findings and their resolutions \u2014 or, if a finding outgrows a targeted in-session fix, exactly where it stands.";
   out += "Run this **in the same session as the last unit** \u2014 once its review lands and is committed, roll straight into this section without stopping for a go-ahead. Run the **`/jidoka:plan-review-prompt`** composer against the cumulative plan diff \u2014 don't run the vehicle(s) below directly. The composer aims a cross-unit focus and drives whatever is configured: it injects jidoka's own plan-level review prompt into a `{ run, mode }` template (then `print`/`exec` per its mode), or composes the focus into a slash command for you. " + stopSentence + " The operator's next go-ahead " + closeOutScopeClause(gitWorkflow) + ". Configured vehicle(s):\n\n";
   out += renderPipelineChecklist(steps);
   if (reReview) out += renderReReviewNote();

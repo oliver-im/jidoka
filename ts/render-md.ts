@@ -247,15 +247,16 @@ function renderGitWorkflowBlock(planId: string, enabled: boolean): string {
 /**
  * The go-ahead-scope clause, byte-identical everywhere the close-out gate is
  * stated — the plan-review preamble and the Notes exception bullet render into
- * the same progress.md, and two hand-synced copies would drift. What the
- * close-out contains depends on the git workflow: with it on, the archive move
- * and the merge to `main`; without it, the archive move is the only close-out
- * step the document defines, so the clause must not promise a merge.
+ * the same progress.md, and two hand-synced copies would drift. With the git
+ * workflow on, "(archive, merge)" is defined by the workflow block's own
+ * close-out chain; without it no rendered section defines any close-out step,
+ * so the clause spells out the one action itself rather than naming an
+ * undefined "archive" (and must not promise a merge).
  */
 function closeOutScopeClause(gitWorkflow: boolean): string {
   return gitWorkflow
     ? "covers only the close-out (archive, merge), nothing else"
-    : "covers only the close-out (archive), nothing else";
+    : "covers only the close-out (moving the plan dir to `completed/`), nothing else";
 }
 
 /**
@@ -282,11 +283,12 @@ function renderPlanReviewBlock(
   // note below actually defines it (the flag is on) — a flag-off render must
   // not demand re-review passes the operator opted out of.
   const stopSentence = reReview
-    ? "Resolve material findings to convergence, then **stop** and surface the findings, their " +
-      "resolutions, and the convergence verdict — or, if the review didn't converge or a finding " +
-      "outgrows a targeted in-session fix, exactly where it stands."
-    : "Resolve material findings, then **stop** and surface the findings and their resolutions — " +
-      "or, if a finding outgrows a targeted in-session fix, exactly where it stands.";
+    ? "Resolve material findings to convergence (commit the fixes), then **stop** and surface " +
+      "the findings, their resolutions, and the convergence verdict — or, if the review didn't " +
+      "converge or a finding outgrows a targeted in-session fix, exactly where it stands."
+    : "Resolve material findings (commit the fixes), then **stop** and surface the findings and " +
+      "their resolutions — or, if a finding outgrows a targeted in-session fix, exactly where " +
+      "it stands.";
   out +=
     "Run this **in the same session as the last unit** — once its review lands and is committed, " +
     "roll straight into this section without stopping for a go-ahead. Run the " +

@@ -117,8 +117,11 @@ describe("buildProgressMd", () => {
     expect(md).toContain("## Plan-level review");
     expect(md).toContain("in the same session as the last unit");
     // no git workflow on this plan: the close-out scope must not promise a
-    // merge the document never defines
-    expect(md).toContain("covers only the close-out (archive), nothing else");
+    // merge the document never defines, and must spell out the archive move
+    // itself (no rendered section defines it here)
+    expect(md).toContain(
+      "covers only the close-out (moving the plan dir to `completed/`), nothing else",
+    );
     expect(md).not.toContain("(archive, merge)");
     expect(md).toContain("- [ ] `/code-review:code-review`");
     expect(md).toContain("- [ ] `/codex:adversarial-review`");
