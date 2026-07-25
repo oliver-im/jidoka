@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 // A review step is EITHER a slash command (e.g. the built-in "/code-review" —
-// local working-tree diff — or "/codex:adversarial-review") OR a tool-agnostic
+// a local diff: the working tree when given no target, the target's range when
+// given one — or "/codex:adversarial-review") OR a tool-agnostic
 // bash *template* object `{ run, mode }` (e.g. { run: "codex exec ...", mode:
 // "exec" }), so the pipeline isn't tied to slash commands or any one tool.
 //
@@ -32,9 +33,23 @@ export type ReviewTemplateStep = z.infer<typeof reviewTemplateStepSchema>;
 
 // The stage-scoped placeholders a review template's `run` may contain. Single
 // source of truth: the renderer only *detects* them (to note that substitution
-// is still pending), while the resume/agent layer substitutes them. `pre_review`
-// runs before any diff exists, so only `{plan_dir}` is meaningful there — the
-// resume protocol enforces the per-stage scope.
+// is still pending), while the resume/agent layer substitutes them.
+//
+// `{base}` is **stage-scoped**: it is the ref THIS STAGE's work forked from, not
+// a fixed branch. At `unit_review` that is the **plan branch** (what `unit/NN`
+// forked from), so `{diff_range}` = `merge-base({base},HEAD)..HEAD` is the one
+// unit's diff. At `plan_review` it is the branch the *plan* forked from (`main`),
+// so the same expression is the cumulative plan diff. Reading `{base}` as `main`
+// at unit stage is the sharp edge: it silently widens every unit's review to
+// Units 01..NN, which is exactly the scope the unit gate exists to avoid.
+// `pre_review` runs before any diff exists, so only `{plan_dir}` is meaningful
+// there. The resume protocol enforces the per-stage scope.
+//
+// Substitute a **resolved literal ref** — `abc123..HEAD`, `plan/260725-0...HEAD`.
+// Do not emit an unexpanded `$(git merge-base …)`: the shipped templates single-
+// quote the prompt, so command substitution would not expand and the reviewer
+// would receive the literal text (and, per `config.ts`, fail open rather than
+// error).
 export const REVIEW_PLACEHOLDERS = [
   "{plan_dir}",
   "{base}",

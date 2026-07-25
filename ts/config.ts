@@ -49,7 +49,16 @@ export const defaultConfig: Config = {
   // code. Passing an explicit range also means uncommitted work is NOT covered,
   // so the unit's work must be committed on its `unit/NN` branch first.
   //
+  // `{diff_range}` must arrive as a **resolved literal ref**; the single-quoted
+  // prompt would pass an unexpanded `$(git merge-base …)` through as literal
+  // text, and `/code-review` fails open on a target it can't resolve. Note also
+  // that `{base}` is stage-scoped — at unit stage it is the *plan branch*, not
+  // `main` (see ts/types.ts) — or the range widens to the whole plan so far.
+  //
   // `< /dev/null` is the same stdin hang-guard the codex template documents.
+  // Like the codex step below, this runs for minutes, so an `exec` run needs
+  // the Bash timeout raised past its 120s default (or to be backgrounded); the
+  // resume protocol says so at the point of use.
   unit_review: [
     {
       run: "claude -p '/code-review {diff_range}' < /dev/null",

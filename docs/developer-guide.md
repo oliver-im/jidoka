@@ -153,7 +153,7 @@ The renderer reads a layered config: built-in defaults < `~/.claude/plugins/jido
 
 One skill fronts the config UX (interactive by design — it uses `AskUserQuestion`, unlike `/jidoka`, which runs one-shot and never prompts):
 
-- `jidoka:setup` — first-run Q&A walkthrough that writes the global file. Triggered by phrases like "set up jidoka". Handles only the scalar knobs; the review steps (`pre_review`, `unit_review`, `plan_review` — each a slash command or `{ run, mode }` template) are written at their defaults and hand-edited in the JSON afterward (see README → Editing review commands). The hook re-validates on next plan-mode use, so no separate validator is needed.
+- `jidoka:setup` — first-run Q&A walkthrough that writes the global file. Triggered by phrases like "set up jidoka". Handles only the scalar knobs; the review steps (`pre_review`, `unit_review`, `plan_review` — each a slash command or `{ run, mode }` template) are written at their defaults and hand-edited in the JSON afterward (see [data-model.md](data-model.md#examples) for worked `config.json` shapes). The hook re-validates on next plan-mode use, so no separate validator is needed.
 
 ## Plugin Manifest
 

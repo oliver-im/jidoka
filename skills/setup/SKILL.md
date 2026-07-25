@@ -35,7 +35,7 @@ Each entry in `pre_review` / `unit_review` / `plan_review` is a **review step**,
 
   ⚠️ **codex `exec`-mode stdin pitfall.** `codex exec [PROMPT]` appends stdin as a `<stdin>` block whenever stdin is a pipe (per `codex exec --help`), so when the agent runs an `exec` template unattended (the Bash tool / a backgrounded shell — stdin is an open pipe with no EOF), codex **blocks forever** waiting on stdin. Redirect stdin from `/dev/null` (`codex exec … "{focus}" < /dev/null`) whenever the prompt is passed as an **argument** — it's a no-op on a foreground TTY. The **feed-the-diff** form above already closes stdin (the pipe ends), so it needs no guard.
 
-  `run` may contain these **placeholders**, filled by the resuming agent at run time (the renderer records them verbatim — there's no diff at materialize time): `{plan_dir}` (the materialized plan dir — the only one meaningful in `pre_review`, which runs before any diff exists), `{base}` (the branch the plan forked from), `{diff_range}` (`merge-base(<base>,HEAD)..HEAD`), `{focus}` (a composed review focus; plan-level, filled by the `/jidoka:plan-review-prompt` composer). Exact per-stage applicability lives in the resume protocol (`docs/exec-plans/AGENTS.md`).
+  `run` may contain these **placeholders**, filled by the resuming agent at run time (the renderer records them verbatim — there's no diff at materialize time): `{plan_dir}` (the materialized plan dir — the only one meaningful in `pre_review`, which runs before any diff exists), `{base}` (the ref *this stage's* work forked from — the **plan branch** at `unit_review`, the branch the plan forked from at `plan_review`), `{diff_range}` (`merge-base(<base>,HEAD)..HEAD` — so the one unit's diff at unit stage, the cumulative plan diff at plan stage), `{focus}` (a composed review focus; plan-level, filled by the `/jidoka:plan-review-prompt` composer). Substitute a resolved literal ref, not an unexpanded `$(git merge-base …)` — the shipped templates single-quote the prompt, so it would arrive as literal text. Exact per-stage applicability lives in the resume protocol (`docs/exec-plans/AGENTS.md`).
 
   `mode` is `"print"` (**default** — surface the ready-to-run command and stop for you to run it) or `"exec"` (opt-in — the resuming agent runs it via the Bash tool). The default is `print` on purpose: expensive/external review (codex) stays operator-run unless you deliberately opt a step into `exec`.
 
@@ -90,7 +90,10 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
   // run it and every unit stops for you. Wrapping it in "claude -p" puts the
   // command in the user-prompt slot at the CLI layer, which the flag does not
   // gate — so the unit loop keeps flowing. Set it back to "/code-review" if you
-  // WANT a human gate per unit; nothing else needs changing.
+  // WANT a human gate per unit — but that is not a pure revert: the bare
+  // command carries no range, and on a unit branch with no upstream it falls
+  // back to main...HEAD, i.e. the whole plan so far. Hand the operator the
+  // unit's range explicitly, or accept the wider scope.
   // "{diff_range}" is required, not decoration: unranged, /code-review reviews
   // "commits ahead of upstream + uncommitted changes", so by Unit 05 it
   // re-reviews Units 01-04 — and on an empty range it reviews the most recent
@@ -138,13 +141,13 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
 }
 ```
 
-These defaults give you a sensible review pipeline out of the box: `/jidoka:pre-plan-review` flags structural plan issues before any unit lands, the built-in `/code-review` reviews each unit's diff (agent-run via `claude -p`, so the loop doesn't stop at every unit — swap it back to a bare `"/code-review"` if you'd rather gate each unit on a human), and the plan-level slot ships on (a `codex exec` template, agent-run; set `[]` to disable). Customizing is a hand-edit of `~/.claude/plugins/jidoka/config.json` after setup: add or remove slash commands **or `{ run, mode }` templates** in any of the three arrays (see "Review step forms" above). The README's "Editing review commands" section has more examples. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
+These defaults give you a sensible review pipeline out of the box: `/jidoka:pre-plan-review` flags structural plan issues before any unit lands, the built-in `/code-review` reviews each unit's diff (agent-run via `claude -p`, so the loop doesn't stop at every unit — swap it back to a bare `"/code-review"` if you'd rather gate each unit on a human), and the plan-level slot ships on (a `codex exec` template, agent-run; set `[]` to disable). Customizing is a hand-edit of `~/.claude/plugins/jidoka/config.json` after setup: add or remove slash commands **or `{ run, mode }` templates** in any of the three arrays (see "Review step forms" above). `docs/data-model.md` (§Examples) has two worked `config.json` shapes. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
 
 ## Process
 
-1. Check whether `~/.claude/plugins/jidoka/config.json` already exists (Read or Bash with `test -f`). If it does, show its contents and ask the user whether to overwrite it or keep what's there. If they want surgical edits, point them at the file path and the README's "Editing review commands" section.
+1. Check whether `~/.claude/plugins/jidoka/config.json` already exists (Read or Bash with `test -f`). If it does, show its contents and ask the user whether to overwrite it or keep what's there. If they want surgical edits, point them at the file path and at `docs/data-model.md` (§Examples).
 2. Walk through each user-facing setting in order using `AskUserQuestion`. Show the default in the prompt; accept Enter-for-default. Validate input as you go (no empty `plan_dir_root`, etc.). The auto-populated keys (`git_workflow`, `pre_review`, `unit_review`, `plan_review`, `review_reconverge`) are not asked; they get written at their defaults.
 3. Show a preview of the resulting JSONC (template above with the `plan_dir_root` **and `reference_dir`** answers substituted in, comments preserved). Ask `confirm / edit / abort`.
-4. On `confirm`: `mkdir -p ~/.claude/plugins/jidoka && write the file`. Print the path. Mention that customizing review commands is a direct edit of this file — the inline comments document the schema, and the README's "Editing review commands" section has additional examples.
+4. On `confirm`: `mkdir -p ~/.claude/plugins/jidoka && write the file`. Print the path. Mention that customizing review commands is a direct edit of this file — the inline comments document the schema, and `docs/data-model.md` (§Examples) has additional worked examples.
 5. On `edit`: jump back to the question whose answer the user wants to change.
 6. On `abort`: write nothing.
