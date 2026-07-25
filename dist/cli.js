@@ -18201,10 +18201,12 @@ var defaultConfig = {
     }
   ],
   // `-c model_reasoning_summary=detailed` asks codex for its fullest reasoning
-  // summary (a summary — not raw chain-of-thought, which stays hidden), so a
-  // plan-level review surfaces *why* it flagged (or cleared) a cross-unit seam,
-  // not just a bare verdict; the relay stays findings-first (see
-  // skills/plan-review-prompt/SKILL.md, step 6). `< /dev/null` is the stdin
+  // summary (a summary — not raw chain-of-thought, which stays hidden), adding
+  // its interleaved narration to the saved transcript for on-demand inspection.
+  // The *why flagged/cleared* itself is part of the reviewer's required OUTPUT —
+  // findings + per-focus-target dispositions with evidence citations (see
+  // skills/plan-review-prompt/plan-review.prompt.md; relay contract in that
+  // skill's SKILL.md, step 6). `< /dev/null` is the stdin
   // hang-guard: `codex exec [PROMPT]` appends stdin as a `<stdin>` block whenever
   // stdin is a pipe (per `codex exec --help`), so an unattended/non-TTY `exec`
   // run (the Bash tool, a backgrounded shell) blocks forever on the open pipe.
@@ -19626,7 +19628,7 @@ function isValidSessionId(id) {
 var program2 = new Command();
 program2.name("jidoka").description(
   "Materialize plan-mode output as reviewable markdown units on ExitPlanMode"
-).version("0.4.5", "-v, --version", "Show version number");
+).version("0.4.6", "-v, --version", "Show version number");
 program2.command("hook").description("Process ExitPlanMode hook from stdin").action(async () => {
   const code = await runHook();
   process.exit(code);
