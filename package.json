@@ -1,6 +1,6 @@
 {
   "name": "jidoka",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "description": "Materialize multi-unit plans on ExitPlanMode",
   "license": "MIT",
   "type": "module",
