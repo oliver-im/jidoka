@@ -12,7 +12,7 @@ recent commit and returns confident findings about unrelated code, indistinguish
 clean pass. Every guardrail for that lives in `docs/exec-plans/AGENTS.md`, which is jidoka's
 own dogfooding doc and is **not** part of the plugin:
 
-```
+```bash
 grep -rl "git diff --quiet" dist/ templates/ skills/ hooks/ .claude-plugin/   # → nothing
 ```
 

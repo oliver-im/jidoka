@@ -48,8 +48,9 @@ five→six, `9981c7f` six→seven) — a recurring one-line remediation commit.
 
 Fix at the right depth: drop the numeral (it is derivable from the template below), **and** add
 a test that extracts the fenced ```jsonc block, strips comments with the repo's existing
-`strip-json-comments` dependency (**not** a hand-rolled regex — a naive `//` strip corrupts
-values like `"{focus}"` and any `//` inside a JSON string), and asserts its keys deep-equal
+`strip-json-comments` dependency (**not** a hand-rolled regex — a naive `//`-to-end-of-line
+strip truncates any value *containing* `//`, e.g. a URL like `"https://example.com"`, and a
+`run` template with a `//` path), and asserts its keys deep-equal
 `defaultConfig` and round-trip through `configSchema`. That also catches value drift, which is
 currently unguarded.
 

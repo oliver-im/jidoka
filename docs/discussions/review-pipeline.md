@@ -27,10 +27,15 @@ Too costly for an automated/checklist pipeline. Not a default, not a recommendat
 > **Refined (2026-07)** — see */code-review went operator-run* at the end of this doc. The reviewer is unchanged (still the built-in `/code-review`), but it is now reached through a `claude -p` template because upstream made it `disable-model-invocation`, and the reviewed scope is the unit's **committed unit-branch range**, not the pre-commit working tree: an explicit range target does not see uncommitted work.
 
 The old default pointed at the **code-review plugin**, which reviews a **GitHub PR**.
-Per-unit review runs on a unit's **local working-tree diff before commit** — no PR
-exists. The **built-in `/code-review`** (correctness bugs + reuse/simplification/
-efficiency cleanups on a local diff) is the right tool. This is the central
-simplification: drop the PR plugin, lean on the built-in.
+Per-unit review runs on a **local diff** — no PR exists. The **built-in
+`/code-review`** (correctness bugs + reuse/simplification/efficiency cleanups on a
+local diff) is the right tool. This is the central simplification: drop the PR
+plugin, lean on the built-in.
+
+*(As originally written this paragraph said "working-tree diff **before commit**".
+That is no longer how the default runs — the refinement above targets an explicit
+committed range, which by construction excludes uncommitted work. The local-vs-PR
+argument that decided the question is untouched.)*
 
 - **Namespace trap** (now documented everywhere): built-in `/code-review` = local diff;
   `/code-review:code-review` = PR plugin. Easy to confuse.
