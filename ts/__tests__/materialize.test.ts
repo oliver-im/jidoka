@@ -135,7 +135,14 @@ describe("materialize", () => {
     expect(u01).toContain("**Blocked by:** none");
     expect(u01).toContain("**Agents involved:** main only");
     expect(u01).toContain("## Review pipeline");
-    expect(u01).toContain("- [ ] `/code-review`");
+    // The default unit_review is a `claude -p` template, not a bare slash
+    // command: `/code-review` is disable-model-invocation, so only the Bash
+    // route is agent-reachable. It must render with its `exec` badge (the
+    // agent runs it) and its `{diff_range}` placeholder intact — the renderer
+    // records templates verbatim and never substitutes.
+    expect(u01).toContain(
+      "- [ ] `claude -p '/code-review {diff_range}' < /dev/null` — **exec**:",
+    );
 
     rmSync(base, { recursive: true, force: true });
   });
@@ -150,7 +157,8 @@ describe("materialize", () => {
     expect(progress).toContain("## Git workflow");
     expect(progress).toContain("worktrees/260505-0-pivot-renderer/");
     expect(progress).toContain("plan/260505-0-pivot-renderer");
-    expect(progress).toContain("git merge --no-ff plan/260505-0-pivot-renderer");
+    expect(progress).toContain("Publishing is a separate, explicitly-requested step");
+    expect(progress).not.toContain("git merge --no-ff");
     rmSync(base, { recursive: true, force: true });
   });
 

@@ -200,13 +200,13 @@ describe("buildProgressMd", () => {
     // bullet carries the same clause, so a bare clause pin couldn't catch the
     // preamble dropping it
     expect(md).toContain(
-      "The operator's next go-ahead covers only the close-out (archive, merge), nothing else.",
+      "The operator's next go-ahead covers only the close-out (archive), nothing else.",
     );
     // the Notes carry the matching last-unit exception, its clause wired
     // through the template slot
     expect(md).toContain("**Exception — the last unit:**");
     expect(md).toContain(
-      "The go-ahead that follows covers only the close-out (archive, merge), nothing else.",
+      "The go-ahead that follows covers only the close-out (archive), nothing else.",
     );
     // the git-workflow close-out chain is conditioned on that go-ahead
     expect(md).toContain("**At the end, on the operator's close-out go-ahead**");
@@ -323,7 +323,13 @@ describe("buildProgressMd", () => {
     expect(md).toContain("## Git workflow");
     expect(md).toContain("worktrees/260607-3-foo/");
     expect(md).toContain("plan/260607-3-foo");
-    expect(md).toContain("git merge --no-ff plan/260607-3-foo");
+    // the close-out chain stops at the archive commit: the go-ahead does not
+    // buy a merge or a push, and this block renders into repos whose `main` is
+    // protected, so it must name no landing mechanism at all
+    expect(md).toContain("commit on the plan branch — **and stop there.**");
+    expect(md).toContain("Publishing is a separate, explicitly-requested step");
+    expect(md).not.toContain("git merge --no-ff");
+    expect(md).not.toContain("git checkout main");
   });
 
   it("omits the git workflow block when disabled or absent", () => {

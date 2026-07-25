@@ -23,7 +23,7 @@ The contract between them: the skill writes the plan markdown to the plan-mode p
 
 ## Git workflow
 
-`main` is protected — **never commit, push, or merge to `main` directly.** Land every change through a GitHub pull request: branch from `main`, push the branch, `gh pr create`, and let it merge on GitHub (CodeRabbit reviews PRs). This includes plan archival — `docs/exec-plans/AGENTS.md`'s end-of-plan step opens a PR for the plan branch rather than merging locally.
+`main` is protected — **never commit, push, or merge to `main` directly.** Land every change through a GitHub pull request: branch from `main`, push the branch, `gh pr create`, and let it merge on GitHub (CodeRabbit reviews PRs). This includes plan archival: a plan branch lands via PR, never a local merge. Note the close-out is two steps, not one — `docs/exec-plans/AGENTS.md`'s end-of-plan step *archives* (`git mv` to `completed/`, stamp, commit on the plan branch) and stops there. The push and `gh pr create` need their own explicit request; a close-out go-ahead does not carry them.
 
 ## Key Architecture Concepts
 

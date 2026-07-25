@@ -222,9 +222,16 @@ function renderPreReviewBlock(steps: ReviewStep[] | undefined): string {
  * The `## Git workflow` reminder, rendered into `progress.md` only when the
  * `git_workflow` flag is on (config or `.jidoka.json`). Self-contained — it
  * names this plan's actual worktree/branch and spells out the per-unit and
- * land-on-main steps inline, so a resuming agent in any repo needs no external
+ * close-out steps inline, so a resuming agent in any repo needs no external
  * doc. Returns "" when off (no empty section), and a block ending in a blank
  * line when on, so the template slot collapses cleanly either way.
+ *
+ * It deliberately stops at the archive commit and stays vague about landing
+ * ("however this repo lands changes"). It renders into repos jidoka knows
+ * nothing about, so it must not name a landing mechanism — an earlier version
+ * spelled out `git checkout main && git merge --no-ff`, which instructs a
+ * direct merge into `main` on a single go-ahead and is forbidden outright in
+ * any repo with a protected default branch (this one included).
  */
 function renderGitWorkflowBlock(planId: string, enabled: boolean): string {
   if (!enabled) return "";
@@ -238,7 +245,10 @@ function renderGitWorkflowBlock(planId: string, enabled: boolean): string {
     "`Unit NN: <title>` commit → `git branch -D unit/NN-slug` → advance the cursor.\n" +
     "- **At the end, on the operator's close-out go-ahead** (after the Plan-level review " +
     "below has been surfaced): `git mv` the plan dir `active/ → completed/` (+ provenance " +
-    `stamp), commit, then \`git checkout main && git merge --no-ff plan/${planId}\`, ` +
+    "stamp), commit on the plan branch — **and stop there.** Publishing is a separate, " +
+    "explicitly-requested step: the close-out go-ahead authorizes the archive commit, not " +
+    "remote mutation or a merge into `main`. Once asked, land " +
+    `\`plan/${planId}\` however this repo lands changes, then ` +
     `\`git worktree remove worktrees/${planId}\`.\n` +
     "\n"
   );
@@ -248,14 +258,18 @@ function renderGitWorkflowBlock(planId: string, enabled: boolean): string {
  * The go-ahead-scope clause, byte-identical everywhere the close-out gate is
  * stated — the plan-review preamble and the Notes exception bullet render into
  * the same progress.md, and two hand-synced copies would drift. With the git
- * workflow on, "(archive, merge)" is defined by the workflow block's own
- * close-out chain; without it no rendered section defines any close-out step,
- * so the clause spells out the one action itself rather than naming an
- * undefined "archive" (and must not promise a merge).
+ * workflow on, "(archive)" is defined by the workflow block's own close-out
+ * chain; without it no rendered section defines any close-out step, so the
+ * clause spells out the one action itself rather than naming an undefined
+ * "archive".
+ *
+ * Neither branch may promise a merge or a push. The go-ahead buys the archive
+ * commit and nothing else — publishing is a separate, explicitly-requested
+ * step, and this clause renders into repos whose `main` is protected.
  */
 function closeOutScopeClause(gitWorkflow: boolean): string {
   return gitWorkflow
-    ? "covers only the close-out (archive, merge), nothing else"
+    ? "covers only the close-out (archive), nothing else"
     : "covers only the close-out (moving the plan dir to `completed/`), nothing else";
 }
 

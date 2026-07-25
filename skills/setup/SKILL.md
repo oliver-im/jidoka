@@ -19,7 +19,7 @@ A JSONC file (JSON with `//` comments — the reader strips them before parsing)
 | `reference_dir` | string | `docs/discussions` | "Where does this repo keep high-level design discussions (the 'what to build / why')? (project-relative; defaults to `docs/discussions/`. A repo whose reference area is a settled-fact wiki might use `wiki/`.)" |
 | `git_workflow` | bool | `false` | _(don't ask; write `false`. Set `true` by hand to opt into the worktree-per-plan / branch-per-unit workflow — jidoka then renders a `## Git workflow` reminder into each `progress.md`. Also settable per-repo in a committed `.jidoka.json`.)_ |
 | `pre_review` | ReviewStep[] | `["/jidoka:pre-plan-review"]` | _(don't ask; write the shipped default)_ |
-| `unit_review` | ReviewStep[] | `["/code-review"]` | _(don't ask; write the shipped default)_ |
+| `unit_review` | ReviewStep[] | `[{ "run": "claude -p '/code-review {diff_range}' < /dev/null", "mode": "exec" }]` | _(don't ask; write the shipped default)_ |
 | `plan_review` | ReviewStep[] | `[{ "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }]` | _(don't ask; write the shipped default)_ |
 | `review_reconverge` | bool | `true` | _(don't ask; write `true`. Set `false` by hand to drop the re-review-to-convergence note jidoka renders into each `unit_review`/`plan_review` section. Global-config-only.)_ |
 
@@ -27,7 +27,7 @@ A JSONC file (JSON with `//` comments — the reader strips them before parsing)
 
 Each entry in `pre_review` / `unit_review` / `plan_review` is a **review step**, in one of two forms — so the pipeline isn't tied to slash commands or any single tool:
 
-- a **slash command** string — e.g. `"/code-review"`, `"/jidoka:pre-plan-review"`. Whether the resuming agent runs it or hands it to you depends on that command's own `disable-model-invocation` (codex's review commands are operator-run).
+- a **slash command** string — e.g. `"/jidoka:pre-plan-review"`. Whether the resuming agent runs it or hands it to you depends on that command's own `disable-model-invocation`. Codex's review commands **and the built-in `/code-review`** set it, so as bare slash commands they are operator-run and stop the loop at every unit. To have the agent run one of those, wrap it in a template instead — the Bash route is not gated by the flag, and the shipped `unit_review` default does exactly this.
 - a **`{ run, mode }` bash template** — a tool-agnostic command. Worked examples:
   - codex (agentic — fetches the diff itself, scales to large diffs): `{ "run": "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null", "mode": "exec" }` (`-c model_reasoning_summary=detailed` adds codex's reasoning narration to the saved transcript for on-demand inspection; the *why flagged/cleared* itself is required in the reviewer's output — findings + per-target dispositions)
   - cursor-agent: `{ "run": "agent -p --mode ask \"{focus}\"", "mode": "exec" }`
@@ -35,7 +35,7 @@ Each entry in `pre_review` / `unit_review` / `plan_review` is a **review step**,
 
   ⚠️ **codex `exec`-mode stdin pitfall.** `codex exec [PROMPT]` appends stdin as a `<stdin>` block whenever stdin is a pipe (per `codex exec --help`), so when the agent runs an `exec` template unattended (the Bash tool / a backgrounded shell — stdin is an open pipe with no EOF), codex **blocks forever** waiting on stdin. Redirect stdin from `/dev/null` (`codex exec … "{focus}" < /dev/null`) whenever the prompt is passed as an **argument** — it's a no-op on a foreground TTY. The **feed-the-diff** form above already closes stdin (the pipe ends), so it needs no guard.
 
-  `run` may contain these **placeholders**, filled by the resuming agent at run time (the renderer records them verbatim — there's no diff at materialize time): `{plan_dir}` (the materialized plan dir — the only one meaningful in `pre_review`, which runs before any diff exists), `{base}` (the branch the plan forked from), `{diff_range}` (`merge-base(<base>,HEAD)..HEAD`), `{focus}` (a composed review focus; plan-level, filled by the `/jidoka:plan-review-prompt` composer). Exact per-stage applicability lives in the resume protocol (`docs/exec-plans/AGENTS.md`).
+  `run` may contain these **placeholders**, filled by the resuming agent at run time (the renderer records them verbatim — there's no diff at materialize time): `{plan_dir}` (the materialized plan dir — the only one meaningful in `pre_review`, which runs before any diff exists), `{base}` (the ref *this stage's* work forked from — the **plan branch** at `unit_review`, the branch the plan forked from at `plan_review`), `{diff_range}` (`merge-base(<base>,HEAD)..HEAD` — so the one unit's diff at unit stage, the cumulative plan diff at plan stage), `{focus}` (a composed review focus; plan-level, filled by the `/jidoka:plan-review-prompt` composer). Substitute a resolved **SHA**, not an unexpanded `$(git merge-base …)` — the shipped templates single-quote the prompt, so it would arrive as literal text — and not a branch name either: git permits `'`, `$(…)`, `;` and `|` in ref names, and the value is interpolated inside those single quotes with no escaping. With `git_workflow` off (the shipped default) there is no plan branch, so `{base}` at unit stage means the commit that unit's own work started from, never `main`. Exact per-stage applicability lives in the resume protocol (`docs/exec-plans/AGENTS.md`).
 
   `mode` is `"print"` (**default** — surface the ready-to-run command and stop for you to run it) or `"exec"` (opt-in — the resuming agent runs it via the Bash tool). The default is `print` on purpose: expensive/external review (codex) stays operator-run unless you deliberately opt a step into `exec`.
 
@@ -79,21 +79,34 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
     "/jidoka:pre-plan-review"
   ],
 
-  // Review steps to run AFTER each Unit lands, on the unit's local working-tree
-  // diff (before commit). Rendered as a checklist in the Unit md.
-  // Default "/code-review" is the BUILT-IN local-diff reviewer (correctness
-  // bugs + reuse/simplification/efficiency cleanups). It is NOT the same as
-  // "/code-review:code-review", which is the code-review *plugin* and reviews
-  // a GitHub PR — wrong tool for a pre-commit unit gate.
+  // Review steps to run AFTER each Unit lands, on the unit's committed
+  // unit-branch diff. Rendered as a checklist in the Unit md.
+  // The reviewer is the BUILT-IN "/code-review" (correctness bugs + reuse/
+  // simplification/efficiency cleanups). It is NOT "/code-review:code-review",
+  // which is the code-review *plugin* and reviews a GitHub PR — wrong tool for
+  // a unit gate.
+  // Why the template and not a bare "/code-review": the built-in sets
+  // disable-model-invocation, so as a slash command the resuming agent cannot
+  // run it and every unit stops for you. Wrapping it in "claude -p" puts the
+  // command in the user-prompt slot at the CLI layer, which the flag does not
+  // gate — so the unit loop keeps flowing. Set it back to "/code-review" if you
+  // WANT a human gate per unit — but that is not a pure revert: the bare
+  // command carries no range, and on a unit branch with no upstream it falls
+  // back to main...HEAD, i.e. the whole plan so far. Hand the operator the
+  // unit's range explicitly, or accept the wider scope.
+  // "{diff_range}" is required, not decoration: unranged, /code-review reviews
+  // "commits ahead of upstream + uncommitted changes", so by Unit 05 it
+  // re-reviews Units 01-04 — and on an empty range it reviews the most recent
+  // commit instead of reporting nothing, which can pass a gate on unrelated
+  // code. The resume protocol checks the range is non-empty first.
+  // Trade-off: this runs a fresh nested session (~5 min, cold context, reads
+  // CLAUDE.md but not the unit's acceptance criteria — /code-review takes no
+  // focus argument, so per-unit focus goes in the unit body prose).
   // No "--fix": unit review is plan-blind, so its findings are candidates to
-  // triage against plan context, not auto-applied. "/code-review" takes no
-  // focus argument; put any per-unit review focus in the unit body prose.
+  // triage against plan context, not auto-applied.
   // Add "/simplify" for a dedicated cleanup-only pass (it does NOT hunt bugs).
-  // A step may instead be a { run, mode } template to use another tool, e.g.
-  // { "run": "agent -p --mode ask \"{focus}\"", "mode": "exec" } (see "Review
-  // step forms" above). Example: ["/code-review", "/simplify"]
   "unit_review": [
-    "/code-review"
+    { "run": "claude -p '/code-review {diff_range}' < /dev/null", "mode": "exec" }
   ],
 
   // Review steps to run AFTER the last Unit's review and commit, against the
@@ -129,13 +142,13 @@ Use this exact JSONC layout, substituting the `plan_dir_root` answer from the qu
 }
 ```
 
-These defaults give you a sensible review pipeline out of the box: `/jidoka:pre-plan-review` flags structural plan issues before any unit lands, the built-in `/code-review` reviews each unit's diff, and the plan-level slot ships on (a `codex exec` template, agent-run; set `[]` to disable). Customizing is a hand-edit of `~/.claude/plugins/jidoka/config.json` after setup: add or remove slash commands **or `{ run, mode }` templates** in any of the three arrays (see "Review step forms" above). The README's "Editing review commands" section has more examples. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
+These defaults give you a sensible review pipeline out of the box: `/jidoka:pre-plan-review` flags structural plan issues before any unit lands, the built-in `/code-review` reviews each unit's diff (agent-run via `claude -p`, so the loop doesn't stop at every unit — swap it back to a bare `"/code-review"` if you'd rather gate each unit on a human), and the plan-level slot ships on (a `codex exec` template, agent-run; set `[]` to disable). Customizing is a hand-edit of `~/.claude/plugins/jidoka/config.json` after setup: add or remove slash commands **or `{ run, mode }` templates** in any of the three arrays (see "Review step forms" above). `docs/data-model.md` (§Examples) has two worked `config.json` shapes. The ExitPlanMode hook re-validates the file on every run, so save-and-go is safe.
 
 ## Process
 
-1. Check whether `~/.claude/plugins/jidoka/config.json` already exists (Read or Bash with `test -f`). If it does, show its contents and ask the user whether to overwrite it or keep what's there. If they want surgical edits, point them at the file path and the README's "Editing review commands" section.
+1. Check whether `~/.claude/plugins/jidoka/config.json` already exists (Read or Bash with `test -f`). If it does, show its contents and ask the user whether to overwrite it or keep what's there. If they want surgical edits, point them at the file path and at `docs/data-model.md` (§Examples).
 2. Walk through each user-facing setting in order using `AskUserQuestion`. Show the default in the prompt; accept Enter-for-default. Validate input as you go (no empty `plan_dir_root`, etc.). The auto-populated keys (`git_workflow`, `pre_review`, `unit_review`, `plan_review`, `review_reconverge`) are not asked; they get written at their defaults.
 3. Show a preview of the resulting JSONC (template above with the `plan_dir_root` **and `reference_dir`** answers substituted in, comments preserved). Ask `confirm / edit / abort`.
-4. On `confirm`: `mkdir -p ~/.claude/plugins/jidoka && write the file`. Print the path. Mention that customizing review commands is a direct edit of this file — the inline comments document the schema, and the README's "Editing review commands" section has additional examples.
+4. On `confirm`: `mkdir -p ~/.claude/plugins/jidoka && write the file`. Print the path. Mention that customizing review commands is a direct edit of this file — the inline comments document the schema, and `docs/data-model.md` (§Examples) has additional worked examples.
 5. On `edit`: jump back to the question whose answer the user wants to change.
 6. On `abort`: write nothing.

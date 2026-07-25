@@ -18157,7 +18157,49 @@ var defaultConfig = {
   reference_dir: "docs/discussions",
   git_workflow: false,
   pre_review: ["/jidoka:pre-plan-review"],
-  unit_review: ["/code-review"],
+  // The built-in `/code-review` sets `disable-model-invocation` — stated
+  // outright on Anthropic's Code Review docs page, so it is deliberate and
+  // documented, not a regression. (The 2.1.169 → 2.1.220 version boundary was
+  // reported by binary inspection and is *not* re-verified here; don't cite it
+  // as measured. What was verified directly is the workaround below.) So a bare
+  // `"/code-review"` step is operator-run — the resuming agent cannot reach it
+  // by any in-session route and the unit loop stops at every unit. Wrapping it
+  // in `claude -p` is the agent-reachable form: the slash command lands in the
+  // *user prompt* slot at the CLI layer, which the flag does not gate. Same
+  // Bash-not-SlashCommand boundary the codex template below relies on, and
+  // empirically confirmed, not inferred.
+  //
+  // `{diff_range}` is load-bearing, not cosmetic. A bare `/code-review` reviews
+  // "the branch's commits ahead of its upstream plus any uncommitted changes",
+  // so by Unit 05 it re-reviews Units 01-04; and on an *empty* diff it does not
+  // report "nothing to review" — it silently falls back to reviewing the most
+  // recent commit and returns confident findings about unrelated code. That is
+  // why the resume protocol (docs/exec-plans/AGENTS.md) carries an empty-diff
+  // precondition: an unguarded run can pass a gate having reviewed the wrong
+  // code. Passing an explicit range also means uncommitted work is NOT covered,
+  // so the unit's work must be committed on its `unit/NN` branch first.
+  //
+  // `{diff_range}` must arrive as a **resolved SHA** (`<merge-base>..HEAD`).
+  // The single-quoted prompt would pass an unexpanded `$(git merge-base …)`
+  // through as literal text, and `/code-review` fails open on a target it can't
+  // resolve. A SHA rather than a branch name because the value is interpolated
+  // *inside single quotes in a shell command* and git permits `'`, `$(…)`, `;`
+  // and `|` in ref names — `feature/o'brien` passes `check-ref-format` and would
+  // close the quote early, reparsing the remainder as shell. Nothing here
+  // escapes the substitution; a `[0-9a-f]+` SHA is what makes that safe. Note
+  // also that `{base}` is stage-scoped — at unit stage it is the *plan branch*,
+  // not `main` (see ts/types.ts) — or the range widens to the whole plan so far.
+  //
+  // `< /dev/null` is the same stdin hang-guard the codex template documents.
+  // Like the codex step below, this runs for minutes, so an `exec` run needs
+  // the Bash timeout raised past its 120s default (or to be backgrounded); the
+  // resume protocol says so at the point of use.
+  unit_review: [
+    {
+      run: "claude -p '/code-review {diff_range}' < /dev/null",
+      mode: "exec"
+    }
+  ],
   // `-c model_reasoning_summary=detailed` asks codex for its fullest reasoning
   // summary (a summary — not raw chain-of-thought, which stays hidden), adding
   // its interleaved narration to the saved transcript for on-demand inspection.
@@ -18919,12 +18961,12 @@ This plan is worked in its own git worktree, one branch per unit:
 
 - **Worktree:** \`worktrees/${planId}/\` on branch \`plan/${planId}\` (off \`main\`); the plan's \`active/\` dir lives only inside it.
 - **Per unit:** branch \`unit/NN-slug\` off the plan branch \u2192 work + review \u2192 \`git merge --squash unit/NN-slug\` into the plan branch as one \`Unit NN: <title>\` commit \u2192 \`git branch -D unit/NN-slug\` \u2192 advance the cursor.
-- **At the end, on the operator's close-out go-ahead** (after the Plan-level review below has been surfaced): \`git mv\` the plan dir \`active/ \u2192 completed/\` (+ provenance stamp), commit, then \`git checkout main && git merge --no-ff plan/${planId}\`, \`git worktree remove worktrees/${planId}\`.
+- **At the end, on the operator's close-out go-ahead** (after the Plan-level review below has been surfaced): \`git mv\` the plan dir \`active/ \u2192 completed/\` (+ provenance stamp), commit on the plan branch \u2014 **and stop there.** Publishing is a separate, explicitly-requested step: the close-out go-ahead authorizes the archive commit, not remote mutation or a merge into \`main\`. Once asked, land \`plan/${planId}\` however this repo lands changes, then \`git worktree remove worktrees/${planId}\`.
 
 `;
 }
 function closeOutScopeClause(gitWorkflow) {
-  return gitWorkflow ? "covers only the close-out (archive, merge), nothing else" : "covers only the close-out (moving the plan dir to `completed/`), nothing else";
+  return gitWorkflow ? "covers only the close-out (archive), nothing else" : "covers only the close-out (moving the plan dir to `completed/`), nothing else";
 }
 function renderPlanReviewBlock(steps, reReview, gitWorkflow) {
   let out = "## Plan-level review\n\n";
