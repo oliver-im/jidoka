@@ -30,7 +30,16 @@ describe("defaults", () => {
   });
 
   it("ships a unit-level pipeline matching today's behavior", () => {
-    expect(defaultConfig.unit_review).toEqual(["/code-review"]);
+    // `/code-review` is `disable-model-invocation`, so a bare slash-command
+    // step would be operator-run and stall the unit loop. The default wraps it
+    // in `claude -p` (agent-reachable via Bash) and pins the scope with
+    // `{diff_range}` — an unranged run silently reviews the wrong commits.
+    expect(defaultConfig.unit_review).toEqual([
+      {
+        run: "claude -p '/code-review {diff_range}' < /dev/null",
+        mode: "exec",
+      },
+    ]);
     // The default plan_review asks codex for a detailed reasoning summary and
     // carries the `< /dev/null` stdin hang-guard so an unattended `exec` run
     // can't block on an open stdin pipe (see config.ts).

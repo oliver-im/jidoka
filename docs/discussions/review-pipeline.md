@@ -1,4 +1,4 @@
-# Review-pipeline direction — unit_review on the built-in /code-review (local diff, no --fix); plan_review opt-in via tool-agnostic templates; re-review to convergence, gated on the reviewer's own middle-tier severity
+# Review-pipeline direction — unit_review on the built-in /code-review, wrapped in claude -p since upstream made it operator-run (local diff, no --fix); plan_review opt-in via tool-agnostic templates; re-review to convergence, gated on the reviewer's own middle-tier severity
 
 Decisions and rationale for how jidoka's review pipeline should use the current
 Claude Code / codex review tooling. Companion to `codex-adversarial-review.md`
@@ -297,3 +297,84 @@ global-config toggle `review_reconverge` (default on), rendered by `renderReRevi
 the unit `## Review pipeline` and the `progress.md` `## Plan-level review` block (`pre_review`
 excluded). v0 is one extra pass gated on the reviewer's own middle-tier severity; the
 unbounded loop stays deferred.
+
+## `/code-review` went operator-run — wrap it in `claude -p` (2026-07 update — revises #2, applies the print/exec model to `unit_review`)
+
+Decision #2 put the built-in `/code-review` in `unit_review` as a bare slash command. Upstream
+has since set `disable-model-invocation` on it, which silently moved the per-unit gate from
+agent-run to operator-run: the resuming agent can no longer reach it, so the unit loop stops
+for a human at every unit. Nothing in jidoka's config or docs said so. The *rule* in
+`skills/setup/SKILL.md` — "whether the resuming agent runs it or hands it to you depends on
+that command's own `disable-model-invocation`" — was right all along; only which side of it
+the shipped default fell on changed. That invisibility is the defect, more than the
+operator-run behavior itself.
+
+**Evidence.** Reported present on 2.1.220 and absent on 2.1.169 by binary inspection (not
+re-verified here). What *is* verified here: it is documented, not a regression — Anthropic's
+Code Review page states "`/code-review` is marked `disable-model-invocation`, so if you set it
+as a scheduled task's prompt, Claude reads it as plain text instead of running the review."
+No changelog entry ever announced it (the changelog mentions `disable-model-invocation` at no
+version), and no upstream issue tracks `/code-review` specifically. The general flag-semantics
+cluster says it will not be walked back: anthropics/claude-code#38969 and #43875 closed as
+duplicates, **#43809 closed as not planned**. The skills docs name `/init`, `/review` and
+`/security-review` as Skill-tool-reachable built-ins and do not name `/code-review`. Best
+available version pin: the `disable-model-invocation` frontmatter reference carries
+`min-version: 2.1.196` on its scheduled-task clause. Same complaint from another plugin
+ecosystem: openai/codex-plugin-cc#211 (open) and #269 — already cited in #6 for codex, now
+biting the built-in too.
+
+**Decision: reach it through `claude -p`; don't change reviewer, don't default away from it.**
+`/code-review` is still the right tool for a unit gate — #2 stands. What changes is the
+*vehicle*: the shipped `unit_review` becomes
+`{ run: "claude -p '/code-review {diff_range}' < /dev/null", mode: "exec" }`. This needs **no
+schema work** — it is exactly the tool-agnostic template + `print`/`exec` axis the 2026-06
+update already built, applied to a stage that had not previously needed it. The route is
+legitimate for the same reason the codex template is: the flag gates the SlashCommand route,
+not Bash, and under `-p` the slash command lands in the **user-prompt slot at the CLI layer**.
+That claim (already asserted in `docs/exec-plans/AGENTS.md`) is now **verified empirically**
+on 2.1.220 rather than inferred — a bare `claude -p '/code-review'` ran the real review and
+returned findings in the review harness's own `{file, line, summary, failure_scenario}` schema.
+
+**The empty-diff discovery — the part that changes the resume protocol.** That verification
+ran against a deliberately empty control: branch level with upstream, clean tree, where the
+documented behavior ("it needs work on the branch or in the working tree to have something to
+report") predicts *nothing to review*. Instead it spent five minutes reviewing the **last
+landed commit** and returned confident, well-cited findings about already-merged code. So
+`/code-review` **does not fail closed**: an unattended step can pass a gate having reviewed
+the wrong diff, and the output is indistinguishable from a clean review. Two consequences,
+both shipped — `{diff_range}` is mandatory in the default (unranged, its scope is "commits
+ahead of upstream plus uncommitted changes", so by Unit 05 it re-reviews Units 01–04), and the
+resume protocol gains a **non-empty-range precondition**. Passing an explicit range also
+excludes uncommitted work, so the unit must now be committed on its `unit/NN` branch before
+review — a real behavior change from the old bare-command form.
+
+**What it costs, stated plainly.** The nested session is cold. It reads `CLAUDE.md` but not
+the unit's acceptance criteria, and there is no way to inject them: non-`ultra` `/code-review`
+parses everything after the command as the review *target*, so it has no note slot (only
+`ultra` turns trailing prose into an attached note, and `ultra` is genuinely operator-only —
+billed, interactive confirmation). It also runs several minutes per unit with no context cache
+shared with the outer session. And an explicit range is only as good as what the range
+*contains*: probing this repo's own `HEAD~1..HEAD` — a release commit reading `4 files
+changed, 4 insertions` — stalled past twenty minutes, because one of those "lines" is the
+committed single-line minified `dist/cli.js` (~1.4 MB). Committed build artifacts are a
+sharp edge for any ranged review; the resume protocol now says to review before rebuilding.
+Against that: since 2.1.218 the in-session `/code-review` is
+itself a forked background subagent, so the context gap is narrower than it first appears, and
+a gate that never runs unattended is worse than a cold one that does.
+
+**Why not the alternatives.**
+- *Swap the reviewer.* `/review` and `/security-review` are Skill-tool-reachable, but the
+  first is PR-shaped and the second security-only. Neither is a unit gate.
+- *Add a `run: agent|operator` field to slash-command steps.* Duplicates `mode`; the
+  two-mechanism model (`ts/types.ts`, "Two-mechanism invocation model") is deliberate.
+- *Detect invocability at render time.* The renderer is deterministic and has no reliable way
+  to introspect the host binary's flags — and it would break the "renderer only records"
+  boundary that keeps the exit-0 hook from running shell.
+- *Leave it operator-run and only document it.* Defensible — jidoka **is**
+  stop-the-line-and-call-a-human, so a per-unit human gate is on-brand rather than a
+  degradation. It stays exactly one config line away, which is why the setup skill and
+  `data-model.md` now name that swap explicitly instead of burying it.
+
+**Status:** shipped in `ts/config.ts` (`defaultConfig.unit_review`), with the non-empty-range
+precondition in `docs/exec-plans/AGENTS.md` (resume protocol) and the invocation +
+does-not-fail-closed properties in `docs/data-model.md` (§Command semantics & invocation).

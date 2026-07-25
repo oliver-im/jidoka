@@ -19,7 +19,7 @@ _Re-derive: `find docs/discussions -name '*.md' ! -name 'index.md' ! -name 'AGEN
 - Default plan_dir_root = docs/exec-plans/active — ship the convention batteries-included, not a neutral plan/
 - Dynamic workflows × jidoka — the one candidate seam (workflow-backed plan_review) was spiked and lost to the single pass on cost + recall (shelved); unit execution & plan-as-worklist need no change; no jidoka-side "use workflows" prompt (ultracode owns that layer)
 - googleworkspace/cli as a productization reference — copy the discipline (CLI-first, self-describing, distribution), not the surface area
-- Review-pipeline direction — unit_review on the built-in /code-review (local diff, no --fix); plan_review opt-in via tool-agnostic templates; re-review to convergence, gated on the reviewer's own middle-tier severity
+- Review-pipeline direction — unit_review on the built-in /code-review, wrapped in claude -p since upstream made it operator-run (local diff, no --fix); plan_review opt-in via tool-agnostic templates; re-review to convergence, gated on the reviewer's own middle-tier severity
 - Skill distribution — one canonical source copied into per-agent dirs (not symlinks); three-layer local testing
 - Strategic review — proceed: no strategic blocker; defer MCP, keep the skill Claude-specific, don't over-invest in polish
 

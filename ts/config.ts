@@ -30,7 +30,32 @@ export const defaultConfig: Config = {
   reference_dir: "docs/discussions",
   git_workflow: false,
   pre_review: ["/jidoka:pre-plan-review"],
-  unit_review: ["/code-review"],
+  // The built-in `/code-review` sets `disable-model-invocation` (verified on
+  // Claude Code 2.1.220; stated on the Code Review docs page), so a bare
+  // `"/code-review"` step is operator-run — the resuming agent cannot reach it
+  // by any in-session route and the unit loop stops at every unit. Wrapping it
+  // in `claude -p` is the agent-reachable form: the slash command lands in the
+  // *user prompt* slot at the CLI layer, which the flag does not gate. Same
+  // Bash-not-SlashCommand boundary the codex template below relies on, and
+  // empirically confirmed, not inferred.
+  //
+  // `{diff_range}` is load-bearing, not cosmetic. A bare `/code-review` reviews
+  // "the branch's commits ahead of its upstream plus any uncommitted changes",
+  // so by Unit 05 it re-reviews Units 01-04; and on an *empty* diff it does not
+  // report "nothing to review" — it silently falls back to reviewing the most
+  // recent commit and returns confident findings about unrelated code. That is
+  // why the resume protocol (docs/exec-plans/AGENTS.md) carries an empty-diff
+  // precondition: an unguarded run can pass a gate having reviewed the wrong
+  // code. Passing an explicit range also means uncommitted work is NOT covered,
+  // so the unit's work must be committed on its `unit/NN` branch first.
+  //
+  // `< /dev/null` is the same stdin hang-guard the codex template documents.
+  unit_review: [
+    {
+      run: "claude -p '/code-review {diff_range}' < /dev/null",
+      mode: "exec",
+    },
+  ],
   // `-c model_reasoning_summary=detailed` asks codex for its fullest reasoning
   // summary (a summary — not raw chain-of-thought, which stays hidden), so a
   // plan-level review surfaces *why* it flagged (or cleared) a cross-unit seam,
