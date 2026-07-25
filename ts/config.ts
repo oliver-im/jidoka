@@ -30,8 +30,11 @@ export const defaultConfig: Config = {
   reference_dir: "docs/discussions",
   git_workflow: false,
   pre_review: ["/jidoka:pre-plan-review"],
-  // The built-in `/code-review` sets `disable-model-invocation` (verified on
-  // Claude Code 2.1.220; stated on the Code Review docs page), so a bare
+  // The built-in `/code-review` sets `disable-model-invocation` — stated
+  // outright on Anthropic's Code Review docs page, so it is deliberate and
+  // documented, not a regression. (The 2.1.169 → 2.1.220 version boundary was
+  // reported by binary inspection and is *not* re-verified here; don't cite it
+  // as measured. What was verified directly is the workaround below.) So a bare
   // `"/code-review"` step is operator-run — the resuming agent cannot reach it
   // by any in-session route and the unit loop stops at every unit. Wrapping it
   // in `claude -p` is the agent-reachable form: the slash command lands in the
@@ -49,11 +52,16 @@ export const defaultConfig: Config = {
   // code. Passing an explicit range also means uncommitted work is NOT covered,
   // so the unit's work must be committed on its `unit/NN` branch first.
   //
-  // `{diff_range}` must arrive as a **resolved literal ref**; the single-quoted
-  // prompt would pass an unexpanded `$(git merge-base …)` through as literal
-  // text, and `/code-review` fails open on a target it can't resolve. Note also
-  // that `{base}` is stage-scoped — at unit stage it is the *plan branch*, not
-  // `main` (see ts/types.ts) — or the range widens to the whole plan so far.
+  // `{diff_range}` must arrive as a **resolved SHA** (`<merge-base>..HEAD`).
+  // The single-quoted prompt would pass an unexpanded `$(git merge-base …)`
+  // through as literal text, and `/code-review` fails open on a target it can't
+  // resolve. A SHA rather than a branch name because the value is interpolated
+  // *inside single quotes in a shell command* and git permits `'`, `$(…)`, `;`
+  // and `|` in ref names — `feature/o'brien` passes `check-ref-format` and would
+  // close the quote early, reparsing the remainder as shell. Nothing here
+  // escapes the substitution; a `[0-9a-f]+` SHA is what makes that safe. Note
+  // also that `{base}` is stage-scoped — at unit stage it is the *plan branch*,
+  // not `main` (see ts/types.ts) — or the range widens to the whole plan so far.
   //
   // `< /dev/null` is the same stdin hang-guard the codex template documents.
   // Like the codex step below, this runs for minutes, so an `exec` run needs

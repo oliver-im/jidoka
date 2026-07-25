@@ -355,12 +355,7 @@ the unit's acceptance criteria, and there is no way to inject them: non-`ultra` 
 parses everything after the command as the review *target*, so it has no note slot (only
 `ultra` turns trailing prose into an attached note, and `ultra` is genuinely operator-only —
 billed, interactive confirmation). It also runs several minutes per unit with no context cache
-shared with the outer session. And an explicit range is only as good as what the range
-*contains*: probing this repo's own `HEAD~1..HEAD` — a release commit reading `4 files
-changed, 4 insertions` — stalled past twenty minutes, because one of those "lines" is the
-committed single-line minified `dist/cli.js` (~1.4 MB). Committed build artifacts are a
-sharp edge for any ranged review; the resume protocol now says to review before rebuilding.
-Against that: since 2.1.218 the in-session `/code-review` is
+shared with the outer session. Against that: since 2.1.218 the in-session `/code-review` is
 itself a forked background subagent, so the context gap is narrower than it first appears, and
 a gate that never runs unattended is worse than a cold one that does.
 
@@ -381,8 +376,9 @@ a gate that never runs unattended is worse than a cold one that does.
 - *A `jidoka:unit-review` composer skill, symmetric with `plan-review-prompt`.* **Deferred,
   not rejected** — and the strongest of these. jidoka owns its own skills' frontmatter, so an
   agent-invocable composer sidesteps the flag at the root; more importantly it can *compute*
-  what a config string can only *state*: derive the unit range against the plan branch, verify
-  it resolves and is non-empty, keep build artifacts out, set its own timeout, and inject the
+  what a config string can only *state*: derive the unit range against the ref the unit forked
+  from, resolve it to a SHA before it lands inside a single-quoted shell prompt, verify it
+  resolves and carries commits, set its own timeout, and inject the
   unit's acceptance criteria — the one gap the `claude -p` form cannot close at all, since
   non-`ultra` `/code-review` has no note slot. Note it would **drive** the configured vehicle,
   not replace `/code-review` as reviewer (decision #2 stands either way); a skill that reviewed
@@ -413,16 +409,48 @@ static template rather than of the vehicle:
 - **An unresolvable range reads as non-empty.** `git diff --quiet` exits ≥ 128 on a bad ref,
   which a bare "non-zero means proceed" check treats as a green light — feeding a typo'd ref
   straight into the fail-open path the check exists to prevent. Now specified by exit code.
-- **Committed build artifacts.** `/code-review` takes one target and accepts no pathspec, so
-  the artifact cannot be excluded at review time; the protocol now orders the unit
-  (commit source → review → build → commit bundle) instead of offering an escape that does not exist.
+- ~~**Committed build artifacts.**~~ **Retracted — the measurement was wrong.** This claimed
+  `dist/cli.js` is a single-line minified ~1.4 MB bundle that rebuilds as `1 file changed,
+  1 insertion`, and on that basis imposed a two-commit source-then-build ordering on every
+  unit of every plan. Measured: **19,716 lines, 743 KB, not minified** (`scripts/build.mjs`
+  passes `bundle: true` and no `minify`), longest line 10,732 chars; the `v0.4.5` release
+  commit's `dist/cli.js` diff is **one line**. Wrong on size, on format, and on diff
+  behaviour. The twenty-minute stall was real, but nothing here explains it and the ordering
+  constraint bought nothing, so both the diagnosis and the workflow rule are withdrawn. The
+  lesson is the same one as the dirty-tree probe below: an observation is not a mechanism, and
+  a costly rule justified by an unmeasured number is worse than no rule.
 - **A single-quoted prompt swallows command substitution**, so `{diff_range}` must be
-  substituted as a resolved literal ref.
+  substituted as a resolved SHA. Not merely "literal": git permits `'`, `$(…)`, `;` and `|`
+  in ref names — `feature/o'brien` passes `check-ref-format` — and the value is interpolated
+  inside single quotes in a shell command with nothing escaping it. A branch name is a
+  quote-breaking (and in principle command-executing) substitution; a `[0-9a-f]+` merge-base
+  SHA is not.
+- **An empty *net* diff is not an empty range.** The precondition first used
+  `git diff --quiet`, which exits 0 for a commit and its revert — two real commits whose tree
+  delta cancels. Following it literally skips the gate on history that genuinely wants review.
+  Counting commits (`git rev-list --count`) is the right test; resolvability is a separate
+  check (`git rev-parse --verify`).
+- **The archive/publish split reached the doc but not the renderer.** `renderGitWorkflowBlock`
+  still emitted `git checkout main && git merge --no-ff plan/<id>` as part of a single
+  close-out go-ahead — into *every* consumer's `progress.md`, instructing exactly the direct
+  merge this repo's root `AGENTS.md` forbids. Fixed at the renderer; the block now stops at
+  the archive commit and names no landing mechanism, since it renders into repos jidoka knows
+  nothing about.
+
+**Deliberately not built: an upgrade path.** Zod's `.default()` only fills *absent* keys, so a
+config written by an earlier `jidoka:setup` keeps `unit_review: ["/code-review"]` and never
+sees the new default. For a plugin with a user base this would need a deprecation warning in
+`loadConfig`; here the author is the only user and updates their own config, so adding
+migration machinery would be speculative generality. Recorded rather than silently skipped —
+if jidoka ever grows users, this is the first thing that owes them a warning.
 
 **Status:** shipped in `ts/config.ts` (`defaultConfig.unit_review`), with the range
 preconditions in `docs/exec-plans/AGENTS.md` (resume protocol) and the invocation +
 does-not-fail-closed properties in `docs/data-model.md` (§Command semantics & invocation).
 Next candidate: the `jidoka:unit-review` composer above, spawned as
 `../exec-plans/backlog/260725-0-jidoka-unit-review-composer-skill.md` (the reasoning stays
-here, per `AGENTS.md`). The pre-existing `jidoka:setup` fidelity defects surfaced by the same
+here, per `docs/discussions/AGENTS.md` — not the `exec-plans` one cited above). The
+consumer-facing gaps this default opens — the preconditions never shipping in the plugin, the
+`{base}` referent missing with `git_workflow: false`, and the renderer edges the `exec` default
+newly exercises — are tracked as `260725-2-ship-review-guardrails-to-consumers`. The pre-existing `jidoka:setup` fidelity defects surfaced by the same
 review passes are tracked separately as `260725-1-setup-skill-config-fidelity`.

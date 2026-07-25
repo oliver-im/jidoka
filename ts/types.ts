@@ -45,11 +45,26 @@ export type ReviewTemplateStep = z.infer<typeof reviewTemplateStepSchema>;
 // `pre_review` runs before any diff exists, so only `{plan_dir}` is meaningful
 // there. The resume protocol enforces the per-stage scope.
 //
-// Substitute a **resolved literal ref** — `abc123..HEAD`, `plan/260725-0...HEAD`.
-// Do not emit an unexpanded `$(git merge-base …)`: the shipped templates single-
-// quote the prompt, so command substitution would not expand and the reviewer
-// would receive the literal text (and, per `config.ts`, fail open rather than
-// error).
+// **Without the git workflow there is no plan branch.** `git_workflow` ships
+// `false`, and that topology (worktree per plan, `unit/NN` branch per unit) is
+// what gives `{base}` its unit-stage meaning. With it off there are no unit
+// branches, so `{base}` has no structural referent — resolve it to *the commit
+// the unit's own work started from* (e.g. `HEAD` before the unit's first commit,
+// recorded as the unit begins), not to `main`, which reproduces the Units 01..NN
+// widening described above. If that boundary can't be established, the unit-stage
+// range is not derivable and the step should be surfaced rather than run.
+//
+// Substitute a **resolved SHA** — `git merge-base {base} HEAD` → `<sha>..HEAD`.
+// Two distinct reasons, both load-bearing:
+//   1. Do not emit an unexpanded `$(git merge-base …)`: the shipped templates
+//      single-quote the prompt, so command substitution would not expand and the
+//      reviewer receives the literal text (and, per `config.ts`, fails open
+//      rather than erroring).
+//   2. Prefer the SHA over a branch name. The value is interpolated inside
+//      single quotes in a shell command and nothing escapes it, while git permits
+//      `'`, `$(…)`, backticks, `;` and `|` in ref names — `feature/o'brien` is a
+//      legal branch that closes the quote early and reparses the rest as shell.
+//      A `[0-9a-f]+` SHA cannot.
 export const REVIEW_PLACEHOLDERS = [
   "{plan_dir}",
   "{base}",

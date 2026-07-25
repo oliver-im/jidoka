@@ -157,7 +157,8 @@ describe("materialize", () => {
     expect(progress).toContain("## Git workflow");
     expect(progress).toContain("worktrees/260505-0-pivot-renderer/");
     expect(progress).toContain("plan/260505-0-pivot-renderer");
-    expect(progress).toContain("git merge --no-ff plan/260505-0-pivot-renderer");
+    expect(progress).toContain("Publishing is a separate, explicitly-requested step");
+    expect(progress).not.toContain("git merge --no-ff");
     rmSync(base, { recursive: true, force: true });
   });
 
