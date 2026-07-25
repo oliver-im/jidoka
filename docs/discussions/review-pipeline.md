@@ -422,4 +422,7 @@ static template rather than of the vehicle:
 **Status:** shipped in `ts/config.ts` (`defaultConfig.unit_review`), with the range
 preconditions in `docs/exec-plans/AGENTS.md` (resume protocol) and the invocation +
 does-not-fail-closed properties in `docs/data-model.md` (§Command semantics & invocation).
-Next candidate: the `jidoka:unit-review` composer above.
+Next candidate: the `jidoka:unit-review` composer above, spawned as
+`../exec-plans/backlog/260725-0-jidoka-unit-review-composer-skill.md` (the reasoning stays
+here, per `AGENTS.md`). The pre-existing `jidoka:setup` fidelity defects surfaced by the same
+review passes are tracked separately as `260725-1-setup-skill-config-fidelity`.

@@ -4,4 +4,5 @@ Candidate work — what could be picked up (not started; may drift). A **re-deri
 
 _Re-derive: `grep -rhm1 '^# ' --include='[0-9]*.md' docs/exec-plans/backlog/ | sed 's/^# /- /' | sort`_
 
-_No entries yet._
+- 260725-0-jidoka-unit-review-composer-skill — Add a jidoka:unit-review composer that computes the unit's review scope and drives the configured vehicle
+- 260725-1-setup-skill-config-fidelity — Make jidoka:setup faithful to config.ts: stop clobbering hand-edited config, honor reference_dir, and guard the template against drift
