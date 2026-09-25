@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -335,6 +336,27 @@ describe("runWithInput: filesystem behavior", () => {
     const target = join(plansRoot, "260505-0-hook-test-plan");
     expect(existsSync(join(target, "overview.md"))).toBe(true);
     expect(existsSync(stale)).toBe(false);
+    rmSync(project, { recursive: true, force: true });
+  });
+
+  it("leaves neither a partial plan dir nor staging when a write fails", () => {
+    const project = makeTempDir("partial-proj");
+    const realMaterializeAt = materializeModule.materializeAt;
+    // Fail only after the plan files have been written.
+    const spy = vi
+      .spyOn(materializeModule, "materializeAt")
+      .mockImplementation((...args) => {
+        realMaterializeAt(...args);
+        throw new Error("disk full");
+      });
+    try {
+      runWithInput(stdin(`partial-${process.pid}`, validPlanMd), testConfig(project));
+    } finally {
+      spy.mockRestore();
+    }
+    expect(stdoutChunks.join("")).toContain("failed to materialize plan");
+    expect(stdoutChunks.join("")).toContain("disk full");
+    expect(readdirSync(join(project, "notes/plan"))).toEqual([]);
     rmSync(project, { recursive: true, force: true });
   });
 });

@@ -128,6 +128,22 @@ describe("materialize", () => {
     }
   });
 
+  it("exits 1 on validation errors and writes nothing", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-invalid-"));
+    try {
+      const fixture = join(fixtures, "invalid_plan_bad_slug.json");
+      const r = run(
+        ["materialize", fixture, "--plans-root", tmp, "--today", "260101"],
+        { env: { CLAUDE_PROJECT_DIR: tmp } },
+      );
+      expect(r.status).toBe(1);
+      expect(r.stderr).toContain("invalid slug 'Bad Slug'");
+      expect(readdirSync(tmp)).toEqual([]);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   it("exits 1 with a clean error on missing file (no stack trace)", () => {
     const r = run(["materialize", "/no/such/file.json"]);
     expect(r.status).toBe(1);

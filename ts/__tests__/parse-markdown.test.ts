@@ -108,6 +108,15 @@ describe("parsePlanMarkdown — title", () => {
     const plan = parse(`# ${longTitle}\n\n## Unit 01: Foo\n\nSummary.\n`);
     expect(plan.slug.length).toBe(60);
     expect(plan.slug).toBe("a".repeat(60));
+    // The validator must accept the longest slug the parser emits.
+    expect(validatePlan(plan)).toEqual([]);
+  });
+
+  it("drops the trailing hyphen when truncation lands on a word break", () => {
+    // Slugified, the title's 60th char is the hyphen before "bcd".
+    const plan = parse(`# ${"a".repeat(59)} bcd\n\n## Unit 01: Foo\n\nSummary.\n`);
+    expect(plan.slug).toBe("a".repeat(59));
+    expect(validatePlan(plan)).toEqual([]);
   });
 });
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   mkdirSync,
   readFileSync,
@@ -69,12 +69,15 @@ describe("resolveTargetDir", () => {
     rmSync(base, { recursive: true, force: true });
   });
 
-  it("increments past existing entries", () => {
+  it("increments past the highest existing entry", () => {
     const base = makeTempDir("inc");
     const plansRoot = join(base, "plan");
     mkdirSync(join(plansRoot, "260505-0-other"), { recursive: true });
+    // Gaps (1 and 2 archived) and non-numeric names must not lower the max.
+    mkdirSync(join(plansRoot, "260505-3-later"), { recursive: true });
+    mkdirSync(join(plansRoot, "260505-draft-notes"), { recursive: true });
     const target = resolveTargetDir(samplePlan(), plansRoot, "260505");
-    expect(target.endsWith("260505-1-pivot-renderer")).toBe(true);
+    expect(target).toBe(join(plansRoot, "260505-4-pivot-renderer"));
     rmSync(base, { recursive: true, force: true });
   });
 
@@ -283,8 +286,18 @@ describe("materialize", () => {
 });
 
 describe("todayYymmddLocal", () => {
-  it("returns 6-digit string", () => {
-    const s = todayYymmddLocal();
-    expect(s).toMatch(/^\d{6}$/);
+  const originalTz = process.env["TZ"];
+  afterEach(() => {
+    vi.useRealTimers();
+    if (originalTz === undefined) delete process.env["TZ"];
+    else process.env["TZ"] = originalTz;
+  });
+
+  it("returns the zero-padded local date, not the UTC date", () => {
+    // 01:30 on 5 Sep in Seoul is still 4 Sep in UTC.
+    process.env["TZ"] = "Asia/Seoul";
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-04T16:30:00Z"));
+    expect(todayYymmddLocal()).toBe("260905");
   });
 });
