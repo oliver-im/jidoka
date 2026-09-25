@@ -52,6 +52,9 @@ describe("isValidSlug", () => {
     expect(isValidSlug("-a")).toBe(false);
     expect(isValidSlug("a-")).toBe(false);
     expect(isValidSlug("a_b")).toBe(false);
+  });
+  it("accepts the 60-char maximum and rejects 61", () => {
+    expect(isValidSlug("a".repeat(60))).toBe(true);
     expect(isValidSlug("a".repeat(61))).toBe(false);
   });
 });
@@ -94,7 +97,16 @@ describe("validatePlan rules", () => {
       units: [badUnit],
     };
     const errs = validatePlan(p);
-    expect(errs.length).toBeGreaterThanOrEqual(6);
+    // The self-reference is reported both as a self-dependency and as a cycle.
+    expect(errs.map((e) => e.kind).sort()).toEqual([
+      "empty_task_summary",
+      "empty_unit_title",
+      "invalid_slug",
+      "invalid_unit_id_format",
+      "unit_blocked_by_not_found",
+      "unit_cyclic_dependency",
+      "unit_self_dependency",
+    ]);
   });
 });
 
