@@ -355,6 +355,7 @@ describe("runWithInput: filesystem behavior", () => {
       spy.mockRestore();
     }
     expect(stdoutChunks.join("")).toContain("failed to materialize plan");
+    expect(stdoutChunks.join("")).toContain("disk full");
     expect(readdirSync(join(project, "notes/plan"))).toEqual([]);
     rmSync(project, { recursive: true, force: true });
   });
