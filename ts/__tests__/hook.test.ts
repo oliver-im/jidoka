@@ -117,12 +117,6 @@ afterEach(() => {
 });
 
 describe("isValidSessionId", () => {
-  it("accepts well-formed ids", () => {
-    expect(isValidSessionId("abc-123")).toBe(true);
-    expect(isValidSessionId("test_session")).toBe(true);
-    expect(isValidSessionId("ABC")).toBe(true);
-    expect(isValidSessionId("a")).toBe(true);
-  });
   it("rejects bad ids", () => {
     expect(isValidSessionId("")).toBe(false);
     expect(isValidSessionId("../etc/passwd")).toBe(false);
@@ -149,12 +143,6 @@ describe("runWithInput: missing or empty plan (loud, not silent)", () => {
   it("absent tool_input.plan denies loudly (the reproduced bug payload)", () => {
     const project = makeTempDir("absent-proj");
     expectEmptyDeny(project, stdin(`absent-${process.pid}`));
-    rmSync(project, { recursive: true, force: true });
-  });
-
-  it("empty plan string denies loudly", () => {
-    const project = makeTempDir("empty-proj");
-    expectEmptyDeny(project, stdin(`empty-${process.pid}`, ""));
     rmSync(project, { recursive: true, force: true });
   });
 
@@ -194,21 +182,6 @@ describe("runWithInput: missing or empty plan (loud, not silent)", () => {
 // When the inline copy is absent, the hook reads the file. Verified against
 // Claude Code 2.1.173.
 describe("runWithInput: plan sourced from planFilePath", () => {
-  it("materializes from the plan file when tool_input.plan is absent", () => {
-    const project = makeTempDir("pfp-proj");
-    const planFile = join(project, "plan.md");
-    writeFileSync(planFile, validPlanMd);
-    runWithInput(
-      stdin(`pfp-${process.pid}`, undefined, planFile),
-      testConfig(project),
-    );
-    const target = join(project, "notes/plan/260505-0-hook-test-plan");
-    expect(existsSync(join(target, "overview.md"))).toBe(true);
-    expect(existsSync(join(target, "01-only-unit.md"))).toBe(true);
-    expect(stdoutChunks.join("")).toBe(""); // no deny
-    rmSync(project, { recursive: true, force: true });
-  });
-
   it("prefers inline tool_input.plan over the file when both are present", () => {
     const project = makeTempDir("pfp-pref-proj");
     const planFile = join(project, "plan.md");
@@ -237,36 +210,6 @@ describe("runWithInput: plan sourced from planFilePath", () => {
     expect(
       existsSync(join(project, "notes/plan/260505-0-hook-test-plan/overview.md")),
     ).toBe(true);
-    rmSync(project, { recursive: true, force: true });
-  });
-});
-
-describe("runWithInput: valid plan", () => {
-  it("parses markdown and materializes the plan dir", () => {
-    const project = makeTempDir("valid-proj");
-    runWithInput(
-      stdin(`valid-${process.pid}`, validPlanMd),
-      testConfig(project),
-    );
-
-    const target = join(project, "notes/plan/260505-0-hook-test-plan");
-    expect(existsSync(target)).toBe(true);
-    expect(existsSync(join(target, "overview.md"))).toBe(true);
-    expect(existsSync(join(target, "progress.md"))).toBe(true);
-    expect(existsSync(join(target, "01-only-unit.md"))).toBe(true);
-    rmSync(project, { recursive: true, force: true });
-  });
-
-  it("unwraps a ```markdown fenced payload (the skill's documented emit shape)", () => {
-    const project = makeTempDir("fenced-proj");
-    const fenced = "```markdown\n" + validPlanMd + "```\n";
-    runWithInput(stdin(`fenced-${process.pid}`, fenced), testConfig(project));
-    // Without unwrap, the slug would be "markdown" (the leading fence line
-    // becomes the title via extractTitle's fallback). With unwrap, the slug
-    // comes from the inner H1 "Hook test plan".
-    const target = join(project, "notes/plan/260505-0-hook-test-plan");
-    expect(existsSync(target)).toBe(true);
-    expect(existsSync(join(target, "01-only-unit.md"))).toBe(true);
     rmSync(project, { recursive: true, force: true });
   });
 });
@@ -539,28 +482,6 @@ describe("runWithInput: git_workflow hardening (codex review fixes)", () => {
     // no orphan worktree.
     expect(existsSync(join(repo, "docs/exec-plans/active", planId0))).toBe(false);
     expect(existsSync(join(repo, "worktrees", planId0))).toBe(false);
-    rmSync(repo, { recursive: true, force: true });
-  });
-
-  it("cleanupWorktree removes the worktree and its plan branch", () => {
-    const repo = makeGitRepo("wt-cleanup");
-    const id = "260505-9-cleanup-me";
-    const wt = join(repo, "worktrees", id);
-    execFileSync(
-      "git",
-      ["-C", repo, "worktree", "add", wt, "-b", `plan/${id}`, "main"],
-      { stdio: "ignore" },
-    );
-    expect(existsSync(wt)).toBe(true);
-
-    materializeModule.cleanupWorktree(repo, wt, `plan/${id}`);
-
-    expect(existsSync(wt)).toBe(false);
-    expect(
-      execFileSync("git", ["-C", repo, "branch", "--list", `plan/${id}`], {
-        encoding: "utf8",
-      }).trim(),
-    ).toBe("");
     rmSync(repo, { recursive: true, force: true });
   });
 

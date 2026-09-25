@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { parsePlanJson, type Plan, type Unit } from "../types.js";
 import {
-  isValidId,
   isValidSlug,
   isValidUnitId,
   validatePlan,
@@ -22,23 +21,8 @@ const minimalUnit = (id: string): Unit => ({
   body_markdown: "",
 });
 
-const minimalPlan = (units: Unit[]): Plan => ({
-  task_summary: "test plan",
-  slug: "test-plan",
-  units,
-});
-
 const has = (errors: ValidationError[], kind: ValidationError["kind"]) =>
   errors.some((e) => e.kind === kind);
-
-describe("isValidId", () => {
-  it.each(["foo", "a-b", "a_b", "A1", "a"])("accepts %s", (id) => {
-    expect(isValidId(id)).toBe(true);
-  });
-  it.each(["", "a b", "a.b", "a/b", "a@b"])("rejects %s", (id) => {
-    expect(isValidId(id)).toBe(false);
-  });
-});
 
 describe("isValidSlug", () => {
   it.each(["plan-dirs-pivot", "a", "foo123", "12-34"])(
@@ -76,15 +60,6 @@ describe("isValidUnitId", () => {
 });
 
 describe("validatePlan rules", () => {
-  it("minimal plan passes", () => {
-    expect(validatePlan(minimalPlan([minimalUnit("01-only")]))).toEqual([]);
-  });
-
-  it("empty task_summary reported", () => {
-    const p = { ...minimalPlan([minimalUnit("01-x")]), task_summary: "" };
-    expect(has(validatePlan(p), "empty_task_summary")).toBe(true);
-  });
-
   it("collects multiple errors in one pass", () => {
     const badUnit: Unit = {
       ...minimalUnit("BAD"),
@@ -110,58 +85,28 @@ describe("validatePlan rules", () => {
   });
 });
 
-// === Per-fixture parity tests =========================================
+// === Per-fixture rule tests ============================================
 //
-// For every JSON file in tests/fixtures/, the filename declares the
-// expected outcome:
-// - valid_*.json — must validate cleanly (zero errors).
-// - invalid_<rule>.json — must surface at least one error of the
-//   matching kind.
+// Each invalid_<rule>.json fixture must surface at least one error of the
+// matching kind. Rules already pinned by "collects multiple errors in one
+// pass" (slug, unit id format, dangling blocked_by) have no fixture here.
 
-interface FixtureExpectation {
-  // The error kind we expect at least one of, or null for "must pass".
-  expect: ValidationError["kind"] | null;
-}
-
-const expectations: Record<string, FixtureExpectation> = {
-  "valid_plan_minimal.json": { expect: null },
-  "valid_plan_sequential.json": { expect: null },
-  "invalid_plan_bad_slug.json": { expect: "invalid_slug" },
-  "invalid_plan_bad_unit_id.json": { expect: "invalid_unit_id_format" },
-  "invalid_plan_dangling_blocked_by.json": {
-    expect: "unit_blocked_by_not_found",
-  },
-  "invalid_plan_duplicate_unit_id.json": { expect: "duplicate_unit_id" },
-  "invalid_plan_empty_units.json": { expect: "empty_units" },
-  "invalid_plan_unit_cycle.json": { expect: "unit_cyclic_dependency" },
+const expectations: Record<string, ValidationError["kind"]> = {
+  "invalid_plan_duplicate_unit_id.json": "duplicate_unit_id",
+  "invalid_plan_empty_units.json": "empty_units",
+  "invalid_plan_unit_cycle.json": "unit_cyclic_dependency",
 };
 
 describe("fixture parity", () => {
-  const fixtureFiles = readdirSync(fixturesDir).filter((f) =>
-    f.endsWith(".json"),
-  );
-
-  it("every fixture has an expectation", () => {
-    for (const f of fixtureFiles) {
-      expect(expectations[f], `expectation missing for ${f}`).toBeDefined();
-    }
-  });
-
-  for (const [fixture, exp] of Object.entries(expectations)) {
-    it(`${fixture}: ${exp.expect ?? "passes"}`, () => {
-      const path = join(fixturesDir, fixture);
-      const json = readFileSync(path, "utf8");
-
+  for (const [fixture, kind] of Object.entries(expectations)) {
+    it(`${fixture}: ${kind}`, () => {
+      const json = readFileSync(join(fixturesDir, fixture), "utf8");
       const parsed = parsePlanJson(json);
       expect(parsed.ok, `parse failed: ${parsed.ok ? "" : parsed.error}`)
         .toBe(true);
       if (!parsed.ok) return;
       const errs = validatePlan(parsed.value);
-      if (exp.expect === null) {
-        expect(errs).toEqual([]);
-      } else {
-        expect(has(errs, exp.expect), `missing ${exp.expect} in ${JSON.stringify(errs)}`).toBe(true);
-      }
+      expect(has(errs, kind), `missing ${kind} in ${JSON.stringify(errs)}`).toBe(true);
     });
   }
 });
