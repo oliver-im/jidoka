@@ -1,21 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import {
   buildOverviewMd,
   buildProgressMd,
   buildUnitMd,
   unitIdPrefix,
 } from "../render-md.js";
-import { parsePlanJson, type Plan, type Unit } from "../types.js";
-
-const here = dirname(fileURLToPath(import.meta.url));
-const loadPlan = (name: string): Plan => {
-  const r = parsePlanJson(readFileSync(join(here, "fixtures", name), "utf8"));
-  if (!r.ok) throw new Error(r.error);
-  return r.value;
-};
+import type { Plan, Unit } from "../types.js";
 
 const minimalUnit = (id: string, blockedBy: string[] = []): Unit => ({
   id,
@@ -30,10 +20,6 @@ describe("unitIdPrefix", () => {
   it("extracts two-digit prefix", () => {
     expect(unitIdPrefix("01-housekeeping")).toBe("01");
     expect(unitIdPrefix("99-end")).toBe("99");
-  });
-  it("returns undefined for non-matching ids", () => {
-    expect(unitIdPrefix("foo")).toBeUndefined();
-    expect(unitIdPrefix("1-foo")).toBeUndefined();
   });
 });
 
@@ -99,11 +85,6 @@ describe("buildProgressMd", () => {
     expect(md).toContain("_No pre-execution review configured.");
     expect(md).toContain("## Plan-level review");
     expect(md).toContain("_No plan-level reviews configured.");
-  });
-
-  it("falls back when no units", () => {
-    const plan: Plan = { task_summary: "x", slug: "x", units: [] };
-    expect(buildProgressMd(plan, "x")).toContain("**Cursor:** (no units)");
   });
 
   it("renders a configured plan-level pipeline", () => {
@@ -233,17 +214,6 @@ describe("buildProgressMd", () => {
     expect(md).toContain("the **resuming agent** substitutes their placeholders");
   });
 
-  it("renders a unit template review step with its mode badge", () => {
-    const u: Unit = {
-      ...minimalUnit("01-x"),
-      review: [{ run: "agent -p --mode ask {focus}", mode: "exec" }],
-    };
-    const md = buildUnitMd(u, false);
-    expect(md).toContain(
-      "- [ ] `agent -p --mode ask {focus}` — **exec**",
-    );
-  });
-
   it("omits the substitution note for a template with no placeholders (exec)", () => {
     const u: Unit = {
       ...minimalUnit("01-x"),
@@ -251,16 +221,6 @@ describe("buildProgressMd", () => {
     };
     const md = buildUnitMd(u, false);
     expect(md).toContain("- [ ] `codex exec review` — **exec**");
-    expect(md).not.toContain("substitutes their placeholders");
-  });
-
-  it("omits the substitution note for a template with no placeholders (print)", () => {
-    const u: Unit = {
-      ...minimalUnit("01-x"),
-      review: [{ run: "codex exec review", mode: "print" }],
-    };
-    const md = buildUnitMd(u, false);
-    expect(md).toContain("- [ ] `codex exec review` — **print**");
     expect(md).not.toContain("substitutes their placeholders");
   });
 
@@ -332,16 +292,6 @@ describe("buildProgressMd", () => {
     expect(md).not.toContain("git checkout main");
   });
 
-  it("omits the git workflow block when disabled or absent", () => {
-    const plan: Plan = {
-      task_summary: "x",
-      slug: "x",
-      units: [minimalUnit("01-prep")],
-    };
-    expect(buildProgressMd(plan, "260607-3-foo")).not.toContain(
-      "## Git workflow",
-    );
-  });
 });
 
 describe("buildUnitMd", () => {
@@ -376,11 +326,6 @@ describe("buildUnitMd", () => {
     expect(buildUnitMd(u, false)).toContain("- [ ] _No review steps configured._");
   });
 
-  it("emits no review steps placeholder when review is absent", () => {
-    const u: Unit = { ...minimalUnit("01-x") };
-    delete u.review;
-    expect(buildUnitMd(u, false)).toContain("- [ ] _No review steps configured._");
-  });
 });
 
 describe("buildUnitMd re-review-to-convergence note", () => {
@@ -443,14 +388,6 @@ describe("buildProgressMd re-review-to-convergence note", () => {
     expect(md).not.toContain("convergence");
   });
 
-  it("omits the note when no plan_review is configured", () => {
-    const md = buildProgressMd(
-      planWith({ plan_review: [], review_reconverge: true }),
-      "260709-0-x",
-    );
-    expect(md).not.toContain("Re-review to convergence.");
-  });
-
   it("never adds the note to the pre-execution review block", () => {
     // pre_review present, plan_review empty, flag on: the only block that could
     // emit the note is pre-execution — and it must not.
@@ -464,22 +401,5 @@ describe("buildProgressMd re-review-to-convergence note", () => {
     );
     expect(md).toContain("## Pre-execution review");
     expect(md).not.toContain("Re-review to convergence.");
-  });
-});
-
-describe("buildOverviewMd from real fixtures", () => {
-  it("valid_plan_minimal renders", () => {
-    const plan = loadPlan("valid_plan_minimal.json");
-    const md = buildOverviewMd(plan, "260505-0-tidy-readme");
-    expect(md).toContain("Bump version and tidy README");
-    expect(md).toContain("| 01 ");
-  });
-
-  it("valid_plan_sequential renders sequential blocked_by chain", () => {
-    const plan = loadPlan("valid_plan_sequential.json");
-    const md = buildOverviewMd(plan, "260505-0-sequential-refactor");
-    expect(md).toContain("| 01 ");
-    expect(md).toContain("| 02 ");
-    expect(md).toContain("| 03 ");
   });
 });

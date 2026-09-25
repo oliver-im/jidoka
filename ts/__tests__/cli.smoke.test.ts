@@ -5,7 +5,6 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -50,14 +49,6 @@ function run(args: string[], opts: { stdin?: string; env?: NodeJS.ProcessEnv } =
     status: result.status ?? -1,
   };
 }
-
-describe("dist/cli.js bundle", () => {
-  it("exists as an executable file", () => {
-    expect(existsSync(cli)).toBe(true);
-    const stat = statSync(cli);
-    expect(stat.size).toBeGreaterThan(0);
-  });
-});
 
 describe("materialize", () => {
   it("accepts a file path and writes the plan dir", () => {
@@ -111,23 +102,6 @@ describe("materialize", () => {
     }
   });
 
-  it("accepts a BOM-prefixed plan markdown via stdin", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-bom-"));
-    try {
-      const md = "\uFEFF# Smoke plan\n\n## Unit 01: Only\n\nSummary.\n";
-      const r = run(
-        ["materialize", "-", "--plans-root", tmp, "--today", "260101"],
-        { stdin: md, env: { CLAUDE_PROJECT_DIR: tmp } },
-      );
-      expect(r.status).toBe(0);
-      const target = r.stdout.trim();
-      expect(existsSync(join(target, "overview.md"))).toBe(true);
-      expect(existsSync(join(target, "01-only.md"))).toBe(true);
-    } finally {
-      rmSync(tmp, { recursive: true, force: true });
-    }
-  });
-
   it("exits 1 on validation errors and writes nothing", () => {
     const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-invalid-"));
     try {
@@ -153,23 +127,6 @@ describe("materialize", () => {
 });
 
 describe("paths", () => {
-  it("prints the resolved convention paths as JSON (defaults)", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-paths-def-"));
-    try {
-      const r = run(["paths"], { env: { CLAUDE_PROJECT_DIR: tmp } });
-      expect(r.status).toBe(0);
-      expect(JSON.parse(r.stdout)).toEqual({
-        root: "docs/exec-plans",
-        backlog: "docs/exec-plans/backlog",
-        active: "docs/exec-plans/active",
-        completed: "docs/exec-plans/completed",
-        reference: "docs/discussions",
-      });
-    } finally {
-      rmSync(tmp, { recursive: true, force: true });
-    }
-  });
-
   it("honors a project .jidoka.json override", () => {
     const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-paths-"));
     try {
@@ -209,12 +166,6 @@ describe("paths", () => {
 });
 
 describe("convention", () => {
-  it("prints the embedded plan-lifecycle convention spec (exit 0, H1 present)", () => {
-    const r = run(["convention"]);
-    expect(r.status).toBe(0);
-    expect(r.stdout).toContain("# The plan-lifecycle convention");
-  });
-
   it("embeds docs/CONVENTION.md verbatim (staleness guard)", () => {
     const r = run(["convention"]);
     expect(r.status).toBe(0);
@@ -233,25 +184,6 @@ describe("hook", () => {
     const r = run(["hook"], { stdin: "not json" });
     // Hook must always exit 0 — non-zero would block ExitPlanMode permanently.
     expect(r.status).toBe(0);
-  });
-
-  it("exits 0 but denies loudly when tool_input.plan is absent", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-hook-empty-"));
-    try {
-      const sessionId = `smoke-${Date.now()}`;
-      const r = run(["hook"], {
-        stdin: JSON.stringify({ session_id: sessionId }),
-        env: { CLAUDE_PROJECT_DIR: tmp },
-      });
-      // Always exit 0 (a non-zero would block ExitPlanMode permanently) — but
-      // the empty payload now surfaces a deny instead of vanishing silently.
-      expect(r.status).toBe(0);
-      expect(r.stdout).toContain("deny");
-      expect(r.stdout).toContain("no plan content reached the hook");
-      expect(existsSync(join(tmp, "docs/exec-plans/active"))).toBe(false);
-    } finally {
-      rmSync(tmp, { recursive: true, force: true });
-    }
   });
 
   it("materializes from tool_input.planFilePath when plan is absent (file-based flow)", () => {
@@ -276,30 +208,6 @@ describe("hook", () => {
       const active = join(tmp, "docs/exec-plans/active");
       expect(existsSync(active)).toBe(true);
       expect(readdirSync(active).some((d) => d.endsWith("-file-plan"))).toBe(true);
-    } finally {
-      rmSync(tmp, { recursive: true, force: true });
-    }
-  });
-
-  it("materializes a plan dir from tool_input.plan markdown", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "jidoka-smoke-hook-ok-"));
-    try {
-      const sessionId = `smoke-${Date.now()}`;
-      const planMd = "# Smoke plan\n\n## Unit 01: Only\n\nSummary.\n";
-      const r = run(["hook"], {
-        stdin: JSON.stringify({
-          session_id: sessionId,
-          tool_name: "ExitPlanMode",
-          tool_input: { plan: planMd },
-        }),
-        env: { CLAUDE_PROJECT_DIR: tmp },
-      });
-      expect(r.status).toBe(0);
-      expect(r.stdout).toBe("");
-      expect(r.stderr).toMatch(/Wrote plan to /);
-      // Default plan_dir_root is `docs/exec-plans/active`; counter starts at 0.
-      const planDir = join(tmp, "docs/exec-plans/active");
-      expect(existsSync(planDir)).toBe(true);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

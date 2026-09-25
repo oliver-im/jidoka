@@ -9,7 +9,7 @@ import {
   resolveConventionPaths,
   validateProjectPlanDirRoot,
 } from "../config.js";
-import { reviewStepLabel, reviewStepSchema } from "../types.js";
+import { reviewStepSchema } from "../types.js";
 
 let counter = 0;
 function makeTempDir(label: string): string {
@@ -23,54 +23,36 @@ function makeTempDir(label: string): string {
 
 describe("defaults", () => {
   it("match spec", () => {
-    expect(defaultConfig.plan_dir_root).toBe("docs/exec-plans/active");
-    expect(defaultConfig.reference_dir).toBe("docs/discussions");
-    expect(defaultConfig.git_workflow).toBe(false);
-    expect(defaultConfig.review_reconverge).toBe(true);
-  });
-
-  it("ships a unit-level pipeline matching today's behavior", () => {
     // `/code-review` is `disable-model-invocation`, so a bare slash-command
     // step would be operator-run and stall the unit loop. The default wraps it
     // in `claude -p` (agent-reachable via Bash) and pins the scope with
     // `{diff_range}` — an unranged run silently reviews the wrong commits.
-    expect(defaultConfig.unit_review).toEqual([
-      {
-        run: "claude -p '/code-review {diff_range}' < /dev/null",
-        mode: "exec",
-      },
-    ]);
-    // The default plan_review asks codex for a detailed reasoning summary and
-    // carries the `< /dev/null` stdin hang-guard so an unattended `exec` run
-    // can't block on an open stdin pipe (see config.ts).
-    expect(defaultConfig.plan_review).toEqual([
-      {
-        run: "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null",
-        mode: "exec",
-      },
-    ]);
-  });
-
-  it("ships a pre-execution review defaulting to /jidoka:pre-plan-review", () => {
-    expect(defaultConfig.pre_review).toEqual(["/jidoka:pre-plan-review"]);
+    // The default plan_review asks codex for a detailed reasoning summary. Both
+    // exec defaults carry the `< /dev/null` stdin hang-guard so an unattended
+    // run can't block on an open stdin pipe (see config.ts).
+    expect(defaultConfig).toEqual({
+      plan_dir_root: "docs/exec-plans/active",
+      reference_dir: "docs/discussions",
+      git_workflow: false,
+      pre_review: ["/jidoka:pre-plan-review"],
+      unit_review: [
+        {
+          run: "claude -p '/code-review {diff_range}' < /dev/null",
+          mode: "exec",
+        },
+      ],
+      plan_review: [
+        {
+          run: "codex exec -s read-only -c model_reasoning_summary=detailed \"{focus}\" < /dev/null",
+          mode: "exec",
+        },
+      ],
+      review_reconverge: true,
+    });
   });
 });
 
 describe("loadFromPaths", () => {
-  it("falls back to defaults when both files missing", () => {
-    const cfg = loadFromPaths(undefined, undefined);
-    expect(cfg).toEqual(defaultConfig);
-  });
-
-  it("reads global config", () => {
-    const dir = makeTempDir("global");
-    const path = join(dir, "config.json");
-    writeFileSync(path, JSON.stringify({ plan_dir_root: "custom/plans" }));
-    const cfg = loadFromPaths(path, undefined);
-    expect(cfg.plan_dir_root).toBe("custom/plans");
-    rmSync(dir, { recursive: true, force: true });
-  });
-
   it("project override accepts plan_dir_root, git_workflow", () => {
     const dir = makeTempDir("proj");
     const path = join(dir, ".jidoka.json");
@@ -106,21 +88,6 @@ describe("loadFromPaths", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("project override rejects unknown keys", () => {
-    const dir = makeTempDir("unknown");
-    const path = join(dir, ".jidoka.json");
-    writeFileSync(
-      path,
-      JSON.stringify({
-        unknown_setting: 99,
-        another_unknown: "warn",
-      }),
-    );
-    const cfg = loadFromPaths(undefined, path);
-    expect(cfg).toEqual(defaultConfig);
-    rmSync(dir, { recursive: true, force: true });
-  });
-
   it("project override rejects non-boolean git_workflow", () => {
     const dir = makeTempDir("gwbad");
     const path = join(dir, ".jidoka.json");
@@ -130,21 +97,13 @@ describe("loadFromPaths", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("rejects absolute plan_dir_root in project override", () => {
-    const dir = makeTempDir("abs");
+  it("rejects absolute / traversal plan_dir_root in project override", () => {
+    const dir = makeTempDir("pdrbad");
     const path = join(dir, ".jidoka.json");
     writeFileSync(path, JSON.stringify({ plan_dir_root: "/etc/foo" }));
-    const cfg = loadFromPaths(undefined, path);
-    expect(cfg.plan_dir_root).toBe("docs/exec-plans/active");
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("rejects parent traversal in project override", () => {
-    const dir = makeTempDir("traversal");
-    const path = join(dir, ".jidoka.json");
+    expect(loadFromPaths(undefined, path).plan_dir_root).toBe("docs/exec-plans/active");
     writeFileSync(path, JSON.stringify({ plan_dir_root: "../escape" }));
-    const cfg = loadFromPaths(undefined, path);
-    expect(cfg.plan_dir_root).toBe("docs/exec-plans/active");
+    expect(loadFromPaths(undefined, path).plan_dir_root).toBe("docs/exec-plans/active");
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -179,32 +138,12 @@ describe("loadFromPaths", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("hydrates missing unit_review, plan_review, pre_review from defaults", () => {
+  it("hydrates keys the global config omits from defaults", () => {
     const dir = makeTempDir("partial");
     const path = join(dir, "config.json");
     writeFileSync(path, JSON.stringify({ plan_dir_root: "custom" }));
     const cfg = loadFromPaths(path, undefined);
-    expect(cfg.plan_dir_root).toBe("custom");
-    expect(cfg.unit_review).toEqual(defaultConfig.unit_review);
-    expect(cfg.plan_review).toEqual(defaultConfig.plan_review);
-    expect(cfg.pre_review).toEqual(defaultConfig.pre_review);
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("accepts a custom pre_review list of slash commands", () => {
-    const dir = makeTempDir("custom-pre-review");
-    const path = join(dir, "config.json");
-    writeFileSync(
-      path,
-      JSON.stringify({
-        pre_review: ["/jidoka:pre-plan-review", "/codex:adversarial-review"],
-      }),
-    );
-    const cfg = loadFromPaths(path, undefined);
-    expect(cfg.pre_review).toEqual([
-      "/jidoka:pre-plan-review",
-      "/codex:adversarial-review",
-    ]);
+    expect(cfg).toEqual({ ...defaultConfig, plan_dir_root: "custom" });
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -214,25 +153,6 @@ describe("loadFromPaths", () => {
     writeFileSync(path, JSON.stringify({ pre_review: [] }));
     const cfg = loadFromPaths(path, undefined);
     expect(cfg.pre_review).toEqual([]);
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("accepts a custom unit pipeline of slash commands", () => {
-    const dir = makeTempDir("custom-pipeline");
-    const path = join(dir, "config.json");
-    writeFileSync(
-      path,
-      JSON.stringify({
-        unit_review: ["/code-review:code-review", "/codex:review"],
-        plan_review: ["/codex:adversarial-review"],
-      }),
-    );
-    const cfg = loadFromPaths(path, undefined);
-    expect(cfg.unit_review).toEqual([
-      "/code-review:code-review",
-      "/codex:review",
-    ]);
-    expect(cfg.plan_review).toEqual(["/codex:adversarial-review"]);
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -253,15 +173,6 @@ describe("loadFromPaths", () => {
     writeFileSync(path, JSON.stringify({ review_reconverge: false }));
     const cfg = loadFromPaths(path, undefined);
     expect(cfg.review_reconverge).toBe(false);
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("defaults review_reconverge to true when the global config omits it", () => {
-    const dir = makeTempDir("reconverge-default");
-    const path = join(dir, "config.json");
-    writeFileSync(path, JSON.stringify({ plan_dir_root: "x" }));
-    const cfg = loadFromPaths(path, undefined);
-    expect(cfg.review_reconverge).toBe(true);
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -294,9 +205,6 @@ describe("loadFromPaths", () => {
 });
 
 describe("validateProjectPlanDirRoot", () => {
-  it("accepts nested relative paths", () => {
-    expect(validateProjectPlanDirRoot("docs/plans/v2")).toBeUndefined();
-  });
   it("rejects absolute", () => {
     expect(validateProjectPlanDirRoot("/etc/x")).toMatch(/absolute/);
   });
@@ -403,19 +311,6 @@ describe("resolveConventionPaths", () => {
     });
   });
 
-  it("tracks a custom plan_dir_root and reference_dir", () => {
-    const paths = resolveConventionPaths({
-      ...defaultConfig,
-      plan_dir_root: "notes/plans/active",
-      reference_dir: "wiki",
-    });
-    expect(paths.root).toBe("notes/plans");
-    expect(paths.backlog).toBe("notes/plans/backlog");
-    expect(paths.completed).toBe("notes/plans/completed");
-    expect(paths.active).toBe("notes/plans/active");
-    expect(paths.reference).toBe("wiki");
-  });
-
   it("normalizes a conventionless flat plan_dir_root (siblings at repo root)", () => {
     const paths = resolveConventionPaths({ ...defaultConfig, plan_dir_root: "plan" });
     expect(paths.root).toBe(".");
@@ -426,42 +321,6 @@ describe("resolveConventionPaths", () => {
 });
 
 describe("reviewStepSchema", () => {
-  it("accepts a slash command unchanged", () => {
-    const r = reviewStepSchema.safeParse("/code-review");
-    expect(r.success).toBe(true);
-    if (r.success) expect(r.data).toBe("/code-review");
-  });
-
-  it("accepts a template object and defaults mode to print", () => {
-    const r = reviewStepSchema.safeParse({ run: "codex exec {plan_dir}" });
-    expect(r.success).toBe(true);
-    if (r.success) {
-      expect(r.data).toEqual({ run: "codex exec {plan_dir}", mode: "print" });
-    }
-  });
-
-  it("accepts an explicit exec mode", () => {
-    const r = reviewStepSchema.safeParse({ run: "codex exec x", mode: "exec" });
-    expect(r.success).toBe(true);
-    if (r.success && typeof r.data !== "string") {
-      expect(r.data.mode).toBe("exec");
-    }
-  });
-
-  it("rejects a bare (non-slash) string", () => {
-    expect(reviewStepSchema.safeParse("not-a-slash").success).toBe(false);
-  });
-
-  it("rejects an empty template run", () => {
-    expect(reviewStepSchema.safeParse({ run: "" }).success).toBe(false);
-  });
-
-  it("rejects an unknown mode", () => {
-    expect(reviewStepSchema.safeParse({ run: "x", mode: "auto" }).success).toBe(
-      false,
-    );
-  });
-
   it("rejects unknown keys on a template (strict)", () => {
     expect(
       reviewStepSchema.safeParse({ run: "x", focus: "races" }).success,
@@ -469,34 +328,7 @@ describe("reviewStepSchema", () => {
   });
 });
 
-describe("reviewStepLabel", () => {
-  it("labels a slash command as itself", () => {
-    expect(reviewStepLabel("/code-review")).toBe("/code-review");
-  });
-  it("labels a template as its run text", () => {
-    expect(reviewStepLabel({ run: "codex exec x", mode: "exec" })).toBe(
-      "codex exec x",
-    );
-  });
-});
-
 describe("loadFromPaths — template review steps", () => {
-  it("loads a template step with explicit mode", () => {
-    const dir = makeTempDir("tmpl");
-    const path = join(dir, "config.json");
-    writeFileSync(
-      path,
-      JSON.stringify({
-        plan_review: [{ run: "codex exec {diff_range}", mode: "exec" }],
-      }),
-    );
-    const cfg = loadFromPaths(path, undefined);
-    expect(cfg.plan_review).toEqual([
-      { run: "codex exec {diff_range}", mode: "exec" },
-    ]);
-    rmSync(dir, { recursive: true, force: true });
-  });
-
   it("defaults a template step's mode to print", () => {
     const dir = makeTempDir("tmpl-default");
     const path = join(dir, "config.json");

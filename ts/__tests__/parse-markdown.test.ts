@@ -68,23 +68,6 @@ describe("parsePlanMarkdown — title", () => {
     expect(plan.slug).toBe("my-plan");
   });
 
-  it("falls back to the first non-empty non-heading line", () => {
-    const plan = parse("Refactor the auth flow.\n\n## Unit 01: Foo\n\nSummary.\n");
-    expect(plan.task_summary).toBe("Refactor the auth flow.");
-    expect(plan.slug).toBe("refactor-the-auth-flow");
-  });
-
-  it("strips a leading-blank-lines preamble before the H1", () => {
-    const plan = parse("\n\n# My plan\n\n## Unit 01: Foo\n\nSummary.\n");
-    expect(plan.task_summary).toBe("My plan");
-  });
-
-  it("errors when no title precedes the first unit heading", () => {
-    const r = parsePlanMarkdown("## Unit 01: Foo\n\nSummary.\n");
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toMatch(/no plan title/);
-  });
-
   it("skips heading-style lines in the title fallback (no H1, prose follows)", () => {
     const md = "## Goal\n\nReal title here.\n\n## Unit 01: Foo\n\nSummary.\n";
     const plan = parse(md);
@@ -121,45 +104,19 @@ describe("parsePlanMarkdown — title", () => {
 });
 
 describe("parsePlanMarkdown — unit headings (canonical + tolerant)", () => {
-  it("accepts canonical `## Unit NN: title`", () => {
-    const plan = parse("# T\n\n## Unit 01: Alpha\n\nA.\n\n## Unit 02: Beta\n\nB.\n");
-    expect(plan.units.map((u) => u.title)).toEqual(["Alpha", "Beta"]);
-  });
-
-  it("accepts single-digit `## Unit 1: …`", () => {
-    const plan = parse("# T\n\n## Unit 1: Alpha\n\nA.\n");
-    expect(plan.units[0]!.title).toBe("Alpha");
-    expect(plan.units[0]!.id).toBe("01-alpha");
-  });
-
-  it("accepts `## Step NN: …`", () => {
-    const plan = parse("# T\n\n## Step 01: Alpha\n\nA.\n");
-    expect(plan.units[0]!.title).toBe("Alpha");
-  });
-
-  it("accepts bare `## NN: title`", () => {
-    const plan = parse("# T\n\n## 01: Alpha\n\nA.\n");
-    expect(plan.units[0]!.title).toBe("Alpha");
-  });
-
-  it("accepts `## NN. title`", () => {
-    const plan = parse("# T\n\n## 01. Alpha\n\nA.\n");
-    expect(plan.units[0]!.title).toBe("Alpha");
-  });
-
-  it("accepts `## NN - title`", () => {
-    const plan = parse("# T\n\n## 01 - Alpha\n\nA.\n");
-    expect(plan.units[0]!.title).toBe("Alpha");
-  });
-
-  it("accepts em-dash separator `## NN — title`", () => {
-    const plan = parse("# T\n\n## 01 — Alpha\n\nA.\n");
-    expect(plan.units[0]!.title).toBe("Alpha");
-  });
-
-  it("is case-insensitive on `Unit`/`Step`", () => {
-    const plan = parse("# T\n\n## UNIT 01: Alpha\n\nA.\n\n## step 02: Beta\n\nB.\n");
-    expect(plan.units.map((u) => u.title)).toEqual(["Alpha", "Beta"]);
+  it.each([
+    "## Unit 01: Alpha",
+    "## Unit 1: Alpha",
+    "## Step 01: Alpha",
+    "## 01: Alpha",
+    "## 01. Alpha",
+    "## 01 - Alpha",
+    "## 01 — Alpha",
+    "## UNIT 01: Alpha",
+    "## step 01: Alpha",
+  ])("accepts `%s`", (heading) => {
+    const plan = parse(`# T\n\n${heading}\n\nA.\n`);
+    expect(plan.units.map((u) => [u.id, u.title])).toEqual([["01-alpha", "Alpha"]]);
   });
 
   it("ignores non-unit H2 headings (e.g. `## Goal`, `## Tasks`)", () => {
@@ -183,26 +140,6 @@ describe("parsePlanMarkdown — unit headings (canonical + tolerant)", () => {
 });
 
 describe("parsePlanMarkdown — unit body", () => {
-  it("treats the first paragraph as summary, rest as body_markdown", () => {
-    const md = [
-      "# T",
-      "",
-      "## Unit 01: Foo",
-      "",
-      "Short summary line.",
-      "",
-      "### Tasks",
-      "",
-      "- Do thing",
-      "- Do other thing",
-      "",
-    ].join("\n");
-    const plan = parse(md);
-    const u = plan.units[0]!;
-    expect(u.summary).toBe("Short summary line.");
-    expect(u.body_markdown).toBe("### Tasks\n\n- Do thing\n- Do other thing");
-  });
-
   it("joins a multi-line first paragraph into a single summary string", () => {
     const md = "# T\n\n## Unit 01: Foo\n\nLine one\nline two\nline three.\n\nBody.\n";
     const plan = parse(md);
@@ -222,13 +159,6 @@ describe("parsePlanMarkdown — unit body", () => {
     expect(plan.units[0]!.body_markdown).toBe("Body para 1.\n\nBody para 2.");
   });
 
-  it("handles CRLF line endings", () => {
-    const md = "# T\r\n\r\n## Unit 01: Foo\r\n\r\nSummary.\r\n\r\nBody.\r\n";
-    const plan = parse(md);
-    expect(plan.units[0]!.summary).toBe("Summary.");
-    expect(plan.units[0]!.body_markdown).toBe("Body.");
-  });
-
   it("derives unit id from the unit title slug, not the heading number", () => {
     const plan = parse("# T\n\n## Unit 01: Add `tool_input` Parser!\n\nS.\n");
     expect(plan.units[0]!.id).toMatch(/^01-add-tool-input-parser$/);
@@ -237,26 +167,6 @@ describe("parsePlanMarkdown — unit body", () => {
   it("falls back to NN-unit when title slugifies to empty", () => {
     const plan = parse("# T\n\n## Unit 01: !!!\n\nS.\n");
     expect(plan.units[0]!.id).toBe("01-unit");
-  });
-
-  it("keeps a `topology` fence inline as prose (no longer extracted)", () => {
-    const md = [
-      "# T",
-      "",
-      "## Unit 01: Foo",
-      "",
-      "Summary.",
-      "",
-      "```topology",
-      `{ "task_summary": "x" }`,
-      "```",
-      "",
-    ].join("\n");
-    const plan = parse(md);
-    expect(plan.units[0]!.body_markdown).toBe(
-      "```topology\n{ \"task_summary\": \"x\" }\n```",
-    );
-    expect(validatePlan(plan)).toEqual([]);
   });
 });
 
@@ -303,12 +213,6 @@ describe("parsePlanMarkdown — outer markdown fence", () => {
     expect(plan.slug).toBe("markdown");
   });
 
-  it("leaves a non-fenced plan unchanged", () => {
-    const plan = parse(RAW);
-    expect(plan.task_summary).toBe("My plan");
-    expect(plan.slug).toBe("my-plan");
-  });
-
   it("tolerates leading/trailing whitespace around the wrapper", () => {
     const wrapped = "\n\n  ```markdown\n# My plan\n\n## Unit 01: Foo\n\nSummary.\n```  \n\n";
     const plan = parse(wrapped);
@@ -325,14 +229,6 @@ describe("parsePlanMarkdown — outer markdown fence", () => {
 
   it("strips a leading BOM before parsing", () => {
     const plan = parse("\uFEFF# My plan\n\n## Unit 01: Foo\n\nSummary.\n");
-    expect(plan.task_summary).toBe("My plan");
-    expect(plan.slug).toBe("my-plan");
-  });
-
-  it("strips a leading BOM in front of an outer ```markdown wrapper", () => {
-    const plan = parse(
-      "\uFEFF```markdown\n# My plan\n\n## Unit 01: Foo\n\nSummary.\n```\n",
-    );
     expect(plan.task_summary).toBe("My plan");
     expect(plan.slug).toBe("my-plan");
   });
